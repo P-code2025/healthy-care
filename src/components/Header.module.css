@@ -2,49 +2,100 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 32px;
-  background: #fff;
-  border-bottom: 1px solid #eee;
+  padding: 20px 32px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--gray-200);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 100;
 }
 
 .greeting h2 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .greeting p {
-  margin: 0;
-  color: #6c757d;
+  margin: 4px 0 0 0;
+  color: var(--text-secondary);
   font-size: 14px;
+  font-weight: 400;
 }
 
 .actions {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
 }
 
 .search {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  padding: 10px 16px 10px 40px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--gray-300);
   font-size: 14px;
+  width: 300px;
+  transition: all var(--transition-base);
+  background: var(--gray-50);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--primary-green);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(143, 209, 79, 0.1);
 }
 
 .iconBtn {
-  background: none;
+  background: var(--gray-100);
   border: none;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.iconBtn:hover {
+  background: var(--gray-200);
+  transform: translateY(-2px);
+}
+
+.iconBtn::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background: var(--error);
+  border-radius: 50%;
+  border: 2px solid var(--white);
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
   object-fit: cover;
+  border: 2px solid var(--primary-green);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(143, 209, 79, 0.3);
 }

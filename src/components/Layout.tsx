@@ -11,8 +11,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div>
       <SidebarLeft />
-      <Header />
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        <Header />
+        <div className={styles.content}>{children}</div>
+      </main>
     </div>
   );
 };

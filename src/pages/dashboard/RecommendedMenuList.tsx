@@ -11,7 +11,7 @@ export default function RecommendedMenuList({
       <ul className={styles.list}>
         {items.map((i) => (
           <li key={i.title} className={styles.item}>
-            {i.title}
+            <p className={styles.itemTitle}>{i.title}</p>
           </li>
         ))}
       </ul>

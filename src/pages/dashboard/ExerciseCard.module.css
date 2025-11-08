@@ -1,0 +1,80 @@
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  border: 1px solid var(--gray-200);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.iconWrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-green-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon {
+  font-size: 28px;
+}
+
+.content {
+  flex: 1;
+}
+
+.title {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.info {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.infoItem {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge.beginner {
+  background: #8FD14F20;
+  color: #7BC043;
+}
+
+.badge.intermediate {
+  background: #FFB84D20;
+  color: #E89D2F;
+}
+
+.badge.hard {
+  background: #FF806620;
+  color: #E56B4D;
+}

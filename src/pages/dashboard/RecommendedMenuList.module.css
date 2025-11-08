@@ -1,30 +1,68 @@
 .card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+  transition: all var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
 }
 
 .title {
-  margin: 0;
-  color: #888;
+  margin: 0 0 20px 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .list {
-  margin: 12px 0;
+  margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 
 .item {
-  padding: 8px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  transition: background 0.2s;
+  padding: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.item::before {
+  content: '🥗';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 24px;
+  opacity: 0.3;
+  transition: all var(--transition-base);
 }
 
 .item:hover {
-  background: #f9f9f9;
+  background: var(--bg-hover);
+  border-color: var(--primary-orange);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-sm);
+}
+
+.item:hover::before {
+  opacity: 0.6;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.itemTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
 }

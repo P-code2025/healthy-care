@@ -13,8 +13,8 @@ export default function WorkoutProgressList({ items }: { items: Item[] }) {
         {items.map((it) => (
           <div key={it.name} className={styles.item}>
             <div className={styles.label}>
-              <strong>{it.name}</strong>
-              <span>{it.value}%</span>
+              <span className={styles.labelName}>{it.name}</span>
+              <span className={styles.labelValue}>{it.value}%</span>
             </div>
             <div className={styles.bar}>
               <div className={styles.fill} style={{ width: `${it.value}%` }} />
