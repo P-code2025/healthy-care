@@ -11,7 +11,7 @@ export default function DashboardCard({ title, value, unit }: Props) {
     <div className={styles.card}>
       <h4 className={styles.title}>{title}</h4>
       <p className={styles.value}>
-        {value} {unit}
+        {value} {unit && <span>{unit}</span>}
       </p>
     </div>
   );

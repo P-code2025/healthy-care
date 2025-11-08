@@ -1,49 +1,28 @@
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
-import type { FoodLog, WorkoutLog } from "../../services/api";
+import type { FoodLog } from "../../services/api";
 
-import DashboardCard from "./DashboardCard";
+import StatsCard from "./StatsCard";
 import CaloriesCard from "./CaloriesCard";
-import WorkoutProgressList from "./WorkoutProgressList";
-import RecommendedMenuList from "./RecommendedMenuList";
-import RecommendedExerciseList from "./RecommendedExerciseList";
+import WorkoutCard from "./WorkoutCard";
+import MenuCard from "./MenuCard";
+import ExerciseCard from "./ExerciseCard";
 import RecentActivity from "./RecentActivity";
+import WeightGauge from "./WeightGauge";
+import WeeklyActivityChart from "./WeeklyActivityChart";
+import CalendarWidget from "./CalendarWidget";
+import styles from "./Dashboard.module.css";
 
 export default function Dashboard() {
   const [foodLog, setFoodLog] = useState<FoodLog[]>([]);
-  const [workoutLog, setWorkoutLog] = useState<WorkoutLog[]>([]);
 
   useEffect(() => {
     api.getFoodLog().then(setFoodLog).catch(console.error);
-    api.getWorkoutLog().then(setWorkoutLog).catch(console.error);
   }, []);
 
   const totalCalories = foodLog.reduce((sum, f) => sum + f.calories, 0);
-  const burned = workoutLog.reduce(
-    (sum, w) => sum + (w.calories_burned_estimated || 0),
-    0
-  );
   const consumed = totalCalories;
   const goal = 2000;
-
-  const workouts = [
-    { name: "Running (1h)", value: 60 },
-    { name: "Squatting (50kg)", value: 85 },
-    { name: "Stretching (1h)", value: 40 },
-  ];
-
-  const menus = [
-    { title: "Grilled Chicken Salad" },
-    { title: "Oatmeal with Almond Butter" },
-    { title: "Grilled Chicken Wrap" },
-    { title: "Avocado and Spinach" },
-  ];
-
-  const exercises = [
-    { title: "Brisk Walking" },
-    { title: "Bodyweight Squats" },
-    { title: "Stretching" },
-  ];
 
   const recent = [
     {
@@ -58,39 +37,137 @@ export default function Dashboard() {
   ];
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
-      {/* Khu vực chính bên trái */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
-          gap: 24,
-        }}
-      >
-        <DashboardCard title="Steps" value={8690} unit="steps" />
-        <DashboardCard title="Sleep" value={"7h 30m"} />
-        <DashboardCard title="Water Intake" value={1.2} unit="L" />
-        <DashboardCard title="Weight" value={"78 kg"} />
+    <div className={styles.container}>
+      {/* Main Content */}
+      <div className={styles.mainContent}>
+        {/* Stats Cards */}
+        <div className={styles.statsGrid}>
+          <StatsCard 
+            title="Weight" 
+            value={78} 
+            unit="kg" 
+            icon="⚖️"
+            subtitle="85 kg left"
+          />
+          <StatsCard 
+            title="Steps" 
+            value={8050} 
+            unit="steps" 
+            icon="👟"
+            subtitle="9500 steps left"
+          />
+          <StatsCard 
+            title="Sleep" 
+            value={6.5} 
+            unit="hours" 
+            icon="😴"
+          />
+          <StatsCard 
+            title="Water Intake" 
+            value={0.7} 
+            unit="litre left" 
+            icon="💧"
+          />
+        </div>
 
-        <div style={{ gridColumn: "1 / -1" }}>
+        {/* Weight Gauge and Calories */}
+        <div className={styles.chartsRow}>
+          <WeightGauge current={78} min={65} max={85} />
           <CaloriesCard
             total={consumed}
             goal={goal}
-            burned={burned}
             consumed={consumed}
           />
         </div>
 
-        <div style={{ gridColumn: "1 / -1" }}>
-          <WorkoutProgressList items={workouts} />
+        {/* Weekly Activity Chart */}
+        <WeeklyActivityChart />
+
+        {/* Workout Progress Cards */}
+        <div className={styles.workoutCards}>
+          <WorkoutCard 
+            icon="🏃"
+            title="Running 10 km"
+            percentage={75}
+            status="Cardio"
+            color="green"
+          />
+          <WorkoutCard 
+            icon="🏋️"
+            title="Squatting 50kg"
+            percentage={100}
+            status="Strength"
+            color="orange"
+          />
+          <WorkoutCard 
+            icon="🧘"
+            title="Stretching to touch toes"
+            percentage={50}
+            status="Flexibility"
+            color="coral"
+          />
         </div>
 
-        <RecommendedMenuList items={menus} />
-        <RecommendedExerciseList items={exercises} />
+        {/* Recommended Menus and Exercises */}
+        <div className={styles.recommendedRow}>
+          <div className={styles.menuSection}>
+            <h3 className={styles.sectionTitle}>Recommended Menu</h3>
+            <div className={styles.menuGrid}>
+              <MenuCard 
+                title="Oatmeal with Almond Butter and Berries"
+                calories={350}
+                category="Breakfast"
+                image="https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=400&h=300&fit=crop"
+                carbs={45}
+                protein={12}
+                fats={8}
+              />
+              <MenuCard 
+                title="Grilled Chicken Wrap with Avocado and Veggies"
+                calories={450}
+                category="Lunch"
+                image="https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&h=300&fit=crop"
+                carbs={35}
+                protein={30}
+                fats={15}
+              />
+            </div>
+          </div>
+
+          <div className={styles.menuSection}>
+            <h3 className={styles.sectionTitle}>Recommended Exercises</h3>
+            <div className={styles.exerciseList}>
+              <ExerciseCard 
+                title="Brisk Walking"
+                calories={200}
+                duration={30}
+                difficulty="Beginner"
+                image=""
+              />
+              <ExerciseCard 
+                title="Bodyweight Squats"
+                calories={250}
+                duration={20}
+                difficulty="Intermediate"
+                image=""
+              />
+              <ExerciseCard 
+                title="Dumbbell Squat"
+                calories={300}
+                duration={30}
+                difficulty="Hard"
+                image=""
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Cột phải: Recent Activity */}
-      <RecentActivity items={recent} />
+      {/* Right Sidebar */}
+      <div className={styles.sidebar}>
+        <CalendarWidget />
+        <RecentActivity items={recent} />
+      </div>
     </div>
   );
 }

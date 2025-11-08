@@ -1,18 +1,16 @@
 // src/App.tsx
 
 import { Routes, Route } from "react-router-dom";
-import Layout from "./components/Layout"; // Import Layout đã sửa
+import Layout from "./components/Layout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import FoodDiary from "./pages/foodDiary/FoodDiary";
 import Progress from "./pages/progress/Progress";
 import MealPlan from "./pages/mealPlan/MealPlan";
 import GroceryList from "./pages/groceryList/GroceryList";
+import Messages from "./pages/Messages";
 
 const Calendar = () => (
   <h1 className="text-3xl font-bold text-dark-text">Calendar Page</h1>
-);
-const Messages = () => (
-  <h1 className="text-3xl font-bold text-dark-text">Messages Page</h1>
 );
 const HealthyMenu = () => (
   <h1 className="text-3xl font-bold text-dark-text">Healthy Menu Page</h1>

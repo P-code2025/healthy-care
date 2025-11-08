@@ -1,6 +1,10 @@
 .main {
-  margin-left: 288px; /* bằng chiều rộng sidebar */
-  padding: 32px;
-
+  margin-left: 280px; /* bằng chiều rộng sidebar */
+  padding: 0;
   min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.content {
+  padding: 32px;
 }

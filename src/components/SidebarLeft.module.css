@@ -1,25 +1,36 @@
 .sidebar {
-  width: 288px;
+  width: 280px;
   height: 100vh;
-  background-color: #9f81dc;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--bg-sidebar);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   position: fixed;
   top: 0;
   left: 0;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-family);
+  z-index: 1000;
 }
 
 .logo {
-  padding: 20px 24px;
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .logo h1 {
-  font-size: 1.875rem;
+  font-size: 24px;
   font-weight: 700;
-  color: #212529;
+  color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.logo h1::before {
+  content: '🌿';
+  margin-right: 8px;
 }
 
 .nav {
@@ -32,26 +43,27 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
   text-decoration: none;
-  color: #374151;
+  color: var(--text-sidebar);
   font-weight: 500;
-  transition: background 0.2s ease;
+  font-size: 15px;
+  transition: all var(--transition-base);
   background-color: transparent;
-  border: none; /* reset border mặc định của button */
-  outline: none; /* reset outline mặc định của button */
-  appearance: none; /* bỏ kiểu nút mặc định */
+  border: none;
+  outline: none;
+  appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
   width: 100%;
   text-align: left;
-  font-size: medium;
+  margin-bottom: 4px;
 }
 
 .navLink:hover {
-  background-color: #f3f4f6;
-  color: #212529;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .navLink:focus,
@@ -61,99 +73,104 @@
 }
 
 .navLink svg {
-  margin-right: 12px;
+  flex-shrink: 0;
 }
 
-/* Active state cho NavLink bình thường và subLink */
-/* Active state cho NavLink bình thường và subLink */
-/* Active state cho cả NavLink và cha Meal Plan */
+/* Active state */
 .active,
 .parentActive {
-  background-color: #ffffff;
-  color: #22c55e;
+  background: var(--primary-green);
+  color: var(--white);
   font-weight: 600;
-  border-radius: 8px;
-  border: none;
-  outline: none;
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(143, 209, 79, 0.3);
 }
 
-/* Cha Meal Plan active khi route con đang active */
 .parentActive {
-  background-color: #ffffff;
-  color: #22c55e;
+  background: var(--primary-green);
+  color: var(--white);
   font-weight: 600;
-  border-radius: 8px; /* giống .active */
-  border: none;
-  outline: none;
-  box-shadow: none;
 }
-/* Dropdown mở nhưng KHÔNG active: không highlight */
+
 /* Dropdown mở nhưng KHÔNG active */
 .open {
-  background-color: transparent;
-  color: #374151;
-  font-weight: 500;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-sidebar);
 }
 
 .adCard {
   padding: 16px;
+  margin: 16px 12px;
 }
 
 .adCardInner {
-  background-color: #fffbeb;
-  color: #b45309;
-  padding: 16px;
-  border-radius: 8px;
-  text-align: center;
+  background: linear-gradient(135deg, #8FD14F 0%, #A8E063 100%);
+  color: var(--white);
+  padding: 20px;
+  border-radius: var(--radius-xl);
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(143, 209, 79, 0.3);
 }
 
 .adCardInner h4 {
   font-weight: 700;
-  margin: 0;
+  margin: 0 0 8px 0;
+  font-size: 16px;
 }
 
 .adCardInner p {
-  font-size: 0.875rem;
-  margin: 8px 0;
+  font-size: 13px;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+  opacity: 0.95;
 }
 
 .adButton {
-  background-color: #4caf50;
-  color: white;
+  background: var(--white);
+  color: var(--primary-green);
   width: 100%;
-  padding: 8px 0;
-  border-radius: 8px;
+  padding: 10px 0;
+  border-radius: var(--radius-lg);
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 14px;
   border: none;
   cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.adButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .logout {
   padding: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--gray-200);
 }
 
 .logoutButton {
   display: flex;
   align-items: center;
+  gap: 12px;
   width: 100%;
-  padding: 10px 16px;
-  border-radius: 8px;
-  color: #6c757d;
-  background: none;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all var(--transition-base);
 }
 
 .logoutButton:hover {
-  background-color: #f3f4f6;
+  background: var(--bg-hover);
+  color: var(--error);
 }
 
 .submenu {
-  margin-left: 32px;
+  margin-left: 20px;
   list-style: none;
   padding: 4px 0;
 }
@@ -162,28 +179,31 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
   text-decoration: none;
-  color: #374151;
+  color: var(--text-secondary);
   font-weight: 500;
-  transition: background 0.2s ease;
+  font-size: 14px;
+  transition: all var(--transition-base);
   background-color: transparent;
+  margin-bottom: 2px;
 }
 
 .subLink:hover {
-  background: #f3f4f6;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .subLink.active {
-  background-color: #ffffff;
-  color: #22c55e;
+  background: var(--bg-green-light);
+  color: var(--primary-green);
   font-weight: 600;
 }
 
 .chevron {
   margin-left: auto;
-  transition: transform 0.2s ease;
+  transition: transform var(--transition-base);
 }
 
 .rotate {

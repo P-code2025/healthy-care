@@ -1,0 +1,31 @@
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+  transition: all var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.title {
+  margin: 0 0 20px 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.chartContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.legendText {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}

@@ -1,0 +1,93 @@
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  border: 1px solid var(--gray-200);
+  transition: all var(--transition-base);
+  position: relative;
+  cursor: pointer;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.badge {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  background: var(--primary-green);
+  color: var(--white);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(143, 209, 79, 0.3);
+}
+
+.badgeIcon {
+  font-size: 14px;
+}
+
+.badgeText {
+  font-size: 12px;
+}
+
+.imageWrapper {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: var(--gray-100);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-base);
+}
+
+.card:hover .image {
+  transform: scale(1.05);
+}
+
+.content {
+  padding: 4px 0;
+}
+
+.title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.nutrition {
+  display: flex;
+  gap: 12px;
+}
+
+.nutrientItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.nutrientIcon {
+  font-size: 14px;
+}
+
+.nutrientValue {
+  font-weight: 600;
+  color: var(--text-primary);
+}
