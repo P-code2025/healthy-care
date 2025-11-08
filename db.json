@@ -1,0 +1,296 @@
+{
+  "users": [
+    {
+      "user_id": 1,
+      "email": "test@example.com",
+      "password_hash": "hashed_pw",
+      "age": 25,
+      "gender": "male",
+      "height_cm": 175,
+      "weight_kg": 70.5,
+      "goal": "tăng cơ",
+      "activity_level": "năng động",
+      "exercise_preferences": { "yoga": true, "gym": false }
+    },
+    {
+      "user_id": 2,
+      "email": "minh02@example.com",
+      "password_hash": "hashed_pw_2",
+      "age": 22,
+      "gender": "female",
+      "height_cm": 162,
+      "weight_kg": 54,
+      "goal": "giảm cân",
+      "activity_level": "trung bình",
+      "exercise_preferences": { "yoga": true, "gym": true }
+    },
+    {
+      "user_id": 3,
+      "email": "khoa03@example.com",
+      "password_hash": "hashed_pw_3",
+      "age": 30,
+      "gender": "male",
+      "height_cm": 180,
+      "weight_kg": 80,
+      "goal": "giữ dáng",
+      "activity_level": "ít vận động",
+      "exercise_preferences": { "yoga": false, "gym": true }
+    },
+    {
+      "user_id": 4,
+      "email": "thu04@example.com",
+      "password_hash": "hashed_pw_4",
+      "age": 27,
+      "gender": "female",
+      "height_cm": 158,
+      "weight_kg": 48,
+      "goal": "tăng sức bền",
+      "activity_level": "năng động",
+      "exercise_preferences": { "yoga": true, "gym": false }
+    }
+  ],
+
+  "food_log": [
+    {
+      "log_id": 101,
+      "user_id": 1,
+      "eaten_at": "2025-11-08T07:30:00Z",
+      "meal_type": "Breakfast",
+      "food_name": "Bún chả",
+      "calories": 520,
+      "protein_g": 28.5,
+      "carbs_g": 60.2,
+      "fat_g": 18.1,
+      "health_consideration": "Hơi nhiều dầu mỡ",
+      "is_corrected": false
+    },
+
+    {
+      "log_id": 102,
+      "user_id": 1,
+      "eaten_at": "2025-11-08T12:00:00Z",
+      "meal_type": "Lunch",
+      "food_name": "Cơm gà",
+      "calories": 650,
+      "protein_g": 32,
+      "carbs_g": 70,
+      "fat_g": 15,
+      "health_consideration": "Khá giàu tinh bột",
+      "is_corrected": false
+    },
+    {
+      "log_id": 103,
+      "user_id": 1,
+      "eaten_at": "2025-11-08T19:00:00Z",
+      "meal_type": "Dinner",
+      "food_name": "Salad cá ngừ",
+      "calories": 350,
+      "protein_g": 30,
+      "carbs_g": 12,
+      "fat_g": 9,
+      "health_consideration": "Lành mạnh",
+      "is_corrected": false
+    },
+
+    {
+      "log_id": 104,
+      "user_id": 2,
+      "eaten_at": "2025-11-08T08:00:00Z",
+      "meal_type": "Breakfast",
+      "food_name": "Bánh mì trứng",
+      "calories": 290,
+      "protein_g": 14,
+      "carbs_g": 32,
+      "fat_g": 10,
+      "health_consideration": "Khá ổn",
+      "is_corrected": false
+    },
+    {
+      "log_id": 105,
+      "user_id": 2,
+      "eaten_at": "2025-11-08T13:00:00Z",
+      "meal_type": "Lunch",
+      "food_name": "Phở bò",
+      "calories": 430,
+      "protein_g": 22,
+      "carbs_g": 50,
+      "fat_g": 8,
+      "health_consideration": "Ít béo",
+      "is_corrected": true
+    },
+    {
+      "log_id": 106,
+      "user_id": 3,
+      "eaten_at": "2025-11-08T18:30:00Z",
+      "meal_type": "Dinner",
+      "food_name": "Pizza hải sản",
+      "calories": 780,
+      "protein_g": 40,
+      "carbs_g": 90,
+      "fat_g": 30,
+      "health_consideration": "Nhiều calo",
+      "is_corrected": false
+    },
+    {
+      "log_id": 107,
+      "user_id": 4,
+      "eaten_at": "2025-11-08T07:45:00Z",
+      "meal_type": "Breakfast",
+      "food_name": "Xôi đậu",
+      "calories": 350,
+      "protein_g": 10,
+      "carbs_g": 60,
+      "fat_g": 8,
+      "health_consideration": "Khá nhiều tinh bột",
+      "is_corrected": false
+    }
+  ],
+
+  "ai_suggestions": [
+    {
+      "suggestion_id": 12,
+      "user_id": 1,
+      "generated_at": "2025-11-08T09:10:00Z",
+      "type": "nutrition",
+      "is_applied": false,
+      "content_details": {
+        "meal_plan": [
+          {
+            "meal": "Breakfast",
+            "calories": 420,
+            "items": ["oats", "banana", "milk"]
+          }
+        ],
+        "notes": "Tăng protein, giảm đường."
+      }
+    },
+    {
+      "suggestion_id": 13,
+      "user_id": 1,
+      "generated_at": "2025-11-08T11:00:00Z",
+      "type": "workout",
+      "is_applied": false,
+      "content_details": {
+        "routine": [
+          { "name": "HIIT", "duration_minutes": 20 },
+          { "name": "Plank", "duration_minutes": 5 }
+        ],
+        "intensity": "moderate"
+      }
+    },
+
+    {
+      "suggestion_id": 14,
+      "user_id": 2,
+      "generated_at": "2025-11-08T10:00:00Z",
+      "type": "nutrition",
+      "is_applied": true,
+      "content_details": {
+        "meal_plan": [
+          {
+            "meal": "Lunch",
+            "calories": 350,
+            "items": ["cơm gạo lứt", "ức gà", "rau luộc"]
+          }
+        ],
+        "notes": "Giảm tinh bột nhanh."
+      }
+    },
+    {
+      "suggestion_id": 15,
+      "user_id": 2,
+      "generated_at": "2025-11-08T17:30:00Z",
+      "type": "workout",
+      "is_applied": false,
+      "content_details": {
+        "routine": [
+          { "name": "Yoga Flow", "duration_minutes": 30 },
+          { "name": "Stretching", "duration_minutes": 10 }
+        ],
+        "intensity": "light"
+      }
+    },
+
+    {
+      "suggestion_id": 16,
+      "user_id": 3,
+      "generated_at": "2025-11-08T15:20:00Z",
+      "type": "nutrition",
+      "is_applied": false,
+      "content_details": {
+        "meal_plan": [
+          {
+            "meal": "Dinner",
+            "calories": 500,
+            "items": ["cá hồi", "khoai lang", "broccoli"]
+          }
+        ],
+        "notes": "Tăng chất béo tốt."
+      }
+    },
+
+    {
+      "suggestion_id": 17,
+      "user_id": 4,
+      "generated_at": "2025-11-08T16:00:00Z",
+      "type": "workout",
+      "is_applied": true,
+      "content_details": {
+        "routine": [
+          { "name": "Chạy bộ", "duration_minutes": 25 },
+          { "name": "Squat", "duration_minutes": 5 }
+        ],
+        "intensity": "moderate"
+      }
+    }
+  ],
+
+  "workout_log": [
+    {
+      "log_id": 201,
+      "user_id": 1,
+      "completed_at": "2025-11-07T18:00:00Z",
+      "exercise_name": "Yoga",
+      "duration_minutes": 45,
+      "calories_burned_estimated": 200,
+      "is_ai_suggested": true
+    },
+
+    {
+      "log_id": 202,
+      "user_id": 1,
+      "completed_at": "2025-11-08T06:30:00Z",
+      "exercise_name": "Chạy bộ",
+      "duration_minutes": 30,
+      "calories_burned_estimated": 280,
+      "is_ai_suggested": false
+    },
+    {
+      "log_id": 203,
+      "user_id": 2,
+      "completed_at": "2025-11-08T19:00:00Z",
+      "exercise_name": "Cardio Dance",
+      "duration_minutes": 40,
+      "calories_burned_estimated": 300,
+      "is_ai_suggested": true
+    },
+    {
+      "log_id": 204,
+      "user_id": 3,
+      "completed_at": "2025-11-07T17:30:00Z",
+      "exercise_name": "Deadlift",
+      "duration_minutes": 50,
+      "calories_burned_estimated": 450,
+      "is_ai_suggested": false
+    },
+    {
+      "log_id": 205,
+      "user_id": 4,
+      "completed_at": "2025-11-08T09:00:00Z",
+      "exercise_name": "Đi bộ nhanh",
+      "duration_minutes": 25,
+      "calories_burned_estimated": 120,
+      "is_ai_suggested": false
+    }
+  ]
+}
