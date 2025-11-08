@@ -1,0 +1,678 @@
+.container {
+  padding: 24px;
+  background: #FAFBFC;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.periodSelector {
+  display: flex;
+  gap: 8px;
+}
+
+.periodBtn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 20px;
+  background: white;
+  color: #6B7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.periodBtn.active {
+  background: linear-gradient(135deg, #7DD87C 0%, #5EC963 100%);
+  color: white;
+}
+
+.periodBtn:hover:not(.active) {
+  background: #F3F4F6;
+}
+
+/* Main Grid Layout */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 380px 1fr 400px;
+  gap: 24px;
+}
+
+/* Card Styles */
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+  border: 1px solid #F3F4F6;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #E5E7EB;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.moreBtn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #9CA3AF;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.viewAllBtn {
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #7DD87C 0%, #5EC963 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewAllBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(125, 216, 124, 0.3);
+}
+
+.periodBadge {
+  padding: 6px 14px;
+  background: #F3F4F6;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  cursor: pointer;
+}
+
+/* Left Column - Body Measurements */
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.bodyMeasurementContainer {
+  position: relative;
+  width: 100%;
+  min-height: 600px;
+}
+
+.bodySvgWrapper {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bodySvg {
+  width: 300px;
+  height: 600px;
+}
+
+.measurementLabel {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.measurementLine {
+  width: 30px;
+  height: 2px;
+  background: #FF6B6B;
+}
+
+.measurementBadge {
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #E5E7EB;
+}
+
+.measurementText {
+  font-size: 11px;
+  color: #6B7280;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.measurementValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Promo Banner */
+.promoBanner {
+  background: linear-gradient(135deg, #7DD87C 0%, #5EC963 100%);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: white;
+}
+
+.promoContent {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.promoIcon {
+  font-size: 48px;
+}
+
+.promoText {
+  flex: 1;
+}
+
+.promoTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.promoSubtitle {
+  font-size: 14px;
+  margin: 0;
+  opacity: 0.95;
+}
+
+.claimBtn {
+  padding: 12px 24px;
+  background: white;
+  color: #5EC963;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.claimBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Middle Column - Weight & Photos */
+.middleColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.weightInfo {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.weightStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.weightLabel {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.weightValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.chartWrapper {
+  margin-top: 20px;
+}
+
+.lineChart {
+  width: 100%;
+  height: 150px;
+  margin-bottom: 10px;
+}
+
+.lineChart polyline {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 2s ease-out forwards;
+}
+
+@keyframes drawLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.lineChart circle {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.lineChart circle:nth-child(1) { animation-delay: 0.3s; }
+.lineChart circle:nth-child(2) { animation-delay: 0.6s; }
+.lineChart circle:nth-child(3) { animation-delay: 0.9s; }
+.lineChart circle:nth-child(4) { animation-delay: 1.2s; }
+.lineChart circle:nth-child(5) { animation-delay: 1.5s; }
+.lineChart circle:nth-child(6) { animation-delay: 1.8s; }
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+.chartLabels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #6B7280;
+}
+
+/* Progress Photos */
+.photosGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.photoCard {
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.photoCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-color: #7DD87C;
+}
+
+.photoPlaceholder {
+  height: 180px;
+  background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.photoPlaceholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoIcon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.photoInfo {
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.photoDate {
+  font-size: 13px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.photoWeight {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Progress Table */
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.progressTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.progressTable th {
+  text-align: left;
+  padding: 12px;
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: 600;
+  border-bottom: 2px solid #E5E7EB;
+}
+
+.progressTable td {
+  padding: 16px 12px;
+  font-size: 14px;
+  color: #1a1a1a;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.weekCell {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.progressTable tbody tr:hover {
+  background: #FAFBFC;
+}
+
+/* Right Column - Stats */
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Calories Chart */
+.caloriesInfo {
+  margin-bottom: 16px;
+}
+
+.caloriesStat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.caloriesLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.caloriesValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.caloriesSubtext {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.barChartWrapper {
+  display: flex;
+  gap: 20px;
+  height: 200px;
+  align-items: flex-end;
+  margin: 20px 0;
+  padding: 0 10px;
+}
+
+.barGroup {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.bars {
+  display: flex;
+  gap: 6px;
+  height: 100%;
+  align-items: flex-end;
+  width: 100%;
+  justify-content: center;
+}
+
+.barConsumed,
+.barBurned {
+  width: 20px;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.barConsumed {
+  background: linear-gradient(180deg, #FFD700 0%, #FFB84D 100%);
+}
+
+.barBurned {
+  background: linear-gradient(180deg, #FF8C8C 0%, #FF6B6B 100%);
+}
+
+.barGroup:hover .barConsumed,
+.barGroup:hover .barBurned {
+  transform: scaleY(1.05);
+  filter: brightness(1.1);
+}
+
+.barLabel {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.legend {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  padding-top: 12px;
+  border-top: 1px solid #F3F4F6;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Sleep Chart */
+.sleepChart {
+  display: flex;
+  gap: 16px;
+  height: 200px;
+  align-items: flex-end;
+  margin: 20px 0;
+  padding: 0 10px;
+}
+
+.sleepBar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.sleepStack {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+
+.sleepSegment {
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.sleepBar:hover .sleepStack {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.sleepLabel {
+  font-size: 11px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.sleepLegend {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #F3F4F6;
+}
+
+/* Hydration */
+.hydrationStatus {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%);
+  border-radius: 12px;
+}
+
+.hydrationIcon {
+  font-size: 32px;
+}
+
+.hydrationText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hydrationLabel {
+  font-size: 14px;
+  color: #0369A1;
+  font-weight: 600;
+}
+
+.hydrationValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0C4A6E;
+}
+
+.hydrationChart {
+  display: flex;
+  gap: 12px;
+  height: 160px;
+  align-items: flex-end;
+  padding: 0 10px;
+}
+
+.hydrationBar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  position: relative;
+}
+
+.hydrationFill {
+  width: 100%;
+  background: linear-gradient(180deg, #7DD87C 0%, #5EC963 100%);
+  border-radius: 6px 6px 0 0;
+  transition: all 0.3s ease;
+  align-self: flex-end;
+  position: relative;
+}
+
+.hydrationBar:hover .hydrationFill {
+  filter: brightness(1.1);
+  box-shadow: 0 -4px 12px rgba(125, 216, 124, 0.4);
+}
+
+.hydrationInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hydrationDay {
+  font-size: 11px;
+  color: #6B7280;
+  font-weight: 600;
+}
+
+.hydrationAmount {
+  font-size: 10px;
+  color: #9CA3AF;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .mainGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .rightColumn {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .container {
+    padding: 16px;
+  }
+}

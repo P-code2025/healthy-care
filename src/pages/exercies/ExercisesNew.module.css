@@ -1,0 +1,513 @@
+.container {
+  padding: 24px;
+  background: #f8fafb;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(167, 233, 175, 0.3);
+}
+
+.addButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(167, 233, 175, 0.4);
+}
+
+.addIcon {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Filters Section */
+.filtersSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.leftFilters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  min-width: 320px;
+  transition: all 0.2s ease;
+}
+
+.searchBox:focus-within {
+  border-color: #A7E9AF;
+  box-shadow: 0 0 0 3px rgba(167, 233, 175, 0.1);
+}
+
+.searchBox svg {
+  color: #9CA3AF;
+  flex-shrink: 0;
+}
+
+.searchBox input {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+  color: #374151;
+}
+
+.searchBox input::placeholder {
+  color: #9CA3AF;
+}
+
+.filterSelect {
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  min-width: 140px;
+}
+
+.filterSelect:hover {
+  border-color: #D1D5DB;
+}
+
+.filterSelect:focus {
+  border-color: #A7E9AF;
+  box-shadow: 0 0 0 3px rgba(167, 233, 175, 0.1);
+}
+
+.rightFilters {
+  display: flex;
+  gap: 12px;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.iconButton:hover {
+  border-color: #A7E9AF;
+  background: #F9FAFB;
+}
+
+.iconButton span {
+  font-size: 16px;
+}
+
+/* Table Section */
+.tableSection {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+}
+
+.tableContainer {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background: #F9FAFB;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.sortIcon {
+  color: #D1D5DB;
+  margin-left: 6px;
+  font-size: 11px;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #F3F4F6;
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background: #F9FAFB;
+}
+
+.table td {
+  padding: 16px;
+  font-size: 14px;
+  color: #374151;
+  white-space: nowrap;
+}
+
+/* Exercise Cell */
+.exerciseCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.exerciseIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.exerciseName {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 15px;
+}
+
+/* Table Data */
+.sets {
+  color: #374151;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.reps {
+  color: #6B7280;
+  font-size: 14px;
+}
+
+.rest {
+  color: #6B7280;
+  font-size: 14px;
+}
+
+.weight {
+  color: #374151;
+  font-weight: 500;
+}
+
+.calories {
+  color: #374151;
+  font-weight: 600;
+}
+
+/* Status Badges */
+.statusBadge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.statusBadge.completed {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.statusBadge.inProgress {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.statusBadge.notStarted {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.statusBadge.skipped {
+  background: #FFE5B4;
+  color: #FF9800;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.paginationInfo {
+  font-size: 14px;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perPageSelect {
+  padding: 6px 10px;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  margin: 0 4px;
+  font-weight: 600;
+  color: #374151;
+  background: white;
+}
+
+.perPageSelect:focus {
+  border-color: #A7E9AF;
+}
+
+.paginationControls {
+  display: flex;
+  gap: 8px;
+}
+
+.pageBtn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: #A7E9AF;
+  background: #F0FDF4;
+  color: #059669;
+}
+
+.pageBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageBtn:first-child:not(:disabled) {
+  background: #D4F4DD;
+  color: #059669;
+  border-color: #A7E9AF;
+}
+
+/* Promo Banner */
+.promoBanner {
+  background: linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%);
+  border-radius: 16px;
+  padding: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.promoBanner::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+
+.promoContent {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.promoVeggies {
+  font-size: 80px;
+  line-height: 1;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.promoText {
+  font-size: 16px;
+  color: #1a1a1a;
+  line-height: 1.6;
+}
+
+.promoTitle {
+  margin: 0 0 4px 0;
+  font-weight: 500;
+}
+
+.promoSubtitle {
+  margin: 0;
+  font-size: 18px;
+}
+
+.promoSubtitle strong {
+  font-weight: 700;
+  font-size: 20px;
+  color: #16A34A;
+}
+
+.claimBtn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #FFB84D 0%, #FF9800 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.claimBtn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(255, 152, 0, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .filtersSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .leftFilters,
+  .rightFilters {
+    width: 100%;
+  }
+
+  .searchBox {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .addButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .leftFilters {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .filterSelect {
+    width: 100%;
+  }
+
+  .tableContainer {
+    overflow-x: scroll;
+  }
+
+  .table {
+    min-width: 800px;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .paginationControls {
+    justify-content: center;
+  }
+
+  .promoBanner {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .promoContent {
+    flex-direction: column;
+    text-align: center;
+  }
+}
