@@ -1,0 +1,47 @@
+/* src/pages/healthyMenu/HealthyMenu.module.css */
+
+.container {
+  /* Đang dùng layout chung, không cần padding */
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #333;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.nutritionList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.nutritionList li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed #eee;
+}

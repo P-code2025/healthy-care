@@ -20,7 +20,8 @@ export default function GroceryList() {
   const [categorized, setCategorized] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    api.getAiSuggestions().then((data) => {
+    // Dòng code đã sửa
+    api.getAiSuggestions().then((data: AiSuggestion[]) => {
       const nutritionPlans = data.filter((s) => s.type === "nutrition");
       const allItems: string[] = [];
       nutritionPlans.forEach((p) => {
