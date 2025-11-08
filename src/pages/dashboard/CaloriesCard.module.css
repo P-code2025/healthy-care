@@ -1,0 +1,25 @@
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  margin: 0;
+  color: #888;
+}
+
+.total {
+  margin: 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  font-size: 14px;
+  color: #333;
+}
