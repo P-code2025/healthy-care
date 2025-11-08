@@ -1,7 +1,7 @@
 // src/pages/Progress/components/CaloriesActivities.tsx
 import {
-  LineChart,
-  Line,
+  BarChart, // Sửa: Import BarChart
+  Bar, // Sửa: Import Bar
   XAxis,
   YAxis,
   Tooltip,
@@ -18,7 +18,7 @@ export default function CaloriesActivities({
   foodLogs: FoodLog[];
   workoutLogs: WorkoutLog[];
 }) {
-  // Gom calories theo ngày
+  // Gom calories theo ngày (Phần này code cũ của bạn đã làm đúng)
   const intakeByDate: Record<string, number> = {};
   foodLogs.forEach((f) => {
     const date = new Date(f.eaten_at).toLocaleDateString("vi-VN");
@@ -37,32 +37,24 @@ export default function CaloriesActivities({
 
   const data = allDates.map((d) => ({
     date: d,
-    intake: intakeByDate[d] || 0,
-    burn: burnByDate[d] || 0,
+    Consumed: intakeByDate[d] || 0, // Đổi tên "intake" thành "Consumed"
+    Burned: burnByDate[d] || 0, // Đổi tên "burn" thành "Burned"
   }));
 
   return (
     <div className={styles.card}>
       <h3 className={styles.cardTitle}>Calories Intake vs Burn</h3>
+
+      {/* Sửa: Dùng BarChart thay vì LineChart */}
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data}>
+        <BarChart data={data}>
           <XAxis dataKey="date" />
           <YAxis />
           <Tooltip />
           <Legend />
-          <Line
-            type="monotone"
-            dataKey="intake"
-            stroke="#8884d8"
-            name="Calories Intake"
-          />
-          <Line
-            type="monotone"
-            dataKey="burn"
-            stroke="#82ca9d"
-            name="Calories Burned"
-          />
-        </LineChart>
+          <Bar dataKey="Consumed" fill="#f87171" name="Calories Consumed" />
+          <Bar dataKey="Burned" fill="#4ade80" name="Calories Burned" />
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );

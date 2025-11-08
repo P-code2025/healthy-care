@@ -7,7 +7,8 @@ import { BrowserRouter } from "react-router-dom";
 
 // DÒNG NÀY LÀ QUAN TRỌNG NHẤT
 // Dòng này "bảo" Vite tải và biên dịch file CSS của Tailwind
-
+// THÊM DÒNG NÀY ĐỂ IMPORT STYLE CHO LỊCH
+import "react-big-calendar/lib/css/react-big-calendar.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
