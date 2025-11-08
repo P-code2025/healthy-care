@@ -44,17 +44,15 @@ const SidebarLeft: React.FC = () => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const location = useLocation();
 
-  // Active đúng khi ở route con của meal plan
   const isMealPlanActive =
     location.pathname.startsWith("/meal-plan") ||
     location.pathname.startsWith("/grocery-list");
 
-  // Đóng dropdown khi chuyển sang trang không thuộc nhóm Meal Plan
   useEffect(() => {
     if (!isMealPlanActive && openDropdown === "Meal Plan") {
       setOpenDropdown(null);
     }
-  }, [location.pathname]); // mỗi lần đổi route sẽ kiểm tra
+  }, [location.pathname]);
 
   return (
     <aside className={styles.sidebar}>
@@ -69,9 +67,9 @@ const SidebarLeft: React.FC = () => {
               <button
                 type="button"
                 className={`${styles.navLink} ${
-                  isMealPlanActive
-                    ? styles.active
-                    : openDropdown === item.name
+                  isMealPlanActive ? styles.parentActive : ""
+                } ${
+                  openDropdown === item.name && !isMealPlanActive
                     ? styles.open
                     : ""
                 }`}
@@ -122,6 +120,16 @@ const SidebarLeft: React.FC = () => {
         )}
       </nav>
 
+      {/* Banner quảng cáo */}
+      <div className={styles.adCard}>
+        <div className={styles.adCardInner}>
+          <h4>Start your health journey</h4>
+          <p>with a FREE 1-month access to Nutrigo!</p>
+          <button className={styles.adButton}>Claim Now!</button>
+        </div>
+      </div>
+
+      {/* Logout */}
       <div className={styles.logout}>
         <button className={styles.logoutButton}>
           <LuLogOut size={20} />

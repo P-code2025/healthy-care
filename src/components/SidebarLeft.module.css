@@ -38,6 +38,15 @@
   color: #374151;
   font-weight: 500;
   transition: background 0.2s ease;
+  background-color: transparent;
+  border: none; /* reset border mặc định của button */
+  outline: none; /* reset outline mặc định của button */
+  appearance: none; /* bỏ kiểu nút mặc định */
+  -webkit-appearance: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-size: medium;
 }
 
 .navLink:hover {
@@ -45,16 +54,46 @@
   color: #212529;
 }
 
+.navLink:focus,
+.navLink:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .navLink svg {
   margin-right: 12px;
 }
 
-/* Active state cho cả navLink và subLink */
-.active {
-  background-color: #ffffff; /* nền trắng */
-  color: #22c55e; /* chữ xanh lá */
+/* Active state cho NavLink bình thường và subLink */
+/* Active state cho NavLink bình thường và subLink */
+/* Active state cho cả NavLink và cha Meal Plan */
+.active,
+.parentActive {
+  background-color: #ffffff;
+  color: #22c55e;
   font-weight: 600;
   border-radius: 8px;
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+/* Cha Meal Plan active khi route con đang active */
+.parentActive {
+  background-color: #ffffff;
+  color: #22c55e;
+  font-weight: 600;
+  border-radius: 8px; /* giống .active */
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+/* Dropdown mở nhưng KHÔNG active: không highlight */
+/* Dropdown mở nhưng KHÔNG active */
+.open {
+  background-color: transparent;
+  color: #374151;
+  font-weight: 500;
 }
 
 .adCard {
@@ -129,6 +168,7 @@
   color: #374151;
   font-weight: 500;
   transition: background 0.2s ease;
+  background-color: transparent;
 }
 
 .subLink:hover {
