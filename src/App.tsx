@@ -1,35 +1,53 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// src/App.tsx
 
+import { Routes, Route } from "react-router-dom";
+import Layout from "./components/Layout"; // Import Layout đã sửa
+import Dashboard from "./pages/dashboard/Dashboard";
+import FoodDiary from "./pages/foodDiary/FoodDiary";
+import Progress from "./pages/progress/Progress";
+import MealPlan from "./pages/mealPlan/MealPlan";
+import GroceryList from "./pages/groceryList/GroceryList";
+
+const Calendar = () => (
+  <h1 className="text-3xl font-bold text-dark-text">Calendar Page</h1>
+);
+const Messages = () => (
+  <h1 className="text-3xl font-bold text-dark-text">Messages Page</h1>
+);
+const HealthyMenu = () => (
+  <h1 className="text-3xl font-bold text-dark-text">Healthy Menu Page</h1>
+);
+
+const Exercises = () => (
+  <h1 className="text-3xl font-bold text-dark-text">Exercises Page</h1>
+);
+const HealthInsights = () => (
+  <h1 className="text-3xl font-bold text-dark-text">Health Insights Page</h1>
+);
+const Settings = () => (
+  <h1 className="text-3xl font-bold text-dark-text">Settings Page</h1>
+);
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Layout>
+      {" "}
+      {/* Bây giờ 'Layout' đã nhận 'children' một cách chính xác */}
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/calendar" element={<Calendar />} />
+        <Route path="/healthy-menu" element={<HealthyMenu />} />
+        <Route path="/meal-plan" element={<MealPlan />} />
+        <Route path="/grocery-list" element={<GroceryList />} />
+
+        <Route path="/food-diary" element={<FoodDiary />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/progress" element={<Progress />} />
+        <Route path="/exercises" element={<Exercises />} />
+        <Route path="/health-insights" element={<HealthInsights />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </Layout>
+  );
 }
 
-export default App
+export default App;
