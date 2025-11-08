@@ -5,7 +5,7 @@ const CLOVA_API_KEY = 'nv-4d279739705c404bb355aaefef76c60cvHMd';
 const CLOVA_API_URL = 'https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005';
 
 // Configuration
-const DEMO_MODE = true; // Tạm dùng mock data vì CLOVA API có vấn đề với base64
+const DEMO_MODE = true; // CLOVA API có vấn đề với format, tạm dùng mock data
 const USE_PROXY = true;  // Must be true when calling from browser
 const PROXY_URL = 'http://localhost:3001'; // Backend proxy server
 

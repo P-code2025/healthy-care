@@ -66,15 +66,9 @@ app.post('/api/recognize-food', async (req, res) => {
     console.log('📸 Receiving food image for AI analysis...');
     console.log(`📦 Image size: ${(base64Image.length / 1024).toFixed(2)} KB`);
 
-    // Save image temporarily and get public URL
-    const imageId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    saveImageTemporarily(base64Image, imageId);
+    // Call CLOVA Studio API with base64 dataUri
+    console.log('🤖 Calling CLOVA Studio API with base64 data...');
     
-    // Create public URL for the image
-    const imageUrl = `http://localhost:${PORT}/temp-image/${imageId}`;
-    console.log(`🔗 Temporary image URL: ${imageUrl}`);
-
-    // Call CLOVA Studio API with public URL
     const response = await fetch(CLOVA_API_URL, {
       method: 'POST',
       headers: {
@@ -117,8 +111,8 @@ Example:
               },
               {
                 type: 'image_url',
-                image_url: {
-                  url: imageUrl,
+                dataUri: {
+                  data: base64Image,
                 },
               },
             ],
