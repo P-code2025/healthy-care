@@ -5,7 +5,7 @@ import {
   formatNutritionInfo, 
   saveFoodLog,
   type FoodRecognitionResult 
-} from '../services/aiService';
+} from '../../services/aiService';
 
 interface Message {
   id: string;

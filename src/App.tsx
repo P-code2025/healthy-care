@@ -3,28 +3,16 @@
 import { Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/dashboard/Dashboard";
+import Calendar from "./pages/calendar/Calendar";
 import FoodDiary from "./pages/foodDiary/FoodDiary";
 import Progress from "./pages/progress/Progress";
 import MealPlan from "./pages/mealPlan/MealPlan";
 import GroceryList from "./pages/groceryList/GroceryList";
-import Messages from "./pages/Messages";
-
-const Calendar = () => (
-  <h1 className="text-3xl font-bold text-dark-text">Calendar Page</h1>
-);
-const HealthyMenu = () => (
-  <h1 className="text-3xl font-bold text-dark-text">Healthy Menu Page</h1>
-);
-
-const Exercises = () => (
-  <h1 className="text-3xl font-bold text-dark-text">Exercises Page</h1>
-);
-const HealthInsights = () => (
-  <h1 className="text-3xl font-bold text-dark-text">Health Insights Page</h1>
-);
-const Settings = () => (
-  <h1 className="text-3xl font-bold text-dark-text">Settings Page</h1>
-);
+import Messages from "./pages/messages/Messages";
+import HealthyMenu from "./pages/healthyMenu/HealthyMenu";
+import Exercises from "./pages/exercies/Exercises";
+import HealthInsights from "./pages/healthInsights/HealthInsights";
+import Settings from "./pages/settings/Settings";
 function App() {
   return (
     <Layout>
