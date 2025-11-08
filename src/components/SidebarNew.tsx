@@ -10,7 +10,8 @@ const menuItems = [
   { name: 'Food Diary', icon: '📔', path: '/food-diary', badge: null },
   { name: 'Progress', icon: '📈', path: '/progress', badge: null },
   { name: 'Exercises', icon: '🏃', path: '/exercises', badge: null },
-  { name: 'Health Insights', icon: '💡', path: '/health-insights', badge: null }
+  { name: 'Health Insights', icon: '💡', path: '/health-insights', badge: null },
+  { name: 'Settings', icon: '⚙️', path: '/settings', badge: null }
 ];
 
 export default function SidebarNew() {
