@@ -10,4 +10,16 @@ export default defineConfig({
       },
     }),
   ],
+
+  // ✅ Thêm phần này để proxy request ClovaX
+  server: {
+    proxy: {
+      "/api/clova": {
+        target: "https://clovastudio.stream.ntruss.com",
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api\/clova/, ""), // bỏ tiền tố /api/clova
+      },
+    },
+  },
 })
