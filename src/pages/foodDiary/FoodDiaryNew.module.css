@@ -540,7 +540,8 @@
 
 .imagePreview {
   grid-column: 1 / 3;
-  width: 100%;
+  width: 80%;
+  height: 70%;
   border-radius: 14px;
   margin-top: 8px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.08);

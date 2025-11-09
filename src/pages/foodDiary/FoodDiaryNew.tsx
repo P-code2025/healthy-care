@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './FoodDiaryNew.module.css';
 import { analyzeFood } from '../../services/analyzeFood';
 import type { AnalysisResult } from '../../lib/types';
-import { useEffect } from 'react';
 
 interface FoodEntry {
   id: string;
