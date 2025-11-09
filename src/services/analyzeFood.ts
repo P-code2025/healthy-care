@@ -114,7 +114,25 @@ Return JSON only.`
       sugar: Math.round(Number(parsed.sugar) || 0),
     };
 
-    return { analysis: fallback };
+    const amountMatch = fallback.amount.match(/(\d+(\.\d+)?)/);
+const baseAmount = amountMatch ? parseFloat(amountMatch[0]) : 100;
+
+const base100g = {
+  calories: Math.round(fallback.calories * 100 / baseAmount),
+  protein: Math.round(fallback.protein * 100 / baseAmount),
+  carbs: Math.round(fallback.carbs * 100 / baseAmount),
+  fat: Math.round(fallback.fat * 100 / baseAmount),
+  sugar: Math.round(fallback.sugar * 100 / baseAmount),
+};
+
+// Trả về kết quả có base100g
+return {
+  analysis: {
+    ...fallback,
+    base100g,
+    baseAmount,
+  }
+};
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

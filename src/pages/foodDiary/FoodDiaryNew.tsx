@@ -264,6 +264,24 @@ export default function FoodDiaryNew() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMealType, setSelectedMealType] = useState<FoodEntry['mealType']>('Breakfast');
 
+  const recalculateFromAmount = (
+    amountStr: string,
+    base100g: NonNullable<AnalysisResult['base100g']>
+  ) => {
+    const match = amountStr.match(/(\d+(\.\d+)?)/);
+    if (!match) return null;
+    const amount = parseFloat(match[0]);
+    const factor = amount / 100;
+
+    return {
+      calories: Math.round(base100g.calories * factor),
+      protein: Math.round(base100g.protein * factor),
+      carbs: Math.round(base100g.carbs * factor),
+      fat: Math.round(base100g.fat * factor),
+      sugar: Math.round(base100g.sugar * factor),
+    };
+  };
+
   useEffect(() => {
     if (!isDirty || !selectedImage || selectedImage === lastAnalyzedImage) return;
 
@@ -303,77 +321,88 @@ export default function FoodDiaryNew() {
 
   // Lấy thông tin từ OpenFoodFacts
   const fetchBarcodeInfo = async (barcode: string) => {
-  try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-    const data = await res.json();
-    if (data.status !== 1) return null;
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+      const data = await res.json();
+      if (data.status !== 1) return null;
 
-    const p = data.product;
-    const n = p.nutriments || {};
+      const p = data.product;
+      const n = p.nutriments || {};
 
-    // LẤY DỮ LIỆU THEO THỨ TỰ ƯU TIÊN: serving → 100g → fallback
-    const getNutrient = (keys: string[], defaultVal = 0) => {
-      for (const key of keys) {
-        if (n[key] !== undefined && n[key] !== null) return Number(n[key]);
-      }
-      return defaultVal;
-    };
+      // LẤY DỮ LIỆU THEO THỨ TỰ ƯU TIÊN: serving → 100g → fallback
+      const getNutrient = (keys: string[], defaultVal = 0) => {
+        for (const key of keys) {
+          if (n[key] !== undefined && n[key] !== null) return Number(n[key]);
+        }
+        return defaultVal;
+      };
 
-    const servingSize = p.serving_size || '100g';
-    const sizeMatch = servingSize.match(/(\d+(\.\d+)?)/);
-    const size = sizeMatch ? parseFloat(sizeMatch[0]) : 100;
-    const factor = size / 100;
+      const servingSize = p.serving_size || '100g';
+      const sizeMatch = servingSize.match(/(\d+(\.\d+)?)/);
+      const size = sizeMatch ? parseFloat(sizeMatch[0]) : 100;
+      const factor = size / 100;
 
-    // Ưu tiên: serving → 100g → base
-    const calories = Math.round(
-      getNutrient(['energy-kcal_serving']) ||
-      getNutrient(['energy-kcal_100g']) * factor ||
-      getNutrient(['energy-kcal']) * factor ||
-      0
-    );
 
-    const protein = Math.round(
-      getNutrient(['proteins_serving']) ||
-      getNutrient(['proteins_100g']) * factor ||
-      getNutrient(['proteins']) * factor ||
-      0
-    );
+      // Ưu tiên: serving → 100g → base
+      const calories = Math.round(
+        getNutrient(['energy-kcal_serving']) ||
+        getNutrient(['energy-kcal_100g']) * factor ||
+        getNutrient(['energy-kcal']) * factor ||
+        0
+      );
 
-    const carbs = Math.round(
-      getNutrient(['carbohydrates_serving']) ||
-      getNutrient(['carbohydrates_100g']) * factor ||
-      getNutrient(['carbohydrates']) * factor ||
-      0
-    );
+      const protein = Math.round(
+        getNutrient(['proteins_serving']) ||
+        getNutrient(['proteins_100g']) * factor ||
+        getNutrient(['proteins']) * factor ||
+        0
+      );
 
-    const fat = Math.round(
-      getNutrient(['fat_serving']) ||
-      getNutrient(['fat_100g']) * factor ||
-      getNutrient(['fat']) * factor ||
-      0
-    );
+      const carbs = Math.round(
+        getNutrient(['carbohydrates_serving']) ||
+        getNutrient(['carbohydrates_100g']) * factor ||
+        getNutrient(['carbohydrates']) * factor ||
+        0
+      );
 
-    const sugar = Math.round(
-      getNutrient(['sugars_serving']) ||
-      getNutrient(['sugars_100g']) * factor ||
-      getNutrient(['sugars']) * factor ||
-      0
-    );
+      const fat = Math.round(
+        getNutrient(['fat_serving']) ||
+        getNutrient(['fat_100g']) * factor ||
+        getNutrient(['fat']) * factor ||
+        0
+      );
 
-    return {
-      foodName: p.product_name_vi || p.product_name || p.brands || 'Sản phẩm',
-      amount: `${servingSize} (${p.quantity || '1 chai'})`,
-      calories,
-      protein,
-      carbs,
-      fat,
-      sugar,
-    };
-  } catch (err) {
-    console.error('Lỗi fetch OpenFoodFacts:', err);
-    return null;
-  }
-};
+      const sugar = Math.round(
+        getNutrient(['sugars_serving']) ||
+        getNutrient(['sugars_100g']) * factor ||
+        getNutrient(['sugars']) * factor ||
+        0
+      );
+
+      const base100g = {
+        calories: Math.round(calories * 100 / size),
+        protein: Math.round(protein * 100 / size),
+        carbs: Math.round(carbs * 100 / size),
+        fat: Math.round(fat * 100 / size),
+        sugar: Math.round(sugar * 100 / size),
+      };
+
+      return {
+        foodName: p.product_name_vi || p.product_name || p.brands || 'Sản phẩm không xác định',
+        amount: `${servingSize} (${p.quantity || '100g'})`,
+        calories,
+        protein,
+        carbs,
+        fat,
+        sugar,
+        base100g,
+        baseAmount: size,
+      };
+    } catch (err) {
+      console.error('Lỗi fetch OpenFoodFacts:', err);
+      return null;
+    }
+  };
 
   // Xử lý ảnh
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -440,35 +469,35 @@ export default function FoodDiaryNew() {
   };
   // Submit form
   const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  const form = e.target as HTMLFormElement;
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
 
-  const now = new Date();
-  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const newEntry: FoodEntry = {
-    id: Date.now().toString(),
-    date: selectedDate,
-    time,
-    mealType: selectedMealType,
-    foodName: analysisResult.foodName || (form.elements.namedItem('foodName') as HTMLInputElement)?.value || 'Không tên',
-    amount: analysisResult.amount || (form.elements.namedItem('amount') as HTMLInputElement)?.value || '',
-    calories: analysisResult.calories || Number((form.elements.namedItem('calories') as HTMLInputElement)?.value) || 0,
-    protein: analysisResult.protein || Number((form.elements.namedItem('protein') as HTMLInputElement)?.value) || 0,
-    carbs: analysisResult.carbs || Number((form.elements.namedItem('carbs') as HTMLInputElement)?.value) || 0,
-    fat: analysisResult.fat || Number((form.elements.namedItem('fat') as HTMLInputElement)?.value) || 0,
-    sugar: analysisResult.sugar || Number((form.elements.namedItem('sugar') as HTMLInputElement)?.value) || 0,
-    status: (form.elements.namedItem('status') as HTMLSelectElement)?.value as FoodEntry['status'],
-    thoughts: (form.elements.namedItem('thoughts') as HTMLTextAreaElement)?.value || '',
+    const newEntry: FoodEntry = {
+      id: Date.now().toString(),
+      date: selectedDate,
+      time,
+      mealType: selectedMealType,
+      foodName: analysisResult.foodName || (form.elements.namedItem('foodName') as HTMLInputElement)?.value || 'Không tên',
+      amount: analysisResult.amount || (form.elements.namedItem('amount') as HTMLInputElement)?.value || '',
+      calories: analysisResult.calories || Number((form.elements.namedItem('calories') as HTMLInputElement)?.value) || 0,
+      protein: analysisResult.protein || Number((form.elements.namedItem('protein') as HTMLInputElement)?.value) || 0,
+      carbs: analysisResult.carbs || Number((form.elements.namedItem('carbs') as HTMLInputElement)?.value) || 0,
+      fat: analysisResult.fat || Number((form.elements.namedItem('fat') as HTMLInputElement)?.value) || 0,
+      sugar: analysisResult.sugar || Number((form.elements.namedItem('sugar') as HTMLInputElement)?.value) || 0,
+      status: (form.elements.namedItem('status') as HTMLSelectElement)?.value as FoodEntry['status'],
+      thoughts: (form.elements.namedItem('thoughts') as HTMLTextAreaElement)?.value || '',
+    };
+
+    setFoodEntries(prev => [...prev, newEntry]);
+    toast.success('Đã thêm món ăn!');
+
+    // ĐÓNG MODAL + RESET FORM
+    setShowModal(false);
+    resetForm();
   };
-
-  setFoodEntries(prev => [...prev, newEntry]);
-  toast.success('Đã thêm món ăn!');
-
-  // ĐÓNG MODAL + RESET FORM
-  setShowModal(false);
-  resetForm();
-};
 
   const resetForm = () => {
     setAnalysisResult({ foodName: '', amount: '', calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0 });
@@ -596,17 +625,17 @@ export default function FoodDiaryNew() {
 
             {/* Image Upload */}
             <div className={styles.imageUploadWrapper}>
-  <label className={styles.imageUploadLabel}>
-    📷 Chọn/Chụp món ăn
-    <input type="file" accept="image/*" onChange={handleImageUpload} />
-  </label>
+              <label className={styles.imageUploadLabel}>
+                📷 Chọn/Chụp món ăn
+                <input type="file" accept="image/*" onChange={handleImageUpload} />
+              </label>
 
-  {selectedImage && (
-    <div className={styles.imagePreviewWrapper}>
-      <img src={selectedImage} alt="Preview" className={styles.imagePreview} />
-    </div>
-  )}
-</div>
+              {selectedImage && (
+                <div className={styles.imagePreviewWrapper}>
+                  <img src={selectedImage} alt="Preview" className={styles.imagePreview} />
+                </div>
+              )}
+            </div>
 
             {/* Form */}
             <form className={styles.modalForm} onSubmit={handleSubmit}>
@@ -636,15 +665,77 @@ export default function FoodDiaryNew() {
 
               <label>
                 Khối lượng
-                <input name="amount" type="text" value={analysisResult.amount} onChange={e => setAnalysisResult(prev => ({ ...prev, amount: e.target.value }))}
-                  placeholder="Ví dụ: 1 chén, 200g" />
+                <input
+                  name="amount"
+                  type="text"
+                  value={analysisResult.amount}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setAnalysisResult(prev => {
+                      if (!prev.base100g) return { ...prev, amount: val };
+
+                      const recalculated = recalculateFromAmount(val, prev.base100g);
+                      if (!recalculated) return { ...prev, amount: val };
+
+                      return {
+                        ...prev,
+                        amount: val,
+                        ...recalculated,
+                      };
+                    });
+                  }}
+                  placeholder="Ví dụ: 200g, 1 bát..."
+                />
               </label>
 
               <div className={styles.macroGrid}>
                 {(['calories', 'protein', 'carbs', 'fat', 'sugar'] as const).map(key => (
                   <label key={key}>
                     {key.charAt(0).toUpperCase() + key.slice(1)} {key === 'calories' ? '(kcal)' : '(g)'}
-                    <input name={key} type="number" value={analysisResult[key]} onChange={e => setAnalysisResult(prev => ({ ...prev, [key]: Number(e.target.value) }))} />
+                    <input
+                      name={key}
+                      type="number"
+                      value={analysisResult[key]}
+                      onChange={e => {
+                        const value = Number(e.target.value);
+                        if (isNaN(value)) return;
+
+                        setAnalysisResult(prev => {
+                          // Nếu chưa có base100g → chỉ cập nhật giá trị
+                          if (!prev.base100g) {
+                            return { ...prev, [key]: value };
+                          }
+
+                          // CÁC TRƯỜNG HỢP ĐẶC BIỆT
+                          if (key === 'calories') {
+                            const ratio = prev.calories === 0 ? 1 : value / prev.calories;
+                            return {
+                              ...prev,
+                              calories: value,
+                              protein: Math.round(prev.protein * ratio),
+                              carbs: Math.round(prev.carbs * ratio),
+                              fat: Math.round(prev.fat * ratio),
+                              sugar: Math.round(prev.sugar * ratio),
+                            };
+                          }
+
+                          if (key === 'carbs') {
+                            const ratio = prev.carbs === 0 ? 1 : value / prev.carbs;
+                            return {
+                              ...prev,
+                              carbs: value,
+                              calories: Math.round(prev.calories * ratio),
+                              protein: Math.round(prev.protein * ratio),
+                              fat: Math.round(prev.fat * ratio),
+                              sugar: Math.round(prev.sugar * ratio),
+                            };
+                          }
+
+                          // Các macro còn lại (protein, fat, sugar) → chỉ cập nhật
+                          return { ...prev, [key]: value };
+                        });
+                      }}
+                    />
                   </label>
                 ))}
               </div>
