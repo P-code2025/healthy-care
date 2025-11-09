@@ -303,30 +303,77 @@ export default function FoodDiaryNew() {
 
   // Lấy thông tin từ OpenFoodFacts
   const fetchBarcodeInfo = async (barcode: string) => {
-    try {
-      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-      const data = await res.json();
-      if (data.status !== 1) return null;
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+    const data = await res.json();
+    if (data.status !== 1) return null;
 
-      const p = data.product;
-      const n = p.nutriments || {};
-      const serving = p.serving_size || '100g';
-      const size = parseFloat(serving.replace(/[^0-9.]/g, '')) || 100;
-      const factor = size / 100;
+    const p = data.product;
+    const n = p.nutriments || {};
 
-      return {
-        foodName: p.product_name_vi || p.product_name || p.brands || 'Sản phẩm',
-        amount: serving + ' (' + (p.quantity || '1 gói') + ')',
-        calories: Math.round((n['energy-kcal_100g'] || 0) * factor),
-        protein: Math.round((n.proteins_100g || 0) * factor),
-        carbs: Math.round((n.carbohydrates_100g || 0) * factor),
-        fat: Math.round((n.fat_100g || 0) * factor),
-        sugar: Math.round((n.sugars_100g || 0) * factor),
-      };
-    } catch {
-      return null;
-    }
-  };
+    // LẤY DỮ LIỆU THEO THỨ TỰ ƯU TIÊN: serving → 100g → fallback
+    const getNutrient = (keys: string[], defaultVal = 0) => {
+      for (const key of keys) {
+        if (n[key] !== undefined && n[key] !== null) return Number(n[key]);
+      }
+      return defaultVal;
+    };
+
+    const servingSize = p.serving_size || '100g';
+    const sizeMatch = servingSize.match(/(\d+(\.\d+)?)/);
+    const size = sizeMatch ? parseFloat(sizeMatch[0]) : 100;
+    const factor = size / 100;
+
+    // Ưu tiên: serving → 100g → base
+    const calories = Math.round(
+      getNutrient(['energy-kcal_serving']) ||
+      getNutrient(['energy-kcal_100g']) * factor ||
+      getNutrient(['energy-kcal']) * factor ||
+      0
+    );
+
+    const protein = Math.round(
+      getNutrient(['proteins_serving']) ||
+      getNutrient(['proteins_100g']) * factor ||
+      getNutrient(['proteins']) * factor ||
+      0
+    );
+
+    const carbs = Math.round(
+      getNutrient(['carbohydrates_serving']) ||
+      getNutrient(['carbohydrates_100g']) * factor ||
+      getNutrient(['carbohydrates']) * factor ||
+      0
+    );
+
+    const fat = Math.round(
+      getNutrient(['fat_serving']) ||
+      getNutrient(['fat_100g']) * factor ||
+      getNutrient(['fat']) * factor ||
+      0
+    );
+
+    const sugar = Math.round(
+      getNutrient(['sugars_serving']) ||
+      getNutrient(['sugars_100g']) * factor ||
+      getNutrient(['sugars']) * factor ||
+      0
+    );
+
+    return {
+      foodName: p.product_name_vi || p.product_name || p.brands || 'Sản phẩm',
+      amount: `${servingSize} (${p.quantity || '1 chai'})`,
+      calories,
+      protein,
+      carbs,
+      fat,
+      sugar,
+    };
+  } catch (err) {
+    console.error('Lỗi fetch OpenFoodFacts:', err);
+    return null;
+  }
+};
 
   // Xử lý ảnh
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
