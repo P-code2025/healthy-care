@@ -14,11 +14,15 @@ import ExercisesNew from "./pages/exercies/ExercisesNew";
 import HealthInsightsNew from "./pages/healthInsights/HealthInsightsNew";
 import HealthInsightDetail from "./pages/healthInsights/HealthInsightDetail";
 import Settings from "./pages/settings/Settings";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 function App() {
   return (
     <Layout>
       {" "}
       {/* Bây giờ 'Layout' đã nhận 'children' một cách chính xác */}
+      <ToastContainer position="top-right" />
       <Routes>
         <Route path="/" element={<DashboardNew />} />
         <Route path="/calendar" element={<Calendar />} />

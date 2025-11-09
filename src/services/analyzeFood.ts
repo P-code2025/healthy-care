@@ -46,6 +46,7 @@ Return JSON only.`
         content: [
           { type: "image_url", imageUrl: null, dataUri: { data: imageData } },
           { type: "text", text: userPrompt },
+          
         ],
       },
     ];

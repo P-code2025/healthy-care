@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import styles from './FoodDiaryNew.module.css';
 import { analyzeFood } from '../../services/analyzeFood';
 import type { AnalysisResult } from '../../lib/types';
+import { toast } from 'react-toastify';
+import { compressImage } from '../../utils/imageUtils';
+import { detectBarcodeWithQuagga } from '../../utils/barcodeUtils';
 
 interface FoodEntry {
   id: string;
@@ -18,6 +21,7 @@ interface FoodEntry {
   status: 'Energized' | 'Quite Satisfied' | 'Satisfied' | 'Guilty' | 'Uncomfortable';
   thoughts?: string;
 }
+
 
 const FOOD_ENTRIES: FoodEntry[] = [
   {
@@ -202,6 +206,13 @@ const FOOD_ENTRIES: FoodEntry[] = [
   // },
 ];
 
+const getMealTypeFromTime = (hour: number): FoodEntry['mealType'] => {
+  if (hour >= 5 && hour < 11) return 'Breakfast';
+  if (hour >= 11 && hour < 14) return 'Lunch';
+  if (hour >= 18 && hour < 22) return 'Dinner';
+  return 'Snack';
+};
+
 const getMealTypeBadgeColor = (mealType: string) => {
   const colors: Record<string, string> = {
     'Breakfast': '#D4F4DD',
@@ -221,6 +232,13 @@ const getStatusBadgeColor = (status: string) => {
     'Uncomfortable': '#F3E8FF'
   };
   return colors[status] || '#E5E7EB';
+};
+
+const getMealPrompt = (mealType: string, date: string) => {
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = date === today;
+  const day = isToday ? 'hôm nay' : 'hôm qua';
+  return `Bạn muốn thêm món ăn vào buổi ${mealType.toLowerCase()} ${day}?`;
 };
 
 export default function FoodDiaryNew() {
@@ -243,6 +261,8 @@ export default function FoodDiaryNew() {
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>(FOOD_ENTRIES);
   const [isDirty, setIsDirty] = useState(false); // Có thay đổi foodName/amount không?
   const [lastAnalyzedImage, setLastAnalyzedImage] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedMealType, setSelectedMealType] = useState<FoodEntry['mealType']>('Breakfast');
 
   useEffect(() => {
     if (!isDirty || !selectedImage || selectedImage === lastAnalyzedImage) return;
@@ -275,7 +295,143 @@ export default function FoodDiaryNew() {
     }, 800); // debounce 800ms
 
     return () => clearTimeout(timeoutId);
-  }, [analysisResult, selectedImage, isDirty, lastAnalyzedImage]);
+    if (showModal) {
+      const hour = new Date().getHours();
+      setSelectedMealType(getMealTypeFromTime(hour));
+    }
+  }, [analysisResult, selectedImage, isDirty, lastAnalyzedImage, showModal]);
+
+  // Lấy thông tin từ OpenFoodFacts
+  const fetchBarcodeInfo = async (barcode: string) => {
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+      const data = await res.json();
+      if (data.status !== 1) return null;
+
+      const p = data.product;
+      const n = p.nutriments || {};
+      const serving = p.serving_size || '100g';
+      const size = parseFloat(serving.replace(/[^0-9.]/g, '')) || 100;
+      const factor = size / 100;
+
+      return {
+        foodName: p.product_name_vi || p.product_name || p.brands || 'Sản phẩm',
+        amount: serving + ' (' + (p.quantity || '1 gói') + ')',
+        calories: Math.round((n['energy-kcal_100g'] || 0) * factor),
+        protein: Math.round((n.proteins_100g || 0) * factor),
+        carbs: Math.round((n.carbohydrates_100g || 0) * factor),
+        fat: Math.round((n.fat_100g || 0) * factor),
+        sugar: Math.round((n.sugars_100g || 0) * factor),
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  // Xử lý ảnh
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const originalBase64 = reader.result as string;
+      setSelectedImage(originalBase64);
+      setLoading(true);
+      setError(null);
+
+      const toastId = toast.info('Đang quét mã vạch...', { autoClose: false });
+
+      try {
+        // BƯỚC 1: QUÉT MÃ VẠCH (dùng base64 trực tiếp)
+        const barcode = await detectBarcodeWithQuagga(originalBase64);
+
+        if (barcode) {
+          toast.update(toastId, { render: `Mã: ${barcode}`, type: 'info' });
+
+          const info = await fetchBarcodeInfo(barcode);
+          if (info) {
+            setAnalysisResult(info);
+            toast.update(toastId, {
+              render: 'Nhận diện từ mã vạch!',
+              type: 'success',
+              autoClose: 3000,
+            });
+            setLoading(false);
+            return;
+          } else {
+            toast.update(toastId, {
+              render: 'Mã vạch không có trong Open Food Facts',
+              type: 'warning',
+              autoClose: 3000,
+            });
+          }
+        } else {
+          toast.update(toastId, { render: 'AI phân tích...', type: 'info' });
+        }
+
+        // BƯỚC 2: DÙNG AI
+        const compressed = await compressImage(originalBase64, 900, 0.8);
+        const result = await analyzeFood(compressed);
+
+        if (result.error) {
+          setError(result.error);
+          toast.update(toastId, { render: 'Lỗi AI', type: 'error', autoClose: 3000 });
+        } else {
+          setAnalysisResult(result.analysis);
+          toast.update(toastId, { render: 'AI phân tích xong!', type: 'success', autoClose: 3000 });
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
+        toast.update(toastId, { render: 'Lỗi xử lý', type: 'error', autoClose: 3000 });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
+  // Submit form
+  const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  const form = e.target as HTMLFormElement;
+
+  const now = new Date();
+  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const newEntry: FoodEntry = {
+    id: Date.now().toString(),
+    date: selectedDate,
+    time,
+    mealType: selectedMealType,
+    foodName: analysisResult.foodName || (form.elements.namedItem('foodName') as HTMLInputElement)?.value || 'Không tên',
+    amount: analysisResult.amount || (form.elements.namedItem('amount') as HTMLInputElement)?.value || '',
+    calories: analysisResult.calories || Number((form.elements.namedItem('calories') as HTMLInputElement)?.value) || 0,
+    protein: analysisResult.protein || Number((form.elements.namedItem('protein') as HTMLInputElement)?.value) || 0,
+    carbs: analysisResult.carbs || Number((form.elements.namedItem('carbs') as HTMLInputElement)?.value) || 0,
+    fat: analysisResult.fat || Number((form.elements.namedItem('fat') as HTMLInputElement)?.value) || 0,
+    sugar: analysisResult.sugar || Number((form.elements.namedItem('sugar') as HTMLInputElement)?.value) || 0,
+    status: (form.elements.namedItem('status') as HTMLSelectElement)?.value as FoodEntry['status'],
+    thoughts: (form.elements.namedItem('thoughts') as HTMLTextAreaElement)?.value || '',
+  };
+
+  setFoodEntries(prev => [...prev, newEntry]);
+  toast.success('Đã thêm món ăn!');
+
+  // ĐÓNG MODAL + RESET FORM
+  setShowModal(false);
+  resetForm();
+};
+
+  const resetForm = () => {
+    setAnalysisResult({ foodName: '', amount: '', calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0 });
+    setSelectedImage(null);
+    setError(null);
+  };
+
+
+
+
 
   // Calculate totals
   const totalCalories = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
@@ -363,7 +519,7 @@ export default function FoodDiaryNew() {
         </button>
 
         <select
-          className={styles.periodSelect}
+          className={styles.customSelect}
           value={selectedPeriod}
           onChange={(e) => setSelectedPeriod(e.target.value)}
         >
@@ -378,142 +534,77 @@ export default function FoodDiaryNew() {
       </div>
 
       {showModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContainer}>
-            <h2 className={styles.modalTitle}>🍽️ Thêm bữa ăn mới</h2>
+        <div className={styles.modalOverlay} onClick={() => setShowModal(false)}>
+          <div className={styles.modalContainer} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className={styles.modalHeader}>
+              <h2>Thêm bữa ăn mới</h2>
+              <button className={styles.closeBtn} onClick={() => { setShowModal(false); resetForm(); }}>
+                ×
+              </button>
+            </div>
 
-            <form
-              className={styles.modalForm}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.target as HTMLFormElement;
+            {/* Meal prompt */}
+            <p className={styles.mealPrompt}>{getMealPrompt(selectedMealType, selectedDate)}</p>
 
-                const newEntry: FoodEntry = {
-                  id: (foodEntries.length + 1).toString(),
-                  date: new Date().toISOString().split('T')[0],
-                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  mealType: form.mealType.value as FoodEntry['mealType'],
-                  foodName: analysisResult.foodName || form.foodName.value,
-                  amount: analysisResult.amount || form.amount.value,
-                  calories: analysisResult.calories || Number(form.calories.value),
-                  protein: analysisResult.protein || Number(form.protein.value),
-                  carbs: analysisResult.carbs || Number(form.carbs.value),
-                  fat: analysisResult.fat || Number(form.fat.value),
-                  sugar: analysisResult.sugar || Number(form.sugar.value),
-                  status: form.status.value as FoodEntry['status'],
-                  thoughts: form.thoughts.value || '',
-                };
+            {/* Image Upload */}
+            <div className={styles.imageUploadWrapper}>
+  <label className={styles.imageUploadLabel}>
+    📷 Chọn/Chụp món ăn
+    <input type="file" accept="image/*" onChange={handleImageUpload} />
+  </label>
 
-                setFoodEntries(prev => [...prev, newEntry]);
-                setShowModal(false);
-                setAnalysisResult({
-                  foodName: '',
-                  amount: '',
-                  calories: 0,
-                  protein: 0,
-                  carbs: 0,
-                  fat: 0,
-                  sugar: 0,
-                });
-              }}
-            >
-              <label>
-                Loại bữa ăn
-                <select name="mealType" required>
-                  <option>Breakfast</option>
-                  <option>Lunch</option>
-                  <option>Dinner</option>
-                  <option>Snack</option>
-                </select>
-              </label>
+  {selectedImage && (
+    <div className={styles.imagePreviewWrapper}>
+      <img src={selectedImage} alt="Preview" className={styles.imagePreview} />
+    </div>
+  )}
+</div>
 
-              <label>
-                Tên món ăn
-                <input
-                  type="text"
-                  name="foodName"
-                  placeholder="Tên món ăn"
-                  value={analysisResult.foodName}
-                  onChange={(e) => {
-                    setAnalysisResult(prev => ({ ...prev, foodName: e.target.value }));
-                    setIsDirty(true); // Đánh dấu đã sửa
-                  }}
-                  required
-                />
-              </label>
-
-              <label>
-                Khối lượng
-                <input
-                  type="text"
-                  name="amount"
-                  placeholder="Ví dụ: 1 chén, 200g"
-                  value={analysisResult.amount}
-                  onChange={(e) => {
-                    setAnalysisResult(prev => ({ ...prev, amount: e.target.value }));
-                    setIsDirty(true); // Đánh dấu đã sửa
-                  }}
-                />
-              </label>
-
-              <div className={styles.macroGroup}>
-                <label className={styles.macroLabel}>
-                  Calories (kcal)
-                  <input
-                    type="number"
-                    name="calories"
-                    value={analysisResult.calories}
-                    onChange={(e) => {
-                      const newVal = Number(e.target.value);
-                      setAnalysisResult(prev => ({ ...prev, calories: newVal }));
-                      // Nếu người dùng sửa calories → không cần gọi AI
-                    }}
-                  />
-                </label>
-                <label className={styles.macroLabel}>
-                  Protein (g)
-                  <input
-                    type="number"
-                    name="protein"
-                    value={analysisResult.protein}
-                    onChange={(e) => setAnalysisResult(prev => ({ ...prev, protein: Number(e.target.value) }))}
-                  />
+            {/* Form */}
+            <form className={styles.modalForm} onSubmit={handleSubmit}>
+              <div className={styles.row}>
+                <label>
+                  Ngày
+                  <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+                    max={new Date().toISOString().split('T')[0]} />
                 </label>
 
-                <label className={styles.macroLabel}>
-                  Carbs (g)
-                  <input
-                    type="number"
-                    name="carbs"
-                    value={analysisResult.carbs}
-                    onChange={(e) => setAnalysisResult(prev => ({ ...prev, carbs: Number(e.target.value) }))}
-                  />
-                </label>
-
-                <label className={styles.macroLabel}>
-                  Fat (g)
-                  <input
-                    type="number"
-                    name="fat"
-                    value={analysisResult.fat}
-                    onChange={(e) => setAnalysisResult(prev => ({ ...prev, fat: Number(e.target.value) }))}
-                  />
-                </label>
-
-                <label className={styles.macroLabel}>
-                  Sugar (g)
-                  <input
-                    type="number"
-                    name="sugar"
-                    value={analysisResult.sugar}
-                    onChange={(e) => setAnalysisResult(prev => ({ ...prev, sugar: Number(e.target.value) }))}
-                  />
+                <label>
+                  Buổi ăn
+                  <select value={selectedMealType} className={styles.customSelect} onChange={e => setSelectedMealType(e.target.value as FoodEntry['mealType'])}>
+                    <option>Breakfast</option>
+                    <option>Lunch</option>
+                    <option>Dinner</option>
+                    <option>Snack</option>
+                  </select>
                 </label>
               </div>
 
               <label>
-                Cảm xúc sau bữa ăn
-                <select name="status">
+                Tên món ăn
+                <input name="foodName" type="text" value={analysisResult.foodName} onChange={e => setAnalysisResult(prev => ({ ...prev, foodName: e.target.value }))}
+                  placeholder="Tên món ăn" required />
+              </label>
+
+              <label>
+                Khối lượng
+                <input name="amount" type="text" value={analysisResult.amount} onChange={e => setAnalysisResult(prev => ({ ...prev, amount: e.target.value }))}
+                  placeholder="Ví dụ: 1 chén, 200g" />
+              </label>
+
+              <div className={styles.macroGrid}>
+                {(['calories', 'protein', 'carbs', 'fat', 'sugar'] as const).map(key => (
+                  <label key={key}>
+                    {key.charAt(0).toUpperCase() + key.slice(1)} {key === 'calories' ? '(kcal)' : '(g)'}
+                    <input name={key} type="number" value={analysisResult[key]} onChange={e => setAnalysisResult(prev => ({ ...prev, [key]: Number(e.target.value) }))} />
+                  </label>
+                ))}
+              </div>
+
+              <label>
+                Cảm xúc
+                <select name="status" defaultValue="Satisfied">
                   <option>Energized</option>
                   <option>Quite Satisfied</option>
                   <option>Satisfied</option>
@@ -524,78 +615,15 @@ export default function FoodDiaryNew() {
 
               <label>
                 Ghi chú
-                <textarea
-                  name="thoughts"
-                  placeholder="Ví dụ: Ăn ngon, hơi no quá..."
-                />
+                <textarea name="thoughts" placeholder="Ví dụ: Ăn ngon, hơi no..." />
               </label>
 
-              <label className={styles.imageUpload}>
-                Ảnh món ăn
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setImageFile(file);
-                      const reader = new FileReader();
-                      reader.onloadend = async () => {
-                        const base64 = reader.result as string;
-                        setSelectedImage(base64);
-
-                        setLoading(true);
-                        try {
-                          const result = await analyzeFood(base64);
-                          if (result.error) {
-                            setError(result.error);
-                          } else {
-                            // result.analysis là object → đúng kiểu!
-                            setAnalysisResult(result.analysis);
-                          }
-                        } catch (err) {
-                          setError('Lỗi khi phân tích ảnh');
-                        } finally {
-                          setLoading(false);
-                        }
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                />
-              </label>
-
-              {selectedImage && (
-                <img src={selectedImage} alt="Preview" className={styles.imagePreview} />
-              )}
-
-              {loading && <p>Đang nhận diện món ăn...</p>}
-              {error && <p style={{ color: "red" }}>{error}</p>}
-
-              <div className={styles.modalButtons}>
-                <button type="submit" className={styles.addMealBtn}>
-                  + Thêm bữa ăn
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setAnalysisResult({ foodName: '', amount: '', calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0 });
-                    setSelectedImage(null);
-                    setImageFile(null);
-                    setError(null);
-                    setIsDirty(false);
-                    setLastAnalyzedImage(null);
-                  }}
-                  className={styles.closeModalBtn}
-                >
-                  Đóng
-                </button>
-              </div>
+              <button type="submit" className={styles.addMealBtn}>+ Thêm bữa ăn</button>
             </form>
           </div>
         </div>
       )}
+
 
 
       {/* Table */}
