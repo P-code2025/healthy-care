@@ -1,25 +1,100 @@
-// src/components/YouTubePlayer.tsx
-import { useEffect, useRef } from 'react';
+import React, {
+  useRef,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+  memo,
+} from 'react';
 
-interface YouTubePlayerProps {
+export interface YouTubePlayerProps {
   videoId: string;
   autoplay?: boolean;
   muted?: boolean;
   width?: string;
   height?: string;
+  onStateChange?: (state: number) => void;
 }
 
-export default function YouTubePlayer({
-  videoId,
-  autoplay = false,
-  muted = false,
-  width = '100%',
-  height = '100%',
-}: YouTubePlayerProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+export interface YouTubePlayerRef {
+  seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
+  playVideo: () => void;
+  pauseVideo: () => void;
+}
 
-  useEffect(() => {
-    if (!iframeRef.current) return;
+const YouTubePlayer = forwardRef<YouTubePlayerRef, YouTubePlayerProps>(
+  (
+    {
+      videoId,
+      autoplay = false,
+      muted = false,
+      width = '100%',
+      height = '100%',
+      onStateChange,
+    },
+    ref
+  ) => {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    // Expose functions to parent component
+    useImperativeHandle(ref, () => ({
+      seekTo: (seconds: number, allowSeekAhead = true) => {
+        iframeRef.current?.contentWindow?.postMessage(
+          JSON.stringify({
+            event: 'command',
+            func: 'seekTo',
+            args: [seconds, allowSeekAhead],
+          }),
+          '*'
+        );
+      },
+      playVideo: () => {
+        iframeRef.current?.contentWindow?.postMessage(
+          JSON.stringify({ event: 'command', func: 'playVideo' }),
+          '*'
+        );
+      },
+      pauseVideo: () => {
+        iframeRef.current?.contentWindow?.postMessage(
+          JSON.stringify({ event: 'command', func: 'pauseVideo' }),
+          '*'
+        );
+      },
+    }));
+
+    useEffect(() => {
+      const handleMessage = (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.event === 'onStateChange' && onStateChange) {
+            onStateChange(data.info);
+          }
+        } catch {
+          // ignore
+        }
+      };
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
+    }, [onStateChange]);
+
+    if (!videoId || videoId.length !== 11) {
+      return (
+        <div
+          style={{
+            width,
+            height,
+            background: '#000',
+            borderRadius: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontSize: '14px',
+          }}
+        >
+          Video không khả dụng
+        </div>
+      );
+    }
 
     const params = new URLSearchParams({
       enablejsapi: '1',
@@ -28,28 +103,45 @@ export default function YouTubePlayer({
       mute: muted ? '1' : '0',
       rel: '0',
       modestbranding: '1',
+      iv_load_policy: '3',
+      controls: '1',
+      fs: '1',
     });
 
-    iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?${params}`;
-  }, [videoId, autoplay, muted]);
+    const src = `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
 
-  return (
-    <div style={{ position: 'relative', width, height, paddingBottom: '56.25%', overflow: 'hidden' }}>
-      <iframe
-        ref={iframeRef}
+    return (
+      <div
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          border: 0,
+          position: 'relative',
+          width,
+          height,
+          paddingBottom: '56.25%',
+          overflow: 'hidden',
           borderRadius: '16px',
         }}
-        title={`YouTube video player - ${videoId}`}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    </div>
-  );
-}
+      >
+        <iframe
+          ref={iframeRef}
+          src={src}
+          title={`YouTube - ${videoId}`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            border: 0,
+          }}
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+);
+
+YouTubePlayer.displayName = 'YouTubePlayer';
+
+export default memo(YouTubePlayer);

@@ -622,21 +622,6 @@
   position: relative;
 }
 
-.closeBtn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: rgba(0,0,0,0.1);
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-}
 
 .videoWrapper {
   position: relative;
@@ -816,6 +801,28 @@
   box-shadow: 0 8px 20px rgba(255, 152, 0, 0.4);
 }
 
+.workoutCloseBtn {
+  position: absolute;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 20;
+}
+
+.workoutCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
 /* Workout Mode */
 .workoutMode {
   background: #111;
@@ -830,6 +837,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  position: relative;
 }
 
 .workoutHeader h2 {
@@ -975,6 +983,197 @@
   gap: 8px;
   color: #fbbf24;
   font-weight: 600;
+}
+
+.workoutFullScreen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: white;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.videoContainerFull {
+  position: relative;
+  flex: 1;
+  background: #000;
+}
+
+.currentExercise {
+  padding: 16px;
+  text-align: center;
+  background: rgba(255,255,255,0.1);
+}
+
+.setGrid {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.setBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1f2937;
+  border: 2px solid #374151;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.setBtn.completed {
+  background: #16a34a;
+  border-color: #22c55e;
+}
+
+.restBtn {
+  background: #374151;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.restOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.restCircle {
+  width: 120px;
+  height: 120px;
+  border: 8px solid #22c55e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.kpiBanner {
+  background: linear-gradient(135deg, #d4f4dd, #a7e9af);
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpiProgress {
+  height: 8px;
+  background: #86efac;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.kpiProgress > div {
+  height: 100%;
+  background: #16a34a;
+  border-radius: 4px;
+}
+
+.motivation {
+  font-weight: 600;
+  color: #166534;
+}
+
+.programCard {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  padding: 12px;
+}
+
+.dayBtn {
+  padding: 8px 4px;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+}
+
+.dayBtn.today {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  font-weight: 600;
+}
+
+.dayBtn.done {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+.restDay {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.skipIntroBtn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.skipIntroBtn:hover {
+  background: rgba(22, 163, 74, 0.9);
+  transform: scale(1.05);
+}
+
+.videoOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.videoOverlay > * {
+  pointer-events: auto;
 }
 
 /* Responsive */

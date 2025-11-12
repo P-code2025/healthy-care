@@ -3,104 +3,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Play, Heart, Clock, Flame, ChevronRight, Search, Filter, X } from 'lucide-react';
 import styles from './ExercisesNew.module.css';
 import YouTubePlayer from '../../components/YouTubePlayer';
+import { SAMPLE_WORKOUT_PLANS, type WorkoutPlan } from './workoutPlans';
 
-// Types
-interface ExerciseInPlan {
-  exerciseId: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  videoUrl: string;
-}
-
-interface WorkoutPlan {
-  id: string;
-  title: string;
-  duration: number;
-  calories: number;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  goal: 'Strength' | 'Fat Loss' | 'Endurance' | 'Flexibility';
-  thumbnail: string;
-  videoUrl?: string;
-  exercises: ExerciseInPlan[];
-  progress?: number;
-  isSaved: boolean;
-  tags?: string[];
-}
-
-// Sample Data
-const SAMPLE_WORKOUT_PLANS: WorkoutPlan[] = [
-  {
-    id: "1",
-    title: "Full Body Strength - Week 1",
-    duration: 45,
-    calories: 320,
-    difficulty: "Intermediate",
-    goal: "Strength",
-    thumbnail: "https://img.youtube.com/vi/aclHkVaku9U/maxresdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=aclHkVaku9U",
-    progress: 3,
-    isSaved: false,
-    exercises: [
-      { exerciseId: "sq", sets: 4, reps: "12", rest: "60s", videoUrl: "https://www.youtube.com/watch?v=aclHkVaku9U" },
-      { exerciseId: "pu", sets: 3, reps: "15", rest: "45s", videoUrl: "https://www.youtube.com/watch?v=IODxDxX7oi4" },
-      { exerciseId: "dl", sets: 3, reps: "10", rest: "90s", videoUrl: "https://www.youtube.com/watch?v=op9kVnSso6Q" },
-    ]
-  },
-  {
-    id: "2",
-    title: "Morning Yoga Flow",
-    duration: 20,
-    calories: 80,
-    difficulty: "Beginner",
-    goal: "Flexibility",
-    thumbnail: "https://i.ytimg.com/vi/LqXZ628YNj4/maxresdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=LqXZ628YNj4",
-    isSaved: true,
-    exercises: [
-      { exerciseId: "sun", sets: 1, reps: "5 vòng", rest: "30s", videoUrl: "https://www.youtube.com/watch?v=H9qLZR2J3fU" },
-    ]
-  },
-  {
-    id: "3",
-    title: "HIIT Fat Burn",
-    duration: 25,
-    calories: 400,
-    difficulty: "Advanced",
-    goal: "Fat Loss",
-    thumbnail: "https://i.ytimg.com/vi/fvThwHk3DVE/maxresdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=fvThwHk3DVE",
-    isSaved: false,
-    exercises: [
-      { exerciseId: "burpee", sets: 4, reps: "30s", rest: "15s", videoUrl: "https://www.youtube.com/watch?v=dZgVxmf6jkA" },
-    ]
-  },
-  {
-    id: "4",
-    title: "Upper Body Power",
-    duration: 35,
-    calories: 280,
-    difficulty: "Intermediate",
-    goal: "Strength",
-    thumbnail: "https://img.youtube.com/vi/IODxDxX7oi4/maxresdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=IODxDxX7oi4",
-    progress: 0,
-    isSaved: false,
-    exercises: []
-  },
-  {
-    id: "5",
-    title: "Core & Abs Crusher",
-    duration: 15,
-    calories: 150,
-    difficulty: "Intermediate",
-    goal: "Strength",
-    thumbnail: "https://img.youtube.com/vi/ASdvN_XEl_c/maxresdefault.jpg",
-    videoUrl: "https://www.youtube.com/watch?v=ASdvN_XEl_c",
-    isSaved: true,
-    exercises: []
-  },
-];
 
 const TABS = ['Tất cả', 'Cá nhân hóa', 'Đã lưu', 'Lịch sử'] as const;
 type TabType = typeof TABS[number];
@@ -269,7 +173,7 @@ export default function ExercisesNew() {
       {selectedPlan && (
         <div className={styles.modalOverlay} onClick={() => setSelectedPlan(null)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <button className={styles.closeBtn} onClick={() => setSelectedPlan(null)}>
+            <button className={styles.workoutCloseBtn} onClick={() => setSelectedPlan(null)}>
               <X className="w-6 h-6" />
             </button>
 
@@ -322,7 +226,7 @@ export default function ExercisesNew() {
       {showPreview && selectedPlan?.exercises[0]?.videoUrl && (
         <div className={styles.modalOverlay} onClick={() => setShowPreview(false)}>
           <div className={styles.videoModal}>
-            <button className={styles.closeBtn} onClick={() => setShowPreview(false)}>
+            <button className={styles.workoutCloseBtn} onClick={() => setShowPreview(false)}>
               <X className="w-6 h-6" />
             </button>
             <YouTubePlayer videoId={selectedPlan.exercises[0].videoUrl.split('v=')[1]} />
