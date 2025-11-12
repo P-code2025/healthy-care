@@ -11,7 +11,6 @@ export default function Header() {
       <div className={styles.actions}>
         <input type="text" placeholder="Search..." className={styles.search} />
         <button className={styles.iconBtn}>🔔</button>
-        <img src="/avatar.png" alt="Adam" className={styles.avatar} />
       </div>
     </header>
   );

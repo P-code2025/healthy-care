@@ -1,6 +1,8 @@
 // src/App.tsx
+import { Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
-import { Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import DashboardNew from "./pages/dashboard/DashboardNew";
 import Calendar from "./pages/calendar/Calendar";
@@ -14,31 +16,48 @@ import ExercisesNew from "./pages/exercies/ExercisesNew";
 import HealthInsightsNew from "./pages/healthInsights/HealthInsightsNew";
 import HealthInsightDetail from "./pages/healthInsights/HealthInsightDetail";
 import Settings from "./pages/settings/Settings";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+import Onboarding from "./pages/onboarding/Onboarding";
+
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   return (
-    <Layout>
-      {" "}
-      {/* Bây giờ 'Layout' đã nhận 'children' một cách chính xác */}
+    <AuthProvider>
       <ToastContainer position="top-right" />
       <Routes>
-        <Route path="/" element={<DashboardNew />} />
-        <Route path="/calendar" element={<Calendar />} />
-        <Route path="/healthy-menu" element={<HealthyMenu />} />
-        <Route path="/meal-plan" element={<MealPlanNew />} />
-        <Route path="/grocery-list" element={<GroceryListNew />} />
+        {/* ---------- PUBLIC ---------- */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-        <Route path="/food-diary" element={<FoodDiaryNew />} />
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/progress" element={<ProgressNew />} />
-        <Route path="/exercises" element={<ExercisesNew />} />
-        <Route path="/health-insights" element={<HealthInsightsNew />} />
-        <Route path="/health-insights/:id" element={<HealthInsightDetail />} />
-        <Route path="/settings" element={<Settings />} />
+        {/* ---------- ONBOARDING ---------- */}
+        <Route path="/onboarding" element={<Onboarding />} />
+
+        {/* ---------- PROTECTED ---------- */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<DashboardNew />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/healthy-menu" element={<HealthyMenu />} />
+            <Route path="/meal-plan" element={<MealPlanNew />} />
+            <Route path="/grocery-list" element={<GroceryListNew />} />
+            <Route path="/food-diary" element={<FoodDiaryNew />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/progress" element={<ProgressNew />} />
+            <Route path="/exercises" element={<ExercisesNew />} />
+            <Route path="/health-insights" element={<HealthInsightsNew />} />
+            <Route path="/health-insights/:id" element={<HealthInsightDetail />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+        </Route>
+
+        {/* fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Layout>
+    </AuthProvider>
   );
 }
 

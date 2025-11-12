@@ -620,6 +620,12 @@
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
+  scrollbar-width: none; 
+  -ms-overflow-style: none;
+}
+
+.modal::-webkit-scrollbar {
+  display: none; 
 }
 
 
