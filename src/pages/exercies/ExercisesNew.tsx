@@ -123,18 +123,21 @@ export default function ExercisesNew() {
     if (activeTab === 'Đã lưu') {
       filtered = filtered.filter(p => savedPlans.has(p.id));
     } else if (activeTab === 'Cá nhân hóa') {
-      if (aiPlan && aiPlan.exercises.length > 0) {
-        const matched = plans.find(p =>
-          aiPlan.exercises.some(ex =>
-            p.title.toLowerCase().includes(ex.name.toLowerCase()) ||
-            ex.name.toLowerCase().includes(p.title.toLowerCase())
-          )
-        );
-        filtered = matched ? [matched] : plans.slice(0, 1);
-      } else {
-        filtered = plans.slice(0, 1);
-      }
-    }
+  if (aiPlan && aiPlan.exercises.length > 0) {
+    // LẤY TẤT CẢ PLAN KHỚP VỚI BẤT KỲ BÀI TẬP NÀO
+    const matchedPlans = plans.filter(p =>
+      aiPlan.exercises.some(ex =>
+        p.title.toLowerCase().includes(ex.name.toLowerCase()) ||
+        ex.name.toLowerCase().includes(p.title.toLowerCase())
+      )
+    );
+
+    // Nếu không có plan nào khớp → dùng fallback
+    filtered = matchedPlans.length > 0 ? matchedPlans : plans.slice(0, 1);
+  } else {
+    filtered = plans.slice(0, 1);
+  }
+}
 
     if (searchQuery) {
       filtered = filtered.filter(p =>
