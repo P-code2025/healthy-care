@@ -341,12 +341,6 @@ export default function Calendar() {
             ))}
           </div>
 
-          {/* Health Journey Banner */}
-          <div className={styles.healthBanner}>
-            <div className={styles.bannerImage}>🥕🥬</div>
-            <h4 className={styles.bannerTitle}>Start your health journey with a FREE 1-month trial</h4>
-            <button className={styles.claimButton}>Claim Now!</button>
-          </div>
         </div>
       </div>
     </div>

@@ -57,6 +57,10 @@ Return JSON only.`
       temperature: 0.5,
       repetitionPenalty: 1.1,
       maxTokens: 800,
+      // Required by ClovaCompletionRequest
+      includeAiFilters: false,
+      stop: [],
+      seed: 0,
     };
 
     const response = await client.createChatCompletion(request);

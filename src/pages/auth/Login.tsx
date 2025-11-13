@@ -1,8 +1,7 @@
-// src/pages/auth/Login.tsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styles from "./Auth.module.css";
-import { useAuth } from "../../context/AuthContext"; // Đúng đường dẫn
+import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -13,11 +12,11 @@ export default function Login() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // TODO: Gọi API login ở đây
-    // if (success) {
+    // LƯU EMAIL VÀO localStorage TRƯỚC KHI ĐĂNG NHẬP
+    localStorage.setItem("userEmail", email.trim());
+
     login(); // Lưu trạng thái đăng nhập
-    navigate("/onboarding"); // Chuyển sang onboarding
-    // }
+    navigate("/onboarding");
   };
 
   return (

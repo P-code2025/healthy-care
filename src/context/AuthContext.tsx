@@ -1,5 +1,5 @@
 // src/context/AuthContext.tsx
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 interface AuthState {
   isLoggedIn: boolean;
@@ -16,17 +16,12 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<AuthState>({
-    isLoggedIn: false,
-    isOnboarded: false,
-  });
-
-  // Khôi phục trạng thái khi reload
-  useEffect(() => {
+  // ĐỌC TRỰC TIẾP TỪ localStorage KHI KHỞI TẠO
+  const [state, setState] = useState<AuthState>(() => {
     const logged = localStorage.getItem("isLoggedIn") === "true";
     const onboarded = localStorage.getItem("isOnboarded") === "true";
-    setState({ isLoggedIn: logged, isOnboarded: onboarded });
-  }, []);
+    return { isLoggedIn: logged, isOnboarded: onboarded };
+  });
 
   const login = () => {
     localStorage.setItem("isLoggedIn", "true");
@@ -36,6 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("isOnboarded");
+    localStorage.removeItem("userProfile");
     setState({ isLoggedIn: false, isOnboarded: false });
   };
 

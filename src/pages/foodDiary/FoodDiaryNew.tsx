@@ -375,6 +375,16 @@ export default function FoodDiaryNew() {
   };
 
   useEffect(() => {
+  // LƯU TỔNG CALO CỦA NGÀY HIỆN TẠI
+  const today = new Date().toISOString().split('T')[0];
+  const todayEntries = foodEntries.filter(e => e.date === today);
+  const todayCalories = todayEntries.reduce((sum, e) => sum + e.calories, 0);
+
+  localStorage.setItem('dailyCalories', todayCalories.toString());
+  localStorage.setItem('dailyCalorieDate', today); // để kiểm tra ngày
+}, [foodEntries]);
+
+  useEffect(() => {
     if (!isDirty || !selectedImage || selectedImage === lastAnalyzedImage) return;
 
     const timeoutId = setTimeout(async () => {

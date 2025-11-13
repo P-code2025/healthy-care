@@ -1,7 +1,7 @@
 // src/pages/onboarding/Onboarding.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext"; // Đúng đường dẫn
+import { useAuth } from "../../context/AuthContext";
 
 import styles from "./Onboarding.module.css";
 import StepName from "./steps/StepName";
@@ -39,24 +39,22 @@ export default function Onboarding() {
   });
 
   const navigate = useNavigate();
-  const { finishOnboarding } = useAuth(); // Lấy hàm
+  const { finishOnboarding } = useAuth();
   const CurrentStep = steps[step];
 
   const next = (data: Partial<typeof formData>) => {
-    setFormData((prev) => ({ ...prev, ...data }));
+    const newData = { ...formData, ...data };
+    const savedEmail = localStorage.getItem("userEmail") || "";
+    const finalData = { ...newData, email: savedEmail };
+    setFormData(newData);
 
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      // Hoàn thành → lưu dữ liệu + đánh dấu đã onboard
-      const finalData = { ...formData, ...data };
-      console.log("Final onboarding data:", finalData);
-
-      // TODO: Gọi API lưu thông tin người dùng ở đây
-      // await saveUserProfile(finalData);
-
-      finishOnboarding(); // Đánh dấu đã hoàn thành onboarding
-      navigate("/"); // Vào dashboard
+      // LƯU VÀO LOCALSTORAGE
+      localStorage.setItem("userProfile", JSON.stringify(finalData));
+      finishOnboarding();
+      navigate("/");
     }
   };
 
@@ -69,7 +67,7 @@ export default function Onboarding() {
       <CurrentStep data={formData} onNext={next} onPrev={prev} />
       {step > 0 && (
         <button onClick={prev} className={styles.backBtn}>
-          ←
+          Back
         </button>
       )}
     </div>
