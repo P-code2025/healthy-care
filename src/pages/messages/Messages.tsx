@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import styles from './Messages.module.css';
 
 import { TrendingUp, TrendingDown, Camera, Dumbbell, Plus, X } from 'lucide-react';
-import type { AnalysisResult } from '../../lib/types';
+import type { AnalysisResult, FoodEntry } from '../../lib/types';
 import { generateAIExercisePlan, type AIExercisePlan } from '../../services/aiExercisePlan';
 import { analyzeFood } from '../../services/analyzeFood';
 
@@ -17,11 +17,6 @@ interface Message {
   exercisePlan?: AIExercisePlan;
 }
 
-interface FoodEntry {
-  meal: 'breakfast' | 'lunch' | 'dinner';
-  result: AnalysisResult;
-  timestamp: string;
-}
 
 interface UserProfile {
   age: number;
@@ -42,6 +37,7 @@ export default function Messages() {
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const today = new Date().toISOString().split('T')[0];
 
   // Load data
   useEffect(() => {
@@ -59,10 +55,10 @@ export default function Messages() {
   // Get today's total calories
   const getTodayCalories = () => {
     const today = new Date().toISOString().split('T')[0];
-    const entries: FoodEntry[] = JSON.parse(localStorage.getItem('foodEntries') || '[]');
+    const entries: FoodEntry[] = JSON.parse(localStorage.getItem('foodDiary_entries_v2') || '[]');
     return entries
-      .filter(e => e.timestamp.startsWith(today))
-      .reduce((sum, e) => sum + e.result.calories, 0);
+      .filter(e => e.date === today)
+      .reduce((sum, e) => sum + e.calories, 0);
   };
 
   // Handle text input
@@ -100,32 +96,43 @@ export default function Messages() {
     const lower = query.toLowerCase();
 
     // 1. Tổng hợp calo hôm nay
-    if (lower.includes('hôm nay') && lower.includes('calo')) {
+    if (lower.includes('calo') && (lower.includes('hôm nay') || lower.includes('nay') || lower.includes('today'))) {
       const total = getTodayCalories();
-      const goal = 2000; // Có thể lấy từ profile
+      const goal = 2000;
       const diff = total - goal;
       return {
         content: `Bạn đã nạp **${total} kcal** hôm nay (${diff > 0 ? `dư ${diff}` : `thiếu ${-diff}`} kcal so với mục tiêu ${goal} kcal).\n\n` +
-                 `${diff > 0 ? 'Không nên ăn thêm. Hãy đi bộ 40 phút để bù đắp!' : 'Bạn có thể ăn thêm một bữa nhẹ (~200 kcal).'}`
+          `${diff > 0 ? 'Không nên ăn thêm. Hãy đi bộ 40 phút để bù đắp!' : 'Bạn có thể ăn thêm một bữa nhẹ (~200 kcal).'}`
       };
     }
 
-    // 2. Tư vấn tập luyện
-    if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi ý')) {
+    // 2. Tư vấn tập luyện → TRUYỀN userQuery
+    if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi ý') || lower.includes('đau') || lower.includes('mỏi')) {
       if (!userProfile) {
         setShowProfileForm(true);
         return { content: 'Để gợi ý bài tập phù hợp, vui lòng nhập thông tin cá nhân của bạn.' };
       }
 
       const dailyIntake = getTodayCalories();
-      const plans = ['Morning Yoga', 'HIIT Cardio', 'Full Body Strength', 'Core & Mobility'];
-      const plan = await generateAIExercisePlan(dailyIntake, userProfile, plans);
+      const plans = [
+        'Morning Yoga Flow',
+        'HIIT Cardio',
+        'Full Body Strength',
+        'Core & Mobility',
+        '20 Min HIIT Fat Loss - No Repeat Workout',
+        'HIIT Fat Burn',
+        'Upper Body Power',
+        'Core & Abs Crusher'
+      ];
+
+      // TRUYỀN userQuery VÀO ĐÂY
+      const plan = await generateAIExercisePlan(dailyIntake, userProfile, plans, query);
 
       const exerciseList = plan.exercises.map(e => `• **${e.name}** – ${e.duration}\n  _${e.reason}_`).join('\n\n');
       return {
         content: `**Kế hoạch tập hôm nay (${plan.intensity})**\n\n${exerciseList}\n\n` +
-                 `**Đốt ước tính**: ${plan.totalBurnEstimate}\n\n` +
-                 `_${plan.advice}_`,
+          `**Đốt ước tính**: ${plan.totalBurnEstimate}\n\n` +
+          `_${plan.advice}_`,
         exercisePlan: plan
       };
     }
@@ -154,23 +161,51 @@ export default function Messages() {
 
       try {
         const { analysis } = await analyzeFood(dataUri);
-        const meal = new Date().getHours() < 11 ? 'breakfast' : new Date().getHours() < 14 ? 'lunch' : 'dinner';
+        // LẤY mealType TỪ THỜI GIAN
+        const hour = new Date().getHours();
+        const mealType = hour >= 5 && hour < 11 ? 'Breakfast' :
+          hour >= 11 && hour < 14 ? 'Lunch' :
+            hour >= 18 && hour < 22 ? 'Dinner' : 'Snack';
 
-        // Save to localStorage
-        const entry: FoodEntry = {
-          meal: meal as any,
-          result: analysis,
-          timestamp: new Date().toISOString()
+        // TẠO ENTRY ĐÚNG FORMAT
+        const newEntry: FoodEntry = {
+          id: Date.now().toString(),
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          mealType,
+          foodName: analysis.foodName,
+          amount: analysis.amount,
+          calories: analysis.calories,
+          protein: analysis.protein,
+          carbs: analysis.carbs,
+          fat: analysis.fat,
+          sugar: analysis.sugar,
+          status: 'Satisfied',
+          thoughts: ''
         };
-        const existing: FoodEntry[] = JSON.parse(localStorage.getItem('foodEntries') || '[]');
-        localStorage.setItem('foodEntries', JSON.stringify([...existing, entry]));
 
+        // LẤY + LƯU
+        const existing: FoodEntry[] = JSON.parse(localStorage.getItem('foodDiary_entries_v2') || '[]');
+        const updated = [...existing, newEntry];
+        localStorage.setItem('foodDiary_entries_v2', JSON.stringify(updated));
+
+        // CẬP NHẬT DAILY CALORIES
+        const todayCalories = updated.filter(e => e.date === newEntry.date).reduce((s, e) => s + e.calories, 0);
+        // Sau khi lưu vào localStorage
+        localStorage.setItem('dailyCalories', todayCalories.toString());
+        localStorage.setItem('dailyCalorieDate', today);
+
+        // XÓA CACHE NGÀY ĐỂ BUỘC GỌI LẠI AI
+        const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        const profileKey = `${profile.age}_${profile.gender}_${profile.weight}_${profile.height}_${profile.goalWeight}`;
+        const dailyCacheKey = `aiPlan_daily_${today}_${todayCalories}_${profileKey.substring(0, 50)}`;
+        localStorage.removeItem(dailyCacheKey);
         const resultMsg: Message = {
           id: (Date.now() + 1).toString(),
           content: `**${analysis.foodName}** – ${analysis.amount}\n\n` +
-                   `Calories: ${analysis.calories} kcal\n` +
-                   `Protein: ${analysis.protein}g | Carbs: ${analysis.carbs}g | Fat: ${analysis.fat}g | Sugar: ${analysis.sugar}g\n\n` +
-                   `Đã lưu vào **Food Diary**!`,
+            `Calories: ${analysis.calories} kcal\n` +
+            `Protein: ${analysis.protein}g | Carbs: ${analysis.carbs}g | Fat: ${analysis.fat}g | Sugar: ${analysis.sugar}g\n\n` +
+            `Đã lưu vào **Food Diary**!`,
           isUser: false,
           timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
           nutritionData: analysis

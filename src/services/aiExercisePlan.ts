@@ -20,17 +20,24 @@ function extractText(content: any): string {
   return '';
 }
 
-function normalizeAIPlan(data: any): AIExercisePlan {
+function normalizeAIPlan(data: any, availablePlans: string[]): AIExercisePlan {
+  if (!data || typeof data !== 'object') return createFallbackPlan();
+
+  const exercises = Array.isArray(data.exercises)
+    ? data.exercises
+        .filter((ex: any) => ex.name && availablePlans.includes(ex.name))
+        .slice(0, 4)
+        .map((ex: any) => ({
+          name: String(ex.name).trim(),
+          duration: String(ex.duration || "20 phút").trim(),
+          reason: String(ex.reason || "Cải thiện sức khỏe").trim(),
+        }))
+    : [];
+
   return {
     summary: String(data.summary || "Kế hoạch tập luyện hôm nay").trim(),
     intensity: ['nhẹ', 'vừa', 'nặng'].includes(data.intensity) ? data.intensity : 'vừa',
-    exercises: Array.isArray(data.exercises)
-      ? data.exercises.slice(0, 4).map((ex: any) => ({
-          name: String(ex.name || "Bài tập").trim(),
-          duration: String(ex.duration || "20 phút").trim(),
-          reason: String(ex.reason || "Tăng cường sức khỏe").trim(),
-        }))
-      : [],
+    exercises,
     totalBurnEstimate: String(data.totalBurnEstimate || "300-400 kcal").trim(),
     advice: String(data.advice || "Tập đều đặn").trim(),
   };
@@ -69,13 +76,29 @@ function createFallbackPlan(): AIExercisePlan {
   };
 }
 
+type CacheType = 'daily' | 'query';
+
 export async function generateAIExercisePlan(
   dailyIntake: number,
   user: any,
-  availablePlans: string[]
+  availablePlans: string[],
+  userQuery: string = "Tạo kế hoạch tập luyện hôm nay",
+  cacheType: CacheType = 'query'
 ): Promise<AIExercisePlan> {
   const client = new ClovaXClient("HCX-005");
+let cacheKey: string;
+  if (cacheType === 'daily') {
+    const profileKey = `${user.age}_${user.gender}_${user.weight}_${user.height}_${user.goalWeight}`;
+    cacheKey = `aiPlan_daily_${new Date().toDateString()}_${dailyIntake}_${profileKey.substring(0, 50)}`;
+  } else {
+    cacheKey = `aiPlan_${new Date().toDateString()}_${userQuery.substring(0, 30)}`;
+  }
 
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    console.log(`DÙNG CACHE [${cacheType}]:`, cacheKey);
+    return JSON.parse(cached);
+  }
   const bmi = user.weight && user.height
     ? (user.weight / ((user.height / 100) ** 2)).toFixed(1)
     : 'không rõ';
@@ -87,34 +110,63 @@ export async function generateAIExercisePlan(
   const tdee = Math.round(bmr * 1.55);
   const goalText = user.goal === 'lose' ? 'giảm cân' : 'duy trì';
 
+  // PROMPT THÔNG MINH – HIỂU CÂU HỎI NGƯỜI DÙNG
   const prompt = `
-Tạo kế hoạch tập luyện hôm nay. Dùng đúng tên bài tập có sẵn.
+Bạn là huấn luyện viên AI chuyên nghiệp, an toàn và thông minh. Tạo kế hoạch tập luyện HÔM NAY.
 
-THÔNG TIN: ${user.gender}, ${user.age} tuổi, ${user.weight}kg, ${user.height}cm, BMI ${bmi}, mục tiêu ${goalText}, nạp ${dailyIntake}kcal, TDEE ${tdee}kcal.
+=== THÔNG TIN NGƯỜI DÙNG ===
+- Giới tính: ${user.gender}
+- Tuổi: ${user.age}
+- Cân nặng: ${user.weight} kg
+- Chiều cao: ${user.height} cm
+- BMI: ${bmi}
+- Mục tiêu: ${goalText}
+- TDEE: ${tdee} kcal
+- ĐÃ NẠP HÔM NAY: ${dailyIntake} kcal (${Math.round(dailyIntake / tdee * 100)}% TDEE)
+- Thực đơn: ${user.foodEntries?.map((e: any) => `${e.foodName} (${e.amount})`).join(', ') || 'Chưa có'}
+- Sở thích tập: ${user.workoutPreference?.join(', ') || 'Không có'}
+- Câu hỏi: "${userQuery}"
 
-BÀI TẬP CÓ SẴN:
-${availablePlans.slice(0, 10).map(p => `• ${p}`).join('\n')}
+=== QUY TẮC BẮT BUỘC (ƯU TIÊN CAO NHẤT) ===
+1. **NẾU người dùng nói**: đau vai, mỏi vai, đau lưng, mệt, đuối, tập nhẹ, khó nâng tay...
+   → TUYỆT ĐỐI KHÔNG CHỌN: HIIT, Upper Body, Strength, Power, Push-up, Pull-up
+   → ƯU TIÊN: Yoga, Mobility, Core, Đi bộ, Low-impact, Stretching
+   → Cường độ: "nhẹ"
+   → Advice: Gợi ý nghỉ nếu cần
 
-TRẢ VỀ CHỈ JSON (không markdown, không giải thích):
+2. **NẾU KHÔNG có triệu chứng**:
+   → Dựa vào % calo nạp:
+      • < 30% TDEE → cường độ "nhẹ" + cảnh báo ăn thêm
+      • 30–70% TDEE → cường độ "vừa"
+      • > 70% TDEE → cường độ "nặng" hoặc "phục hồi"
+   → Ưu tiên bài phù hợp với thực đơn (carb cao → cardio nhẹ; protein thấp → tránh strength)
+
+3. **Tổng đốt**: 250–600 kcal, chia đều 2–3 bài
+4. **Reason**: cụ thể, liên hệ với BMI, thực đơn, sở thích, mục tiêu
+5. **Summary**: ngắn gọn, có tên người, tình trạng, mục tiêu
+
+=== DANH SÁCH BÀI TẬP ĐƯỢC PHÉP CHỌN ===
+${availablePlans.map(p => `• "${p}"`).join('\n')}
+
+=== TRẢ VỀ CHỈ JSON THUẦN (KHÔNG \`\`\`json, KHÔNG GIẢI THÍCH) ===
 {
-  "summary": "Tóm tắt ngắn gọn",
-  "intensity": "nhẹ" hoặc "vừa" hoặc "nặng",
+  "summary": "Dũng, 20t, BMI 24.2, duy trì, ăn ít (452kcal), tập nhẹ",
+  "intensity": "nhẹ",
   "exercises": [
-    {"name": "Tên bài", "duration": "20 phút", "reason": "Lý do ngắn"}
+    {"name": "Morning Yoga Flow", "duration": "25 phút", "reason": "Giãn cơ sau tteokbokki giàu carb, tăng linh hoạt"},
+    {"name": "Brisk Walking", "duration": "30 phút", "reason": "Đốt calo nhẹ, phù hợp BMI ổn định"}
   ],
-  "totalBurnEstimate": "300-400 kcal",
-  "advice": "Lời khuyên ngắn"
+  "totalBurnEstimate": "320 kcal",
+  "advice": "Ăn thêm bữa nhẹ trước tập (trái cây/sữa). Uống đủ nước. Nếu mệt, giảm thời gian."
 }
 `.trim();
 
-  // DÙNG KIỂU TỪ client.ts → KHÔNG XUNG ĐỘT
   const messages: ClientClovaMessage[] = [
     {
       role: "system",
       content: [{
         type: "text",
-        text: `TRẢ VỀ CHỈ JSON THUẦN. KHÔNG \`\`\`json. KHÔNG GIẢI THÍCH.
-Đảm bảo JSON hợp lệ, đầy đủ. Cường độ chỉ: nhẹ, vừa, nặng.`
+        text: `TRẢ VỀ CHỈ JSON THUẦN. KHÔNG \`\`\`json. KHÔNG GIẢI THÍCH. Đảm bảo JSON hợp lệ.`
       }]
     },
     {
@@ -124,12 +176,9 @@ TRẢ VỀ CHỈ JSON (không markdown, không giải thích):
   ];
 
   try {
-    // TẠO REQUEST ĐẦY ĐỦ TỪ client.createRequest()
     const request = client.createRequest(messages);
-
-    // GHI ĐÈ CHỈ NHỮNG TRƯỜNG CẦN THIẾT
-    request.maxTokens = 1500;     // ĐỦ CHO KẾ HOẠCH
-    request.temperature = 0.3;
+    request.maxTokens = 1500;
+    request.temperature = 0.2;
     request.topP = 0.8;
 
     const response = await client.createChatCompletion(request);
@@ -140,7 +189,6 @@ TRẢ VỀ CHỈ JSON (không markdown, không giải thích):
     const cleaned = rawText
       .replace(/```json|```/g, '')
       .replace(/[\r\n]+/g, ' ')
-      .replace(/\s+/g, ' ')
       .trim();
 
     const fixedJSON = autoFixJSON(cleaned);
@@ -151,13 +199,22 @@ TRẢ VỀ CHỈ JSON (không markdown, không giải thích):
       parsed = JSON.parse(fixedJSON);
     } catch (e) {
       console.error("JSON Parse Failed:", e);
-      return createFallbackPlan();
+      const fallback = createFallbackPlan();
+      localStorage.setItem(cacheKey, JSON.stringify(fallback));
+      return fallback;
     }
 
-    return normalizeAIPlan(parsed);
+    // CHUYỂN parsed → normalized TRƯỚC return
+    const normalized = normalizeAIPlan(parsed, availablePlans);
+
+    // LƯU CACHE SAU KHI CÓ normalized
+    localStorage.setItem(cacheKey, JSON.stringify(normalized));
+    return normalized;
 
   } catch (error) {
     console.error("Clova AI Error:", error);
-    return createFallbackPlan();
+    const fallback = createFallbackPlan();
+    localStorage.setItem(cacheKey, JSON.stringify(fallback));
+    return fallback;
   }
 }

@@ -26,6 +26,8 @@ export default function ExercisesNew() {
   const [plans, setPlans] = useState<WorkoutPlan[]>(SAMPLE_WORKOUT_PLANS);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [dailyCalories, setDailyCalories] = useState(0);
+  const foodEntries = JSON.parse(localStorage.getItem('foodDiary_entries_v2') || '[]')
+  .filter((e: any) => e.date === new Date().toISOString().split('T')[0]);
 
   // AI State
   const [aiPlan, setAiPlan] = useState<AIExercisePlan>(() => {
@@ -43,8 +45,8 @@ export default function ExercisesNew() {
   // Load profile
   useEffect(() => {
     const profile = localStorage.getItem('userProfile');
-    const savedCal = localStorage.getItem('dailyCalories');
-    const calDate = localStorage.getItem('dailyCalorieDate');
+    const savedCal = localStorage.getItem('daily_calories');
+    const calDate = localStorage.getItem('daily_calorie_date');
     const today = new Date().toISOString().split('T')[0];
 
     if (profile) setUserProfile(JSON.parse(profile));
@@ -79,75 +81,90 @@ export default function ExercisesNew() {
   }, [userProfile, dailyCalories]);
 
   // GỌI CLOVA AI + CACHE 1 NGÀY
-  useEffect(() => {
-    if (activeTab !== 'Cá nhân hóa' || !analysis || !userProfile) return;
+// GỌI CLOVA AI + CACHE THEO NGÀY + CALO + PROFILE
+useEffect(() => {
+  if (activeTab !== 'Cá nhân hóa' || !analysis || !userProfile) return;
 
-    const cacheKey = `aiPlan_${new Date().toDateString()}`;
-    const cached = localStorage.getItem(cacheKey);
+  // TẠO CACHE KEY ĐÚNG NHƯ aiExercisePlan.ts
+  const profileKey = `${userProfile.age}_${userProfile.gender}_${userProfile.weight}_${userProfile.height}_${userProfile.goalWeight}`;
+  const cacheKey = `aiPlan_daily_${new Date().toDateString()}_${dailyCalories}_${profileKey.substring(0, 50)}`;
 
-    if (cached) {
-      setAiPlan(JSON.parse(cached));
-      return;
-    }
+  const cached = localStorage.getItem(cacheKey);
 
-    const fetchAI = async () => {
-  setIsLoadingAI(true);
+  if (cached) {
+    console.log("DÙNG CACHE AI DAILY:", cacheKey);
+    setAiPlan(JSON.parse(cached));
+    return;
+  }
 
-  const availablePlanNames = SAMPLE_WORKOUT_PLANS.map(p => p.title);
+  const fetchAI = async () => {
+    setIsLoadingAI(true);
 
-  const result = await generateAIExercisePlan(dailyCalories, {
-    age: userProfile.age,
-    gender: userProfile.gender,
-    weight: userProfile.weight,
-    height: userProfile.height,
-    goalWeight: userProfile.goalWeight,
-    goal: userProfile.goalWeight < userProfile.weight ? 'lose' : 'maintain',
-    activityLevel: 'moderate',
-    workoutPreference: userProfile.workoutPreference || []
-  }, availablePlanNames);
+    const availablePlanNames = SAMPLE_WORKOUT_PLANS.map(p => p.title);
 
-  // result LUÔN là AIExercisePlan → không cần kiểm tra
-  setAiPlan(result);
-  localStorage.setItem(cacheKey, JSON.stringify(result));
+    const result = await generateAIExercisePlan(
+      dailyCalories,
+      {
+        age: userProfile.age,
+        gender: userProfile.gender,
+        weight: userProfile.weight,
+        height: userProfile.height,
+        goalWeight: userProfile.goalWeight,
+        goal: userProfile.goalWeight < userProfile.weight ? 'lose' : 'maintain',
+        foodEntries,
+        activityLevel: 'moderate',
+        workoutPreference: userProfile.workoutPreference || []
+      },
+      availablePlanNames,
+      "Tạo kế hoạch tập luyện hôm nay",
+      'daily' // ← QUAN TRỌNG
+    );
 
-  setIsLoadingAI(false);
-};
+    setAiPlan(result);
+    localStorage.setItem(cacheKey, JSON.stringify(result)); // ← LƯU ĐÚNG KEY
 
-    fetchAI();
-  }, [activeTab, analysis, userProfile, dailyCalories]);
+    setIsLoadingAI(false);
+  };
+
+  fetchAI();
+}, [activeTab, analysis, userProfile, dailyCalories]);
 
   // Filter plans
   const filteredPlans = useMemo(() => {
-    let filtered = plans;
+  let filtered = plans;
 
-    if (activeTab === 'Đã lưu') {
-      filtered = filtered.filter(p => savedPlans.has(p.id));
-    } else if (activeTab === 'Cá nhân hóa') {
-  if (aiPlan && aiPlan.exercises.length > 0) {
-    // LẤY TẤT CẢ PLAN KHỚP VỚI BẤT KỲ BÀI TẬP NÀO
-    const matchedPlans = plans.filter(p =>
-      aiPlan.exercises.some(ex =>
-        p.title.toLowerCase().includes(ex.name.toLowerCase()) ||
-        ex.name.toLowerCase().includes(p.title.toLowerCase())
-      )
-    );
+  if (activeTab === 'Đã lưu') {
+    filtered = filtered.filter(p => savedPlans.has(p.id));
+  } 
+  else if (activeTab === 'Cá nhân hóa') {
+    if (aiPlan && aiPlan.exercises.length > 0) {
+      const normalize = (str: string) => str.toLowerCase().replace(/[-_]/g, ' ').trim();
 
-    // Nếu không có plan nào khớp → dùng fallback
-    filtered = matchedPlans.length > 0 ? matchedPlans : plans.slice(0, 1);
-  } else {
-    filtered = plans.slice(0, 1);
-  }
-}
+      const matchedPlans = plans.filter(p => {
+  return aiPlan.exercises.some(ex => {
+    const exName = ex.name.toLowerCase();
+    const planTitle = p.title.toLowerCase();
+    return planTitle.includes(exName) || exName.includes(planTitle);
+  });
+});
 
-    if (searchQuery) {
-      filtered = filtered.filter(p =>
-        p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.goal.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+// → ƯU TIÊN: Nếu có ≥1 bài khớp → hiển thị tất cả
+filtered = matchedPlans.length > 0 ? matchedPlans : [plans[0]];
+    } else {
+      filtered = plans.slice(0, 1);
     }
+  }
 
-    return filtered;
-  }, [plans, activeTab, searchQuery, savedPlans, aiPlan]);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(p =>
+      p.title.toLowerCase().includes(q) ||
+      p.goal.toLowerCase().includes(q)
+    );
+  }
+
+  return filtered;
+}, [plans, activeTab, searchQuery, savedPlans, aiPlan]);
 
   const toggleSave = (id: string) => {
     setSavedPlans(prev => {
@@ -277,6 +294,13 @@ export default function ExercisesNew() {
           )}
         </div>
       )}
+
+      {analysis && dailyCalories < 0.3 * analysis.tdee && (
+  <div className="bg-orange-100 text-orange-700 p-2 rounded mt-2 text-sm">
+    ⚠️ Bạn mới nạp <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> TDEE. 
+    Nên ăn thêm trước khi tập để tránh mệt mỏi.
+  </div>
+)}
 
       {/* ==================== PLAN GRID ==================== */}
       <div className={styles.grid}>

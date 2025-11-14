@@ -145,3 +145,20 @@ export interface AnalysisResult {
   };
   baseAmount?: number; // Khối lượng gốc (g hoặc ml)
 }
+
+
+export interface FoodEntry {
+  id: string;
+  date: string;
+  time: string;
+  mealType: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
+  foodName: string;
+  amount: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  sugar: number;
+  status: 'Energized' | 'Quite Satisfied' | 'Satisfied' | 'Guilty' | 'Uncomfortable';
+  thoughts?: string;
+}

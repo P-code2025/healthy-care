@@ -1,27 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import styles from './FoodDiaryNew.module.css';
 import { analyzeFood } from '../../services/analyzeFood';
-import type { AnalysisResult } from '../../lib/types';
+import type { AnalysisResult, FoodEntry } from '../../lib/types';
 import { toast } from 'react-toastify';
 import { compressImage } from '../../utils/imageUtils';
 import { detectBarcodeWithQuagga } from '../../utils/barcodeUtils';
 import { FaWalking, FaRunning, FaDumbbell, FaSwimmer, FaBicycle } from 'react-icons/fa';
+import { loadFoodEntries, saveDailyCalories, saveFoodEntries } from '../../lib/storage';
 
-interface FoodEntry {
-  id: string;
-  date: string;
-  time: string;
-  mealType: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
-  foodName: string;
-  amount: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  sugar: number;
-  status: 'Energized' | 'Quite Satisfied' | 'Satisfied' | 'Guilty' | 'Uncomfortable';
-  thoughts?: string;
-}
+
 
 const getDateRange = (period: string): { start: string; end: string } => {
   const now = new Date();
@@ -52,188 +39,6 @@ const getDateRange = (period: string): { start: string; end: string } => {
   return { start, end };
 };
 
-const FOOD_ENTRIES: FoodEntry[] = [
-  {
-    id: '1',
-    date: '2028-08-01',
-    time: '7:00 AM',
-    mealType: 'Breakfast',
-    foodName: 'Scrambled Eggs with Spinach & Whole Grain Toast',
-    amount: '2 Slices',
-    calories: 300,
-    protein: 25,
-    carbs: 20,
-    fat: 12,
-    sugar: 3,
-    status: 'Energized',
-    thoughts: ''
-  },
-  // {
-  //   id: '2',
-  //   date: '2028-08-01',
-  //   time: '12:00 PM',
-  //   mealType: 'Lunch',
-  //   foodName: 'Grilled Chicken Wrap with Quinoa Salad',
-  //   amount: '1 Wrap',
-  //   calories: 450,
-  //   protein: 40,
-  //   carbs: 30,
-  //   fat: 18,
-  //   sugar: 4,
-  //   status: 'Quite Satisfied',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '3',
-  //   date: '2028-08-01',
-  //   time: '3:00 PM',
-  //   mealType: 'Snack',
-  //   foodName: 'Greek Yogurt with Mixed Berries',
-  //   amount: '1 Cup',
-  //   calories: 200,
-  //   protein: 18,
-  //   carbs: 12,
-  //   fat: 10,
-  //   sugar: 14,
-  //   status: 'Quite Satisfied',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '4',
-  //   date: '2028-08-01',
-  //   time: '7:00 PM',
-  //   mealType: 'Dinner',
-  //   foodName: 'Cheeseburger and Fries',
-  //   amount: '1 Serving',
-  //   calories: 700,
-  //   protein: 30,
-  //   carbs: 35,
-  //   fat: 35,
-  //   sugar: 5,
-  //   status: 'Guilty',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '5',
-  //   date: '2028-08-02',
-  //   time: '8:02 AM',
-  //   mealType: 'Breakfast',
-  //   foodName: 'Avocado Toast with Poached Egg',
-  //   amount: '2 Slices',
-  //   calories: 350,
-  //   protein: 30,
-  //   carbs: 14,
-  //   fat: 18,
-  //   sugar: 5,
-  //   status: 'Satisfied',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '6',
-  //   date: '2028-08-02',
-  //   time: '1:15 PM',
-  //   mealType: 'Lunch',
-  //   foodName: 'Quinoa Salad with Roasted Veggies & Feta',
-  //   amount: '1 Bowl',
-  //   calories: 450,
-  //   protein: 50,
-  //   carbs: 15,
-  //   fat: 12,
-  //   sugar: 6,
-  //   status: 'Quite Satisfied',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '7',
-  //   date: '2028-08-02',
-  //   time: '7:12 PM',
-  //   mealType: 'Snack',
-  //   foodName: 'Apple Slices with Peanut Butter',
-  //   amount: '1 Apple',
-  //   calories: 200,
-  //   protein: 30,
-  //   carbs: 6,
-  //   fat: 10,
-  //   sugar: 18,
-  //   status: 'Energized',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '8',
-  //   date: '2028-08-03',
-  //   time: '7:00 PM',
-  //   mealType: 'Dinner',
-  //   foodName: 'Pasta Alfredo with Garlic Bread',
-  //   amount: '1 Plate',
-  //   calories: 650,
-  //   protein: 80,
-  //   carbs: 20,
-  //   fat: 30,
-  //   sugar: 4,
-  //   status: 'Uncomfortable',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '9',
-  //   date: '2028-08-03',
-  //   time: '8:00 AM',
-  //   mealType: 'Breakfast',
-  //   foodName: 'Blueberry Protein Smoothie',
-  //   amount: '1 Glass',
-  //   calories: 300,
-  //   protein: 50,
-  //   carbs: 20,
-  //   fat: 10,
-  //   sugar: 24,
-  //   status: 'Energized',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '10',
-  //   date: '2028-08-03',
-  //   time: '1:00 PM',
-  //   mealType: 'Lunch',
-  //   foodName: 'Greek Salad with Feta and Olives',
-  //   amount: '1 Bowl',
-  //   calories: 400,
-  //   protein: 40,
-  //   carbs: 12,
-  //   fat: 20,
-  //   sugar: 4,
-  //   status: 'Satisfied',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '11',
-  //   date: '2028-08-03',
-  //   time: '6:00 PM',
-  //   mealType: 'Snack',
-  //   foodName: 'Hummus with Carrot Sticks',
-  //   amount: '1 Serving',
-  //   calories: 180,
-  //   protein: 20,
-  //   carbs: 8,
-  //   fat: 7,
-  //   sugar: 2,
-  //   status: 'Quite Satisfied',
-  //   thoughts: ''
-  // },
-  // {
-  //   id: '12',
-  //   date: '2028-08-03',
-  //   time: '7:02 PM',
-  //   mealType: 'Dinner',
-  //   foodName: 'Chocolate Cake and Ice Cream',
-  //   amount: '1 Slice/scoop',
-  //   calories: 600,
-  //   protein: 70,
-  //   carbs: 8,
-  //   fat: 20,
-  //   sugar: 50,
-  //   status: 'Guilty',
-  //   thoughts: ''
-  // },
-];
 
 const getMealTypeFromTime = (hour: number): FoodEntry['mealType'] => {
   if (hour >= 5 && hour < 11) return 'Breakfast';
@@ -287,7 +92,7 @@ export default function FoodDiaryNew() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>(FOOD_ENTRIES);
+  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>(loadFoodEntries());
   const [isDirty, setIsDirty] = useState(false); // Có thay đổi foodName/amount không?
   const [lastAnalyzedImage, setLastAnalyzedImage] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -306,6 +111,16 @@ export default function FoodDiaryNew() {
   const { start: periodStart, end: periodEnd } = useMemo(() => {
     return getDateRange(selectedPeriod);
   }, [selectedPeriod]);
+
+  useEffect(() => {
+  saveFoodEntries(foodEntries);
+
+  // Cập nhật calo hôm nay (dùng hàm chung)
+  const today = new Date().toISOString().split('T')[0];
+  const todayEntries = foodEntries.filter(e => e.date === today);
+  const todayCalories = todayEntries.reduce((sum, e) => sum + e.calories, 0);
+  saveDailyCalories(todayCalories, today);
+}, [foodEntries]);
 
   const filteredEntries = useMemo(() => {
     return foodEntries
@@ -374,15 +189,6 @@ export default function FoodDiaryNew() {
     };
   };
 
-  useEffect(() => {
-  // LƯU TỔNG CALO CỦA NGÀY HIỆN TẠI
-  const today = new Date().toISOString().split('T')[0];
-  const todayEntries = foodEntries.filter(e => e.date === today);
-  const todayCalories = todayEntries.reduce((sum, e) => sum + e.calories, 0);
-
-  localStorage.setItem('dailyCalories', todayCalories.toString());
-  localStorage.setItem('dailyCalorieDate', today); // để kiểm tra ngày
-}, [foodEntries]);
 
   useEffect(() => {
     if (!isDirty || !selectedImage || selectedImage === lastAnalyzedImage) return;
