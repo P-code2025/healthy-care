@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, Camera, Dumbbell, Plus, X } from 'lucide-reac
 import type { AnalysisResult, FoodEntry } from '../../lib/types';
 import { generateAIExercisePlan, type AIExercisePlan } from '../../services/aiExercisePlan';
 import { analyzeFood } from '../../services/analyzeFood';
+import { SAMPLE_WORKOUT_PLANS } from '../exercies/workoutPlans';
 
 interface Message {
   id: string;
@@ -107,35 +108,38 @@ export default function Messages() {
     }
 
     // 2. Tư vấn tập luyện → TRUYỀN userQuery
-    if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi ý') || lower.includes('đau') || lower.includes('mỏi')) {
-      if (!userProfile) {
-        setShowProfileForm(true);
-        return { content: 'Để gợi ý bài tập phù hợp, vui lòng nhập thông tin cá nhân của bạn.' };
-      }
+    // Trong processUserQuery
+if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi ý') || lower.includes('đau') || lower.includes('mỏi')) {
+  if (!userProfile) {
+    setShowProfileForm(true);
+    return { content: 'Vui lòng nhập thông tin cá nhân để tôi tư vấn chính xác!' };
+  }
 
-      const dailyIntake = getTodayCalories();
-      const plans = [
-        'Morning Yoga Flow',
-        'HIIT Cardio',
-        'Full Body Strength',
-        'Core & Mobility',
-        '20 Min HIIT Fat Loss - No Repeat Workout',
-        'HIIT Fat Burn',
-        'Upper Body Power',
-        'Core & Abs Crusher'
-      ];
+  const dailyIntake = getTodayCalories();
+  const plans = [
+    'Morning Yoga Flow',
+    'HIIT Cardio',
+    'Full Body Strength',
+    'Core & Mobility',
+    '20 Min HIIT Fat Loss - No Repeat Workout',
+    'HIIT Fat Burn',
+    'Upper Body Power',
+    'Core & Abs Crusher'
+  ];
 
-      // TRUYỀN userQuery VÀO ĐÂY
-      const plan = await generateAIExercisePlan(dailyIntake, userProfile, plans, query);
+  // → GỌI AI MỚI, KHÔNG DÙNG CACHE
+  const plan = await generateAIExercisePlan(dailyIntake, userProfile, plans, query, 'query');
 
-      const exerciseList = plan.exercises.map(e => `• **${e.name}** – ${e.duration}\n  _${e.reason}_`).join('\n\n');
-      return {
-        content: `**Kế hoạch tập hôm nay (${plan.intensity})**\n\n${exerciseList}\n\n` +
-          `**Đốt ước tính**: ${plan.totalBurnEstimate}\n\n` +
-          `_${plan.advice}_`,
-        exercisePlan: plan
-      };
-    }
+  const exerciseList = plan.exercises
+    .map(e => `• **${e.name}** – ${e.duration}\n _${e.reason}_`)
+    .join('\n\n');
+
+  return {
+    content: `**Kế hoạch tập hôm nay (${plan.intensity})**\n\n${exerciseList}\n\n` +
+      `**Đốt ước tính**: ${plan.totalBurnEstimate}\n\n_${plan.advice}_`,
+    exercisePlan: plan
+  };
+}
 
     // 3. Mặc định
     return { content: 'Tôi có thể giúp bạn phân tích bữa ăn hoặc tư vấn tập luyện. Hãy chụp ảnh món ăn hoặc hỏi về lịch tập!' };

@@ -86,33 +86,34 @@ export async function generateAIExercisePlan(
   cacheType: CacheType = 'query'
 ): Promise<AIExercisePlan> {
   const client = new ClovaXClient("HCX-005");
-let cacheKey: string;
-  if (cacheType === 'daily') {
-    const profileKey = `${user.age}_${user.gender}_${user.weight}_${user.height}_${user.goalWeight}`;
-    cacheKey = `aiPlan_daily_${new Date().toDateString()}_${dailyIntake}_${profileKey.substring(0, 50)}`;
-  } else {
-    cacheKey = `aiPlan_${new Date().toDateString()}_${userQuery.substring(0, 30)}`;
-  }
 
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    console.log(`DÙNG CACHE [${cacheType}]:`, cacheKey);
-    return JSON.parse(cached);
-  }
+  // === TÍNH TOÁN ===
   const bmi = user.weight && user.height
     ? (user.weight / ((user.height / 100) ** 2)).toFixed(1)
     : 'không rõ';
-
   const bmr = user.gender === 'Nam'
-    ? 88.362 + (13.397 * (user.weight || 70)) + (4.799 * (user.height || 170)) - (5.677 * (user.age || 30))
-    : 447.593 + (9.247 * (user.weight || 55)) + (3.098 * (user.height || 160)) - (4.330 * (user.age || 30));
-
+    ? 88.362 + (13.397 * user.weight) + (4.799 * user.height) - (5.677 * user.age)
+    : 447.593 + (9.247 * user.weight) + (3.098 * user.height) - (4.33 * user.age);
   const tdee = Math.round(bmr * 1.55);
   const goalText = user.goal === 'lose' ? 'giảm cân' : 'duy trì';
+  const foodSummary = user.foodEntries?.map((e:any) => `${e.foodName} (${e.amount})`).join(', ') || 'Chưa có';
 
-  // PROMPT THÔNG MINH – HIỂU CÂU HỎI NGƯỜI DÙNG
+  // === CACHE CHỈ CHO DAILY, KHÔNG CHO QUERY ===
+  let cached: string | null = null;
+  if (cacheType === 'daily') {
+    const profileKey = `${user.age}_${user.gender}_${user.weight}_${user.height}_${user.goalWeight}`;
+    const cacheKey = `aiPlan_daily_${new Date().toDateString()}_${dailyIntake}_${profileKey.substring(0, 50)}`;
+    cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      console.log("DÙNG CACHE DAILY:", cacheKey);
+      return JSON.parse(cached);
+    }
+  }
+  // → cacheType 'query' → KHÔNG CACHE → luôn gọi AI mới
+
+  // === PROMPT MỚI – KHÔNG CÓ JSON MẪU, CHỈ CẤU TRÚC ===
   const prompt = `
-Bạn là huấn luyện viên AI chuyên nghiệp, an toàn và thông minh. Tạo kế hoạch tập luyện HÔM NAY.
+Bạn là huấn luyện viên AI chuyên nghiệp, an toàn, thông minh.
 
 === THÔNG TIN NGƯỜI DÙNG ===
 - Giới tính: ${user.gender}
@@ -122,99 +123,111 @@ Bạn là huấn luyện viên AI chuyên nghiệp, an toàn và thông minh. T�
 - BMI: ${bmi}
 - Mục tiêu: ${goalText}
 - TDEE: ${tdee} kcal
-- ĐÃ NẠP HÔM NAY: ${dailyIntake} kcal (${Math.round(dailyIntake / tdee * 100)}% TDEE)
-- Thực đơn: ${user.foodEntries?.map((e: any) => `${e.foodName} (${e.amount})`).join(', ') || 'Chưa có'}
+- ĐÃ NẠP: ${dailyIntake} kcal (${Math.round(dailyIntake / tdee * 100)}% TDEE)
+- Thực đơn: ${foodSummary}
 - Sở thích tập: ${user.workoutPreference?.join(', ') || 'Không có'}
 - Câu hỏi: "${userQuery}"
 
-=== QUY TẮC BẮT BUỘC (ƯU TIÊN CAO NHẤT) ===
-1. **NẾU người dùng nói**: đau vai, mỏi vai, đau lưng, mệt, đuối, tập nhẹ, khó nâng tay...
-   → TUYỆT ĐỐI KHÔNG CHỌN: HIIT, Upper Body, Strength, Power, Push-up, Pull-up
-   → ƯU TIÊN: Yoga, Mobility, Core, Đi bộ, Low-impact, Stretching
-   → Cường độ: "nhẹ"
-   → Advice: Gợi ý nghỉ nếu cần
+=== QUY TẮC BẮT BUỘC ===
+1. Nếu người dùng nói: đau, mỏi, mệt, đuối, tập nhẹ → cường độ "nhẹ", ưu tiên Yoga, Mobility, Đi bộ, Stretching
+2. Nếu không → dựa vào % calo:
+   • < 30% → "nhẹ" + cảnh báo ăn thêm
+   • 30–70% → "vừa"
+   • > 70% → "nặng" hoặc "phục hồi"
+3. Chọn 1–3 bài từ danh sách dưới đây
+4. Tổng đốt: 250–600 kcal
+5. Reason: cụ thể, liên hệ thực tế
+6. Summary: ngắn gọn, có tên, tình trạng
 
-2. **NẾU KHÔNG có triệu chứng**:
-   → Dựa vào % calo nạp:
-      • < 30% TDEE → cường độ "nhẹ" + cảnh báo ăn thêm
-      • 30–70% TDEE → cường độ "vừa"
-      • > 70% TDEE → cường độ "nặng" hoặc "phục hồi"
-   → Ưu tiên bài phù hợp với thực đơn (carb cao → cardio nhẹ; protein thấp → tránh strength)
+=== DANH SÁCH BÀI TẬP ===
+${availablePlans.map(p => `• ${p}`).join('\n')}
 
-3. **Tổng đốt**: 250–600 kcal, chia đều 2–3 bài
-4. **Reason**: cụ thể, liên hệ với BMI, thực đơn, sở thích, mục tiêu
-5. **Summary**: ngắn gọn, có tên người, tình trạng, mục tiêu
-
-=== DANH SÁCH BÀI TẬP ĐƯỢC PHÉP CHỌN ===
-${availablePlans.map(p => `• "${p}"`).join('\n')}
-
-=== TRẢ VỀ CHỈ JSON THUẦN (KHÔNG \`\`\`json, KHÔNG GIẢI THÍCH) ===
+=== TRẢ VỀ CHỈ JSON THUẦN (KHÔNG \`\`\`json) ===
 {
-  "summary": "Dũng, 20t, BMI 24.2, duy trì, ăn ít (452kcal), tập nhẹ",
-  "intensity": "nhẹ",
-  "exercises": [
-    {"name": "Morning Yoga Flow", "duration": "25 phút", "reason": "Giãn cơ sau tteokbokki giàu carb, tăng linh hoạt"},
-    {"name": "Brisk Walking", "duration": "30 phút", "reason": "Đốt calo nhẹ, phù hợp BMI ổn định"}
-  ],
-  "totalBurnEstimate": "320 kcal",
-  "advice": "Ăn thêm bữa nhẹ trước tập (trái cây/sữa). Uống đủ nước. Nếu mệt, giảm thời gian."
+  "summary": "string",
+  "intensity": "nhẹ|vừa|nặng",
+  "exercises": [{"name": "string", "duration": "string", "reason": "string"}],
+  "totalBurnEstimate": "string",
+  "advice": "string"
 }
 `.trim();
 
   const messages: ClientClovaMessage[] = [
-    {
-      role: "system",
-      content: [{
-        type: "text",
-        text: `TRẢ VỀ CHỈ JSON THUẦN. KHÔNG \`\`\`json. KHÔNG GIẢI THÍCH. Đảm bảo JSON hợp lệ.`
-      }]
-    },
-    {
-      role: "user",
-      content: [{ type: "text", text: prompt }]
-    }
+    { role: "system", content: [{ type: "text", text: "TRẢ VỀ CHỈ JSON THUẦN. KHÔNG GIẢI THÍCH." }] },
+    { role: "user", content: [{ type: "text", text: prompt }] }
   ];
 
   try {
     const request = client.createRequest(messages);
     request.maxTokens = 1500;
-    request.temperature = 0.2;
+    request.temperature = 0.3;
     request.topP = 0.8;
 
     const response = await client.createChatCompletion(request);
     const rawText = extractText(response.result.message.content);
+    console.log("Raw AI:", rawText);
 
-    console.log("Raw AI Response:", rawText);
-
-    const cleaned = rawText
-      .replace(/```json|```/g, '')
-      .replace(/[\r\n]+/g, ' ')
-      .trim();
-
+    const cleaned = rawText.replace(/```json|```/g, '').trim();
     const fixedJSON = autoFixJSON(cleaned);
-    console.log("Fixed JSON:", fixedJSON);
-
     let parsed: any;
+
     try {
       parsed = JSON.parse(fixedJSON);
     } catch (e) {
-      console.error("JSON Parse Failed:", e);
+      console.error("JSON lỗi:", e);
       const fallback = createFallbackPlan();
-      localStorage.setItem(cacheKey, JSON.stringify(fallback));
+      if (cacheType === 'daily') localStorage.setItem(`aiPlan_daily_${new Date().toDateString()}`, JSON.stringify(fallback));
       return fallback;
     }
 
-    // CHUYỂN parsed → normalized TRƯỚC return
-    const normalized = normalizeAIPlan(parsed, availablePlans);
+    // === NORMALIZE MỞ RỘNG – KHÔNG LỌC GẮT ===
+    const normalizeAIPlan = (data: any): AIExercisePlan => {
+      if (!data || typeof data !== 'object') return createFallbackPlan();
 
-    // LƯU CACHE SAU KHI CÓ normalized
-    localStorage.setItem(cacheKey, JSON.stringify(normalized));
+      const exercises = Array.isArray(data.exercises)
+        ? data.exercises
+            .filter((ex: any) => ex.name)
+            .map((ex: any) => {
+              // Tìm bài gần nhất trong availablePlans
+              const matched = availablePlans.find(p =>
+                p.toLowerCase().includes(ex.name.toLowerCase()) ||
+                ex.name.toLowerCase().includes(p.toLowerCase())
+              );
+              return {
+                name: matched || ex.name,
+                duration: String(ex.duration || "20 phút").trim(),
+                reason: String(ex.reason || "Cải thiện sức khỏe").trim(),
+              };
+            })
+            .slice(0, 3)
+        : [];
+
+      return {
+        summary: String(data.summary || "Kế hoạch tập luyện hôm nay").trim(),
+        intensity: ['nhẹ', 'vừa', 'nặng'].includes(data.intensity) ? data.intensity : 'vừa',
+        exercises,
+        totalBurnEstimate: String(data.totalBurnEstimate || "300-400 kcal").trim(),
+        advice: String(data.advice || "Tập đều đặn").trim(),
+      };
+    };
+
+    const normalized = normalizeAIPlan(parsed);
+
+    // Chỉ cache daily
+    if (cacheType === 'daily') {
+      const profileKey = `${user.age}_${user.gender}_${user.weight}_${user.height}_${user.goalWeight}`;
+      const cacheKey = `aiPlan_daily_${new Date().toDateString()}_${dailyIntake}_${profileKey.substring(0, 50)}`;
+      localStorage.setItem(cacheKey, JSON.stringify(normalized));
+    }
+
     return normalized;
 
   } catch (error) {
-    console.error("Clova AI Error:", error);
+    console.error("AI Error:", error);
     const fallback = createFallbackPlan();
-    localStorage.setItem(cacheKey, JSON.stringify(fallback));
+    if (cacheType === 'daily') {
+      localStorage.setItem(`aiPlan_daily_${new Date().toDateString()}`, JSON.stringify(fallback));
+    }
     return fallback;
   }
 }
