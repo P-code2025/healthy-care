@@ -50,19 +50,19 @@ export interface AiSuggestion {
   content_details: any;
 }
 
-const BASE_URL = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 async function fetchData<T>(endpoint: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}/${endpoint}`);
+  const res = await fetch(`${API_BASE}/api/${endpoint}`);
   if (!res.ok) throw new Error("API error");
   return res.json();
 }
 
 export const api = {
   getUsers: (): Promise<User[]> => fetchData<User[]>("users"),
-  getFoodLog: (): Promise<FoodLog[]> => fetchData<FoodLog[]>("food_log"),
+  getFoodLog: (): Promise<FoodLog[]> => fetchData<FoodLog[]>("food-log"),
   getWorkoutLog: (): Promise<WorkoutLog[]> =>
-    fetchData<WorkoutLog[]>("workout_log"),
+    fetchData<WorkoutLog[]>("workout-log"),
   getAiSuggestions: (): Promise<AiSuggestion[]> =>
-    fetchData<AiSuggestion[]>("ai_suggestions"),
+    fetchData<AiSuggestion[]>("ai-suggestions"),
 };

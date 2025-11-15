@@ -7,6 +7,12 @@ import {
   type CalendarModuleKey,
   type CalendarTemplate,
 } from "../../data/calendarTemplates";
+import {
+  calendarApi,
+  type CalendarEventDto,
+  type CalendarEventPayload,
+  type CalendarApiModule,
+} from "../../services/calendarApi";
 import styles from "./Calendar.module.css";
 
 type EventCategory = "meal" | "activity" | "appointment";
@@ -32,8 +38,6 @@ interface CalendarFormState {
   linkedModule: CalendarModuleKey;
 }
 
-const STORAGE_KEY = "calendar_events_v1";
-
 const CATEGORY_META: Record<EventCategory, { label: string; color: string; icon: string }> = {
   meal: { label: "Meal Planning", color: "#bbf7d0", icon: "MP" },
   activity: { label: "Physical Activities", color: "#fed7aa", icon: "PA" },
@@ -53,135 +57,55 @@ const DEFAULT_LINK_BY_CATEGORY: Record<EventCategory, CalendarModuleKey> = {
   appointment: "messages",
 };
 
-const DEFAULT_EVENTS: CalendarEvent[] = [
-  {
-    id: "1",
-    title: "Breakfast: Avocado Toast with Eggs",
-    date: "2028-09-03",
-    time: "07:30",
-    category: "meal",
-    location: "Home kitchen",
-    note: "Keep hydration reminder nearby.",
-    linkedModule: "meal-plan",
-  },
-  {
-    id: "2",
-    title: "Morning Yoga Session",
-    date: "2028-09-04",
-    time: "07:00",
-    category: "activity",
-    location: "Studio",
-    note: "Flexibility + breathing drills",
-    linkedModule: "exercises",
-  },
-  {
-    id: "3",
-    title: "Lunch: Quinoa Health Check-up",
-    date: "2028-09-04",
-    time: "12:00",
-    category: "meal",
-    location: "Downtown cafe",
-    linkedModule: "meal-plan",
-  },
-  {
-    id: "4",
-    title: "Lunch: Chicken Stir-Fry for Two",
-    date: "2028-09-05",
-    time: "13:00",
-    category: "meal",
-    linkedModule: "meal-plan",
-  },
-  {
-    id: "5",
-    title: "Snack: Energy Bars",
-    date: "2028-09-05",
-    time: "15:00",
-    category: "meal",
-    linkedModule: "food-diary",
-  },
-  {
-    id: "6",
-    title: "Garden Nutrition Class",
-    date: "2028-09-10",
-    time: "15:30",
-    category: "activity",
-    location: "Community garden",
-    linkedModule: "exercises",
-  },
-  {
-    id: "7",
-    title: "Breakfast: Green Salad",
-    date: "2028-09-11",
-    time: "07:00",
-    category: "meal",
-    linkedModule: "meal-plan",
-  },
-  {
-    id: "8",
-    title: "Dinner: Weight Training",
-    date: "2028-09-12",
-    time: "18:00",
-    category: "activity",
-    linkedModule: "exercises",
-  },
-  {
-    id: "9",
-    title: "Snack: Meal Prep",
-    date: "2028-09-12",
-    time: "16:00",
-    category: "meal",
-    linkedModule: "food-diary",
-  },
-  {
-    id: "10",
-    title: "Lunch: Greek Salad",
-    date: "2028-09-14",
-    time: "12:30",
-    category: "meal",
-    linkedModule: "meal-plan",
-  },
-  {
-    id: "11",
-    title: "Dinner: Overnight Jar Recipes",
-    date: "2028-09-16",
-    time: "19:00",
-    category: "meal",
-    linkedModule: "meal-plan",
-  },
-  {
-    id: "12",
-    title: "General Consultation",
-    date: "2028-09-16",
-    time: "13:00",
-    category: "appointment",
-    location: "Central Health Clinic",
-    linkedModule: "messages",
-  },
-  {
-    id: "13",
-    title: "Group Fitness Class",
-    date: "2028-09-21",
-    time: "12:00",
-    category: "activity",
-    linkedModule: "exercises",
-  },
-  {
-    id: "14",
-    title: "Morning Training Session",
-    date: "2028-09-27",
-    time: "06:30",
-    category: "activity",
-    linkedModule: "exercises",
-  },
-  {
-    id: "15",
-    title: "Dinner: General Consultation",
-    date: "2028-09-27",
-    time: "19:30",
-    category: "appointment",
-    linkedModule: "messages",
-  },
-];
+const API_TO_MODULE: Record<CalendarApiModule, CalendarModuleKey> = {
+  meal_plan: "meal-plan",
+  exercises: "exercises",
+  food_diary: "food-diary",
+  messages: "messages",
+};
+
+const MODULE_TO_API: Record<CalendarModuleKey, CalendarApiModule> = {
+  "meal-plan": "meal_plan",
+  exercises: "exercises",
+  "food-diary": "food_diary",
+  messages: "messages",
+};
+
+const ACTIVE_USER_ID = 1;
+
+const sortEvents = (items: CalendarEvent[]) =>
+  [...items].sort((a, b) =>
+    `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+  );
+
+const mapFromApi = (record: CalendarEventDto): CalendarEvent => {
+  const date = record.eventDate.slice(0, 10);
+  const category = record.category as EventCategory;
+  const linked =
+    (record.linkedModule && API_TO_MODULE[record.linkedModule]) ||
+    DEFAULT_LINK_BY_CATEGORY[category];
+
+  return {
+    id: record.id.toString(),
+    title: record.title,
+    date,
+    time: record.timeSlot,
+    category,
+    location: record.location || "",
+    note: record.note || "",
+    linkedModule: linked,
+  };
+};
+
+const buildPayload = (state: CalendarFormState): CalendarEventPayload => ({
+  title: state.title.trim(),
+  date: state.date,
+  time: state.time,
+  category: state.category,
+  location: state.location.trim() || undefined,
+  note: state.note.trim() || undefined,
+  linkedModule: state.linkedModule ? MODULE_TO_API[state.linkedModule] : null,
+});
 
 const formatDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -251,17 +175,7 @@ export default function Calendar() {
     appointment: true,
   });
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("month");
-  const [events, setEvents] = useState<CalendarEvent[]>(() => {
-    if (typeof window === "undefined") return DEFAULT_EVENTS;
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (!stored) return DEFAULT_EVENTS;
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) ? parsed : DEFAULT_EVENTS;
-    } catch {
-      return DEFAULT_EVENTS;
-    }
-  });
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formState, setFormState] = useState<CalendarFormState>(() => createEmptyForm(selectedDate));
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -269,11 +183,36 @@ export default function Calendar() {
   const [selectedWorkoutTemplate, setSelectedWorkoutTemplate] = useState(
     WORKOUT_TEMPLATES[0]?.id ?? ""
   );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-  }, [events]);
+    let active = true;
+    setLoading(true);
+    calendarApi
+      .list(ACTIVE_USER_ID)
+      .then((records) => {
+        if (!active) return;
+        const mapped = sortEvents(records.map(mapFromApi));
+        setEvents(mapped);
+        if (mapped.length > 0 && !mapped.some((event) => event.date === selectedDate)) {
+          setSelectedDate(mapped[0].date);
+        }
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("Calendar fetch error", err);
+        setError("Unable to load calendar data from database");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const monthEvents = useMemo(
     () => events.filter((event) => isSameMonth(event.date, currentDate)),
@@ -352,29 +291,41 @@ export default function Calendar() {
     });
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!formState.title.trim()) return;
 
-    if (editingId) {
-      setEvents((prev) => prev.map((item) => (item.id === editingId ? { ...item, ...formState } : item)));
-    } else {
-      const newEvent: CalendarEvent = {
-        id:
-          typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : Date.now().toString(),
-        ...formState,
-      };
-      setEvents((prev) => [...prev, newEvent]);
-    }
+    const payload = buildPayload(formState);
 
-    setSelectedDate(formState.date);
-    setIsFormOpen(false);
+    try {
+      if (editingId) {
+        const updated = await calendarApi.update(Number(editingId), ACTIVE_USER_ID, payload);
+        setEvents((prev) =>
+          sortEvents(
+            prev.map((item) => (item.id === editingId ? mapFromApi(updated) : item))
+          )
+        );
+      } else {
+        const created = await calendarApi.create(ACTIVE_USER_ID, payload);
+        setEvents((prev) => sortEvents([...prev, mapFromApi(created)]));
+      }
+      setSelectedDate(payload.date);
+      setIsFormOpen(false);
+      setError(null);
+    } catch (err) {
+      console.error("Calendar save error", err);
+      setError("Unable to save calendar event");
+    }
   };
 
-  const handleRemove = (id: string) => {
-    setEvents((prev) => prev.filter((event) => event.id !== id));
+  const handleRemove = async (id: string) => {
+    try {
+      await calendarApi.remove(Number(id), ACTIVE_USER_ID);
+      setEvents((prev) => prev.filter((event) => event.id !== id));
+    } catch (err) {
+      console.error("Calendar delete error", err);
+      setError("Unable to remove calendar event");
+    }
   };
 
   const applyTemplate = useCallback(
@@ -476,6 +427,8 @@ export default function Calendar() {
           + New Schedule (N)
         </button>
       </div>
+
+      {error && <div className={styles.errorBanner}>{error}</div>}
 
       <div className={styles.summaryCards}>
         {(Object.entries(CATEGORY_META) as [EventCategory, typeof CATEGORY_META.meal][]).map(
@@ -611,7 +564,9 @@ export default function Calendar() {
           </div>
 
           <div className={styles.scheduleList}>
-            {dayEvents.length === 0 ? (
+            {loading ? (
+              <div className={styles.loadingState}>Loading schedule...</div>
+            ) : dayEvents.length === 0 ? (
               <div className={styles.emptyState}>
                 <div className={styles.emptyIcon}>🗓️</div>
                 <p>No schedule yet. Create one to stay on track.</p>

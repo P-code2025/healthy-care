@@ -5,10 +5,12 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
+import { PrismaClient } from '@prisma/client';
 import { saveImageTemporarily, getImage, hasImage } from './imageCache.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const prisma = new PrismaClient();
 
 // CLOVA Studio credentials from environment variables
 const CLOVA_API_KEY = process.env.CLOVA_API_KEY;
@@ -31,6 +33,207 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' })); // Support large base64 images
+
+const cleanup = async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+};
+
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
+
+const mapUser = (user) => ({
+  user_id: user.id,
+  email: user.email,
+  password_hash: user.passwordHash,
+  age: user.age,
+  gender: user.gender,
+  height_cm: user.heightCm,
+  weight_kg: user.weightKg,
+  goal: user.goal,
+  activity_level: user.activityLevel,
+  exercise_preferences: user.exercisePreferences || {},
+});
+
+const mapFoodLog = (log) => ({
+  log_id: log.id,
+  user_id: log.userId,
+  eaten_at: log.eatenAt.toISOString(),
+  meal_type: log.mealType,
+  food_name: log.foodName,
+  calories: log.calories,
+  protein_g: log.proteinGrams,
+  carbs_g: log.carbsGrams,
+  fat_g: log.fatGrams,
+  health_consideration: log.healthConsideration,
+  is_corrected: log.isCorrected,
+});
+
+const mapWorkoutLog = (log) => ({
+  log_id: log.id,
+  user_id: log.userId,
+  completed_at: log.completedAt.toISOString(),
+  exercise_name: log.exerciseName,
+  duration_minutes: log.durationMinutes,
+  calories_burned_estimated: log.caloriesBurnedEstimated,
+  is_ai_suggested: log.isAiSuggested,
+});
+
+const mapSuggestion = (suggestion) => ({
+  suggestion_id: suggestion.id,
+  user_id: suggestion.userId,
+  generated_at: suggestion.generatedAt.toISOString(),
+  type: suggestion.type,
+  is_applied: suggestion.isApplied,
+  content_details: suggestion.contentDetails,
+});
+
+const mapCalendarEvent = (event) => ({
+  id: event.id,
+  userId: event.userId,
+  title: event.title,
+  eventDate: event.eventDate.toISOString(),
+  timeSlot: event.timeSlot,
+  category: event.category,
+  location: event.location,
+  note: event.note,
+  linkedModule: event.linkedModule,
+});
+
+const parseDateOnly = (dateStr) => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (!year || !month || !day) {
+    throw new Error('Invalid date value');
+  }
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const ensureCalendarPayload = (payload) => {
+  const { title, date, time, category } = payload;
+  if (!title || !date || !time || !category) {
+    throw new Error('Missing required calendar fields');
+  }
+};
+
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { id: 'asc' },
+    });
+    res.json(users.map(mapUser));
+  } catch (error) {
+    console.error('Users endpoint error', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.get('/api/food-log', async (req, res) => {
+  try {
+    const logs = await prisma.foodLog.findMany({
+      orderBy: { eatenAt: 'desc' },
+    });
+    res.json(logs.map(mapFoodLog));
+  } catch (error) {
+    console.error('Food log endpoint error', error);
+    res.status(500).json({ error: 'Failed to fetch food logs' });
+  }
+});
+
+app.get('/api/workout-log', async (req, res) => {
+  try {
+    const logs = await prisma.workoutLog.findMany({
+      orderBy: { completedAt: 'desc' },
+    });
+    res.json(logs.map(mapWorkoutLog));
+  } catch (error) {
+    console.error('Workout log endpoint error', error);
+    res.status(500).json({ error: 'Failed to fetch workout logs' });
+  }
+});
+
+app.get('/api/ai-suggestions', async (req, res) => {
+  try {
+    const suggestions = await prisma.aiSuggestion.findMany({
+      orderBy: { generatedAt: 'desc' },
+    });
+    res.json(suggestions.map(mapSuggestion));
+  } catch (error) {
+    console.error('AI suggestions endpoint error', error);
+    res.status(500).json({ error: 'Failed to fetch AI suggestions' });
+  }
+});
+
+app.get('/api/calendar-events', async (req, res) => {
+  try {
+    const userId = Number(req.query.userId) || 1;
+    const events = await prisma.calendarEvent.findMany({
+      where: { userId },
+      orderBy: [{ eventDate: 'asc' }, { timeSlot: 'asc' }],
+    });
+    res.json(events.map(mapCalendarEvent));
+  } catch (error) {
+    console.error('Calendar list error', error);
+    res.status(500).json({ error: 'Failed to fetch calendar events' });
+  }
+});
+
+app.post('/api/calendar-events', async (req, res) => {
+  try {
+    const userId = Number(req.body.userId) || 1;
+    ensureCalendarPayload(req.body);
+    const created = await prisma.calendarEvent.create({
+      data: {
+        userId,
+        title: req.body.title,
+        eventDate: parseDateOnly(req.body.date),
+        timeSlot: req.body.time,
+        category: req.body.category,
+        location: req.body.location,
+        note: req.body.note,
+        linkedModule: req.body.linkedModule,
+      },
+    });
+    res.status(201).json(mapCalendarEvent(created));
+  } catch (error) {
+    console.error('Calendar create error', error);
+    res.status(400).json({ error: error.message || 'Failed to create calendar event' });
+  }
+});
+
+app.put('/api/calendar-events/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = Number(req.body.userId) || 1;
+    ensureCalendarPayload(req.body);
+    const updated = await prisma.calendarEvent.update({
+      where: { id, userId },
+      data: {
+        title: req.body.title,
+        eventDate: parseDateOnly(req.body.date),
+        timeSlot: req.body.time,
+        category: req.body.category,
+        location: req.body.location,
+        note: req.body.note,
+        linkedModule: req.body.linkedModule,
+      },
+    });
+    res.json(mapCalendarEvent(updated));
+  } catch (error) {
+    console.error('Calendar update error', error);
+    res.status(400).json({ error: error.message || 'Failed to update calendar event' });
+  }
+});
+
+app.delete('/api/calendar-events/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await prisma.calendarEvent.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Calendar delete error', error);
+    res.status(400).json({ error: error.message || 'Failed to delete calendar event' });
+  }
+});
 
 // Health check
 app.get('/health', (req, res) => {
