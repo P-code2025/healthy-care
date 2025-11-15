@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import styles from './FoodDiaryNew.module.css';
 import { analyzeFood } from '../../services/analyzeFood';
 import type { AnalysisResult, FoodEntry } from '../../lib/types';
@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import { compressImage } from '../../utils/imageUtils';
 import { detectBarcodeWithQuagga } from '../../utils/barcodeUtils';
 import { FaWalking, FaRunning, FaDumbbell, FaSwimmer, FaBicycle } from 'react-icons/fa';
-import { loadFoodEntries, saveDailyCalories, saveFoodEntries } from '../../lib/storage';
+import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from '../../services/foodDiaryApi';
 
 
 
@@ -39,7 +39,6 @@ const getDateRange = (period: string): { start: string; end: string } => {
   return { start, end };
 };
 
-
 const getMealTypeFromTime = (hour: number): FoodEntry['mealType'] => {
   if (hour >= 5 && hour < 11) return 'Breakfast';
   if (hour >= 11 && hour < 14) return 'Lunch';
@@ -69,10 +68,10 @@ const getStatusBadgeColor = (status: string) => {
 };
 
 const getMealPrompt = (mealType: string, date: string) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   const isToday = date === today;
-  const day = isToday ? 'hôm nay' : 'hôm qua';
-  return `Bạn muốn thêm món ăn vào buổi ${mealType.toLowerCase()} ${day}?`;
+  const dayLabel = isToday ? "today" : "yesterday";
+  return `Would you like to add a meal for ${mealType.toLowerCase()} ${dayLabel}?`;
 };
 
 export default function FoodDiaryNew() {
@@ -80,7 +79,6 @@ export default function FoodDiaryNew() {
   const [selectedPeriod, setSelectedPeriod] = useState('This Week');
   const [showModal, setShowModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult>({
     foodName: '',
     amount: '',
@@ -90,10 +88,14 @@ export default function FoodDiaryNew() {
     fat: 0,
     sugar: 0,
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>(loadFoodEntries());
-  const [isDirty, setIsDirty] = useState(false); // Có thay đổi foodName/amount không?
+  const [, setLoading] = useState(false);
+  const [, setError] = useState<string | null>(null);
+  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(true);
+  const [entriesError, setEntriesError] = useState<string | null>(null);
+  const [savingEntry, setSavingEntry] = useState(false);
+  const [deletingEntries, setDeletingEntries] = useState(false);
+  const [isDirty, setIsDirty] = useState(false); // Has the food name/amount changed?
   const [lastAnalyzedImage, setLastAnalyzedImage] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMealType, setSelectedMealType] = useState<FoodEntry['mealType']>('Breakfast');
@@ -112,15 +114,24 @@ export default function FoodDiaryNew() {
     return getDateRange(selectedPeriod);
   }, [selectedPeriod]);
 
-  useEffect(() => {
-  saveFoodEntries(foodEntries);
+  const loadEntries = useCallback(async () => {
+    try {
+      setEntriesError(null);
+      setEntriesLoading(true);
+      const logs = await foodDiaryApi.list();
+      setFoodEntries(logs.map(mapFoodLogToEntry));
+      setSelectedEntries(new Set());
+    } catch (err) {
+      console.error("Failed to load food logs", err);
+      setEntriesError("Unable to load meal history");
+    } finally {
+      setEntriesLoading(false);
+    }
+  }, []);
 
-  // Cập nhật calo hôm nay (dùng hàm chung)
-  const today = new Date().toISOString().split('T')[0];
-  const todayEntries = foodEntries.filter(e => e.date === today);
-  const todayCalories = todayEntries.reduce((sum, e) => sum + e.calories, 0);
-  saveDailyCalories(todayCalories, today);
-}, [foodEntries]);
+  useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
 
   const filteredEntries = useMemo(() => {
     return foodEntries
@@ -158,7 +169,7 @@ export default function FoodDiaryNew() {
 
   const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
 
-  // Tính tổng theo khoảng thời gian
+  // Aggregate totals for the selected period
   const totals = useMemo(() => {
     return filteredEntries.reduce(
       (acc, entry) => ({
@@ -213,7 +224,8 @@ export default function FoodDiaryNew() {
           setLastAnalyzedImage(selectedImage);
         }
       } catch (err) {
-        setError('Lỗi khi phân tích lại');
+        console.error('Auto analysis retry error', err);
+        setError('Failed to analyze again');
       } finally {
         setLoading(false);
         setIsDirty(false); // Reset
@@ -227,7 +239,7 @@ export default function FoodDiaryNew() {
     }
   }, [analysisResult, selectedImage, isDirty, lastAnalyzedImage, showModal]);
 
-  // Lấy thông tin từ OpenFoodFacts
+  // Fetch product data from OpenFoodFacts
   const fetchBarcodeInfo = async (barcode: string) => {
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
@@ -237,7 +249,7 @@ export default function FoodDiaryNew() {
       const p = data.product;
       const n = p.nutriments || {};
 
-      // LẤY DỮ LIỆU THEO THỨ TỰ ƯU TIÊN: serving → 100g → fallback
+      // Resolve nutrition data priority: serving -> 100g -> fallback
       const getNutrient = (keys: string[], defaultVal = 0) => {
         for (const key of keys) {
           if (n[key] !== undefined && n[key] !== null) return Number(n[key]);
@@ -251,7 +263,7 @@ export default function FoodDiaryNew() {
       const factor = size / 100;
 
 
-      // Ưu tiên: serving → 100g → base
+      // Prioritize: serving -> 100g -> base
       const calories = Math.round(
         getNutrient(['energy-kcal_serving']) ||
         getNutrient(['energy-kcal_100g']) * factor ||
@@ -296,7 +308,7 @@ export default function FoodDiaryNew() {
       };
 
       return {
-        foodName: p.product_name_vi || p.product_name || p.brands || 'Sản phẩm không xác định',
+        foodName: p.product_name_vi || p.product_name || p.brands || 'Unknown product',
         amount: `${servingSize} (${p.quantity || '100g'})`,
         calories,
         protein,
@@ -307,12 +319,12 @@ export default function FoodDiaryNew() {
         baseAmount: size,
       };
     } catch (err) {
-      console.error('Lỗi fetch OpenFoodFacts:', err);
+      console.error('OpenFoodFacts request failed:', err);
       return null;
     }
   };
 
-  // Xử lý ảnh
+  // Image processing
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -324,20 +336,20 @@ export default function FoodDiaryNew() {
       setLoading(true);
       setError(null);
 
-      const toastId = toast.info('Đang quét mã vạch...', { autoClose: false });
+      const toastId = toast.info('Scanning barcode...', { autoClose: false });
 
       try {
-        // BƯỚC 1: QUÉT MÃ VẠCH (dùng base64 trực tiếp)
+        // STEP 1: scan barcode (using base64 directly)
         const barcode = await detectBarcodeWithQuagga(originalBase64);
 
         if (barcode) {
-          toast.update(toastId, { render: `Mã: ${barcode}`, type: 'info' });
+          toast.update(toastId, { render: `Code: ${barcode}`, type: 'info' });
 
           const info = await fetchBarcodeInfo(barcode);
           if (info) {
             setAnalysisResult(info);
             toast.update(toastId, {
-              render: 'Nhận diện từ mã vạch!',
+              render: 'Barcode recognized!',
               type: 'success',
               autoClose: 3000,
             });
@@ -345,29 +357,29 @@ export default function FoodDiaryNew() {
             return;
           } else {
             toast.update(toastId, {
-              render: 'Mã vạch không có trong Open Food Facts',
+              render: 'Barcode not found in Open Food Facts',
               type: 'warning',
               autoClose: 3000,
             });
           }
         } else {
-          toast.update(toastId, { render: 'AI phân tích...', type: 'info' });
+          toast.update(toastId, { render: 'Analyzing with AI...', type: 'info' });
         }
 
-        // BƯỚC 2: DÙNG AI
+        // STEP 2: use AI
         const compressed = await compressImage(originalBase64, 900, 0.8);
         const result = await analyzeFood(compressed);
 
         if (result.error) {
           setError(result.error);
-          toast.update(toastId, { render: 'Lỗi AI', type: 'error', autoClose: 3000 });
+          toast.update(toastId, { render: 'AI error', type: 'error', autoClose: 3000 });
         } else {
           setAnalysisResult(result.analysis);
-          toast.update(toastId, { render: 'AI phân tích xong!', type: 'success', autoClose: 3000 });
+          toast.update(toastId, { render: 'AI analysis completed!', type: 'success', autoClose: 3000 });
         }
       } catch (err) {
         console.error('Upload error:', err);
-        toast.update(toastId, { render: 'Lỗi xử lý', type: 'error', autoClose: 3000 });
+        toast.update(toastId, { render: 'Processing error', type: 'error', autoClose: 3000 });
       } finally {
         setLoading(false);
       }
@@ -376,35 +388,50 @@ export default function FoodDiaryNew() {
     reader.readAsDataURL(file);
   };
   // Submit form
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingEntry) return;
+
     const form = e.target as HTMLFormElement;
+    const status = (form.elements.namedItem('status') as HTMLSelectElement)
+      ?.value as FoodEntry['status'];
+    const thoughts =
+      (form.elements.namedItem('thoughts') as HTMLTextAreaElement)?.value || '';
 
     const now = new Date();
-    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const time = now.toISOString().slice(11, 16);
 
-    const newEntry: FoodEntry = {
-      id: Date.now().toString(),
+    const payload: FoodEntryInput = {
       date: selectedDate,
       time,
       mealType: selectedMealType,
-      foodName: analysisResult.foodName || (form.elements.namedItem('foodName') as HTMLInputElement)?.value || 'Không tên',
-      amount: analysisResult.amount || (form.elements.namedItem('amount') as HTMLInputElement)?.value || '',
-      calories: analysisResult.calories || Number((form.elements.namedItem('calories') as HTMLInputElement)?.value) || 0,
-      protein: analysisResult.protein || Number((form.elements.namedItem('protein') as HTMLInputElement)?.value) || 0,
-      carbs: analysisResult.carbs || Number((form.elements.namedItem('carbs') as HTMLInputElement)?.value) || 0,
-      fat: analysisResult.fat || Number((form.elements.namedItem('fat') as HTMLInputElement)?.value) || 0,
-      sugar: analysisResult.sugar || Number((form.elements.namedItem('sugar') as HTMLInputElement)?.value) || 0,
-      status: (form.elements.namedItem('status') as HTMLSelectElement)?.value as FoodEntry['status'],
-      thoughts: (form.elements.namedItem('thoughts') as HTMLTextAreaElement)?.value || '',
+      foodName: analysisResult.foodName || 'Unnamed',
+      amount: analysisResult.amount || '',
+      calories: Number(analysisResult.calories) || 0,
+      protein: Number(analysisResult.protein) || 0,
+      carbs: Number(analysisResult.carbs) || 0,
+      fat: Number(analysisResult.fat) || 0,
+      sugar: Number(analysisResult.sugar) || 0,
+      status: status || 'Satisfied',
+      thoughts,
     };
 
-    setFoodEntries(prev => [...prev, newEntry]);
-    toast.success('Đã thêm món ăn!');
-
-    // ĐÓNG MODAL + RESET FORM
-    setShowModal(false);
-    resetForm();
+    try {
+      setSavingEntry(true);
+      const created = await foodDiaryApi.create(payload);
+      const mapped = mapFoodLogToEntry(created);
+      setFoodEntries(prev => [mapped, ...prev]);
+      toast.success('Meal saved!');
+      setShowModal(false);
+      resetForm();
+    } catch (err) {
+      console.error('Failed to create food log', err);
+      const message =
+        err instanceof Error ? err.message : 'Unable to save meal, please try again';
+      toast.error(message);
+    } finally {
+      setSavingEntry(false);
+    }
   };
 
   const resetForm = () => {
@@ -413,12 +440,23 @@ export default function FoodDiaryNew() {
     setError(null);
   };
 
-
-  // Calculate totals
-  const totalCalories = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
-  const totalProtein = foodEntries.reduce((sum, entry) => sum + entry.protein, 0);
-  const totalCarbs = foodEntries.reduce((sum, entry) => sum + entry.carbs, 0);
-  const totalFat = foodEntries.reduce((sum, entry) => sum + entry.fat, 0);
+  const handleBulkDelete = async () => {
+    if (!selectedEntries.size) return;
+    try {
+      setDeletingEntries(true);
+      await foodDiaryApi.batchDelete(Array.from(selectedEntries));
+      setFoodEntries(prev => prev.filter(entry => !selectedEntries.has(entry.id)));
+      toast.success(`Removed ${selectedEntries.size} meal(s)!`);
+      setSelectedEntries(new Set());
+    } catch (err) {
+      console.error('Failed to remove food logs', err);
+      const message =
+        err instanceof Error ? err.message : 'Unable to delete meals, please try again';
+      toast.error(message);
+    } finally {
+      setDeletingEntries(false);
+    }
+  };
 
 
   return (
@@ -458,7 +496,7 @@ export default function FoodDiaryNew() {
           </svg>
           <input
             type="text"
-            placeholder="Tìm món ăn..."
+            placeholder="Search meals..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -494,9 +532,9 @@ export default function FoodDiaryNew() {
           <div className={styles.modalContainer} onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className={styles.modalHeader}>
-              <h2>Thêm bữa ăn mới</h2>
+              <h2>Add new meal</h2>
               <button className={styles.closeBtn} onClick={() => { setShowModal(false); resetForm(); }}>
-                ×
+                &times;
               </button>
             </div>
 
@@ -506,7 +544,7 @@ export default function FoodDiaryNew() {
             {/* Image Upload */}
             <div className={styles.imageUploadWrapper}>
               <label className={styles.imageUploadLabel}>
-                📷 Chọn/Chụp món ăn
+                📷 Upload meal photo
                 <input type="file" accept="image/*" onChange={handleImageUpload} />
               </label>
 
@@ -521,13 +559,13 @@ export default function FoodDiaryNew() {
             <form className={styles.modalForm} onSubmit={handleSubmit}>
               <div className={styles.row}>
                 <label>
-                  Ngày
+                  Date
                   <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
                     max={new Date().toISOString().split('T')[0]} />
                 </label>
 
                 <label>
-                  Buổi ăn
+                  Meal
                   <select value={selectedMealType} className={styles.customSelect} onChange={e => setSelectedMealType(e.target.value as FoodEntry['mealType'])}>
                     <option>Breakfast</option>
                     <option>Lunch</option>
@@ -538,13 +576,13 @@ export default function FoodDiaryNew() {
               </div>
 
               <label>
-                Tên món ăn
+                Meal name
                 <input name="foodName" type="text" value={analysisResult.foodName} onChange={e => setAnalysisResult(prev => ({ ...prev, foodName: e.target.value }))}
-                  placeholder="Tên món ăn" required />
+                  placeholder="Meal name" required />
               </label>
 
               <label>
-                Khối lượng
+                Serving size
                 <input
                   name="amount"
                   type="text"
@@ -564,7 +602,7 @@ export default function FoodDiaryNew() {
                       };
                     });
                   }}
-                  placeholder="Ví dụ: 200g, 1 bát..."
+                  placeholder="e.g. 200g, 1 bowl..."
                 />
               </label>
 
@@ -581,12 +619,12 @@ export default function FoodDiaryNew() {
                         if (isNaN(value)) return;
 
                         setAnalysisResult(prev => {
-                          // Nếu chưa có base100g → chỉ cập nhật giá trị
+                          // If base100g is missing just update the value
                           if (!prev.base100g) {
                             return { ...prev, [key]: value };
                           }
 
-                          // CÁC TRƯỜNG HỢP ĐẶC BIỆT
+                          // Special cases
                           if (key === 'calories') {
                             const ratio = prev.calories === 0 ? 1 : value / prev.calories;
                             return {
@@ -611,7 +649,7 @@ export default function FoodDiaryNew() {
                             };
                           }
 
-                          // Các macro còn lại (protein, fat, sugar) → chỉ cập nhật
+                          // Remaining macros (protein, fat, sugar) only update
                           return { ...prev, [key]: value };
                         });
                       }}
@@ -621,7 +659,7 @@ export default function FoodDiaryNew() {
               </div>
 
               <label>
-                Cảm xúc
+                Mood
                 <select name="status" defaultValue="Satisfied">
                   <option>Energized</option>
                   <option>Quite Satisfied</option>
@@ -632,11 +670,13 @@ export default function FoodDiaryNew() {
               </label>
 
               <label>
-                Ghi chú
-                <textarea name="thoughts" placeholder="Ví dụ: Ăn ngon, hơi no..." />
+                Notes
+                <textarea name="thoughts" placeholder="e.g. Delicious, felt full..." />
               </label>
 
-              <button type="submit" className={styles.addMealBtn}>+ Thêm bữa ăn</button>
+              <button type="submit" className={styles.addMealBtn} disabled={savingEntry}>
+                {savingEntry ? 'Saving...' : '+ Add meal'}
+              </button>
             </form>
           </div>
         </div>
@@ -649,25 +689,25 @@ export default function FoodDiaryNew() {
             onClick={e => e.stopPropagation()}
           >
             <div className={styles.filterModalHeader}>
-              <h2>Lọc món ăn</h2>
+              <h2>Filter meals</h2>
               <button
                 className={styles.closeBtn}
                 onClick={() => setShowFilterModal(false)}
               >
-                ×
+                &times;
               </button>
             </div>
 
             <div className={styles.filterForm}>
-              {/* Buổi ăn */}
+              {/* Meal */}
               <label>
-                Buổi ăn
+                Meal
                 <select
                   value={filterMealType}
                   onChange={e => setFilterMealType(e.target.value)}
                   className={styles.customSelect}
                 >
-                  <option value="">Tất cả</option>
+                  <option value="">All</option>
                   <option>Breakfast</option>
                   <option>Lunch</option>
                   <option>Dinner</option>
@@ -684,7 +724,7 @@ export default function FoodDiaryNew() {
                     value={filterCalorieRange[0]}
                     onChange={e => setFilterCalorieRange([Number(e.target.value), filterCalorieRange[1]])}
                   />
-                  <span>→</span>
+                  <span>&rarr;</span>
                   <input
                     type="number"
                     value={filterCalorieRange[1]}
@@ -698,7 +738,7 @@ export default function FoodDiaryNew() {
                 <label>Carbs (g)</label>
                 <div className={styles.rangeInputs}>
                   <input type="number" value={filterCarbsRange[0]} onChange={e => setFilterCarbsRange([Number(e.target.value), filterCarbsRange[1]])} />
-                  <span>→</span>
+                  <span>&rarr;</span>
                   <input type="number" value={filterCarbsRange[1]} onChange={e => setFilterCarbsRange([filterCarbsRange[0], Number(e.target.value)])} />
                 </div>
               </div>
@@ -708,7 +748,7 @@ export default function FoodDiaryNew() {
                 <label>Protein (g)</label>
                 <div className={styles.rangeInputs}>
                   <input type="number" value={filterProteinRange[0]} onChange={e => setFilterProteinRange([Number(e.target.value), filterProteinRange[1]])} />
-                  <span>→</span>
+                  <span>&rarr;</span>
                   <input type="number" value={filterProteinRange[1]} onChange={e => setFilterProteinRange([filterProteinRange[0], Number(e.target.value)])} />
                 </div>
               </div>
@@ -718,7 +758,7 @@ export default function FoodDiaryNew() {
                 <label>Fat (g)</label>
                 <div className={styles.rangeInputs}>
                   <input type="number" value={filterFatRange[0]} onChange={e => setFilterFatRange([Number(e.target.value), filterFatRange[1]])} />
-                  <span>→</span>
+                  <span>&rarr;</span>
                   <input type="number" value={filterFatRange[1]} onChange={e => setFilterFatRange([filterFatRange[0], Number(e.target.value)])} />
                 </div>
               </div>
@@ -728,23 +768,23 @@ export default function FoodDiaryNew() {
                 <label>Sugar (g)</label>
                 <div className={styles.rangeInputs}>
                   <input type="number" value={filterSugarRange[0]} onChange={e => setFilterSugarRange([Number(e.target.value), filterSugarRange[1]])} />
-                  <span>→</span>
+                  <span>&rarr;</span>
                   <input type="number" value={filterSugarRange[1]} onChange={e => setFilterSugarRange([filterSugarRange[0], Number(e.target.value)])} />
                 </div>
               </div>
 
-              {/* Ghi chú */}
+              {/* Notes */}
               <label>
-                Ghi chú (tìm từ)
+                Notes (keyword)
                 <input
                   type="text"
                   value={filterThoughts}
                   onChange={e => setFilterThoughts(e.target.value)}
-                  placeholder="VD: ngon, no, mặn..."
+                  placeholder="e.g. tasty, full, salty..."
                 />
               </label>
 
-              {/* Nút hành động */}
+              {/* Action buttons */}
               <div className={styles.filterActions}>
                 <button
                   type="button"
@@ -760,7 +800,7 @@ export default function FoodDiaryNew() {
                     setCurrentPage(1);
                   }}
                 >
-                  Xóa bộ lọc
+                  Clear filters
                 </button>
                 <button
                   type="button"
@@ -770,7 +810,7 @@ export default function FoodDiaryNew() {
                     setShowFilterModal(false);
                   }}
                 >
-                  Áp dụng
+                  Apply
                 </button>
               </div>
             </div>
@@ -782,6 +822,14 @@ export default function FoodDiaryNew() {
 
       {/* Table */}
       <div className={styles.tableContainer}>
+        {entriesError && (
+          <div className={styles.errorBanner}>
+            <span>{entriesError}</span>
+            <button type="button" onClick={loadEntries}>
+              Try again
+            </button>
+          </div>
+        )}
         <table className={styles.table}>
           <thead>
             <tr>
@@ -812,84 +860,98 @@ export default function FoodDiaryNew() {
             </tr>
           </thead>
           <tbody className={styles.tableBody}>
-            {paginatedEntries.map((entry) => (
-              <tr key={entry.id} className={styles.tableRow}>
-                <td>
-                  <input
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={selectedEntries.has(entry.id)}
-                    onChange={(e) => {
-                      const newSet = new Set(selectedEntries);
-                      if (e.target.checked) {
-                        newSet.add(entry.id);
-                      } else {
-                        newSet.delete(entry.id);
-                      }
-                      setSelectedEntries(newSet);
-                    }}
-                  />
-                </td>
-                <td>
-                  <div className={styles.dateTime}>
-                    <div className={styles.date}>{entry.date}</div>
-                    <div className={styles.time}>{entry.time}</div>
-                  </div>
-                </td>
-                <td>
-                  <span
-                    className={styles.mealBadge}
-                    style={{ backgroundColor: getMealTypeBadgeColor(entry.mealType) }}
-                  >
-                    {entry.mealType}
-                  </span>
-                </td>
-                <td>
-                  <div className={styles.foodName}>{entry.foodName}</div>
-                </td>
-                <td className={styles.amount}>{entry.amount}</td>
-                <td className={styles.calories}>{entry.calories}</td>
-                <td className={styles.nutrient}>{entry.protein}</td>
-                <td className={styles.nutrient}>{entry.carbs}</td>
-                <td className={styles.nutrient}>{entry.fat}</td>
-                <td className={styles.nutrient}>{entry.sugar}</td>
-                <td>
-                  <span
-                    className={styles.statusBadge}
-                    style={{ backgroundColor: getStatusBadgeColor(entry.status) }}
-                  >
-                    {entry.status}
-                  </span>
+            {entriesLoading && (
+              <tr>
+                <td colSpan={11} className={styles.loadingRow}>
+                  Loading diary entries...
                 </td>
               </tr>
-            ))}
-            {Array.from(
-    { length: itemsPerPage - paginatedEntries.length },
-    (_, i) => (
-      <tr key={`ghost-${i}`} className={styles.tableRow}>
-        <td colSpan={11} className={styles.ghostRow}>
-          &nbsp;
-        </td>
-      </tr>
-    )
-  )}
+            )}
+            {!entriesLoading && paginatedEntries.length === 0 && (
+              <tr>
+                <td colSpan={11} className={styles.emptyRow}>
+                  No meals found for this period.
+                </td>
+              </tr>
+            )}
+            {!entriesLoading &&
+              paginatedEntries.map((entry) => (
+                <tr key={entry.id} className={styles.tableRow}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      className={styles.checkbox}
+                      checked={selectedEntries.has(entry.id)}
+                      onChange={(e) => {
+                        const newSet = new Set(selectedEntries);
+                        if (e.target.checked) {
+                          newSet.add(entry.id);
+                        } else {
+                          newSet.delete(entry.id);
+                        }
+                        setSelectedEntries(newSet);
+                      }}
+                    />
+                  </td>
+                  <td>
+                    <div className={styles.dateTime}>
+                      <div className={styles.date}>{entry.date}</div>
+                      <div className={styles.time}>{entry.time}</div>
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      className={styles.mealBadge}
+                      style={{ backgroundColor: getMealTypeBadgeColor(entry.mealType) }}
+                    >
+                      {entry.mealType}
+                    </span>
+                  </td>
+                  <td>
+                    <div className={styles.foodName}>{entry.foodName}</div>
+                  </td>
+                  <td className={styles.amount}>{entry.amount}</td>
+                  <td className={styles.calories}>{entry.calories}</td>
+                  <td className={styles.nutrient}>{entry.protein}</td>
+                  <td className={styles.nutrient}>{entry.carbs}</td>
+                  <td className={styles.nutrient}>{entry.fat}</td>
+                  <td className={styles.nutrient}>{entry.sugar}</td>
+                  <td>
+                    <span
+                      className={styles.statusBadge}
+                      style={{ backgroundColor: getStatusBadgeColor(entry.status) }}
+                    >
+                      {entry.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            {!entriesLoading &&
+              paginatedEntries.length > 0 &&
+              Array.from(
+                { length: Math.max(0, itemsPerPage - paginatedEntries.length) },
+                (_, i) => (
+                  <tr key={`ghost-${i}`} className={styles.tableRow}>
+                    <td colSpan={11} className={styles.ghostRow}>
+                      &nbsp;
+                    </td>
+                  </tr>
+                )
+              )}
           </tbody>
         </table>
         {selectedEntries.size > 0 && (
           <div className={styles.deleteBar}>
-            <span>{selectedEntries.size} món được chọn</span>
+            <span>{selectedEntries.size} items selected</span>
             <button
               className={styles.deleteBtn}
-              onClick={() => {
-                setFoodEntries(prev => prev.filter(e => !selectedEntries.has(e.id)));
-                setSelectedEntries(new Set());
-                toast.success(`Đã xóa ${selectedEntries.size} món ăn!`);
-              }}
+              onClick={handleBulkDelete}
+              disabled={deletingEntries}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-8 0h10l-1 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 6Z" />
               </svg>
-              Xóa
+              {deletingEntries ? 'Deleting...' : 'Delete'}
             </button>
           </div>
         )}
@@ -898,7 +960,7 @@ export default function FoodDiaryNew() {
       {/* Pagination */}
       <div className={styles.pagination}>
         <div className={styles.paginationInfo}>
-          Hiển thị{' '}
+          Showing{' '}
           <select
             className={styles.perPageSelect}
             value={itemsPerPage}
@@ -911,7 +973,7 @@ export default function FoodDiaryNew() {
             <option>25</option>
             <option>50</option>
           </select>{' '}
-          trong {filteredEntries.length} mục
+          of {filteredEntries.length} items
         </div>
         <div className={styles.paginationControls}>
           <button
@@ -971,16 +1033,16 @@ export default function FoodDiaryNew() {
       {/* Exercise Burn Banner */}
       <div className={styles.exerciseBanner}>
         <div className={styles.exerciseHeader}>
-          <h3>Làm thế nào để tiêu hao {totals.calories.toLocaleString()} Kcal?</h3>
+          <h3>How to burn {totals.calories.toLocaleString()} Kcal?</h3>
         </div>
 
         <div className={styles.exerciseGrid}>
           {[
-            { Icon: FaWalking, label: 'Đi bộ', minutes: Math.round(totals.calories / 4.3), color: '#10B981' },
-            { Icon: FaRunning, label: 'Chạy bộ', minutes: Math.round(totals.calories / 10), color: '#F59E0B' },
-            { Icon: FaDumbbell, label: 'Nhảy dây', minutes: Math.round(totals.calories / 11.8), color: '#8B5CF6' },
-            { Icon: FaSwimmer, label: 'Bơi lội', minutes: Math.round(totals.calories / 7.0), color: '#3B82F6' },
-            { Icon: FaBicycle, label: 'Đạp xe', minutes: Math.round(totals.calories / 8.0), color: '#EF4444' },
+            { Icon: FaWalking, label: 'Walking', minutes: Math.round(totals.calories / 4.3), color: '#10B981' },
+            { Icon: FaRunning, label: 'Running', minutes: Math.round(totals.calories / 10), color: '#F59E0B' },
+            { Icon: FaDumbbell, label: 'Jump rope', minutes: Math.round(totals.calories / 11.8), color: '#8B5CF6' },
+            { Icon: FaSwimmer, label: 'Swimming', minutes: Math.round(totals.calories / 7.0), color: '#3B82F6' },
+            { Icon: FaBicycle, label: 'Cycling', minutes: Math.round(totals.calories / 8.0), color: '#EF4444' },
           ].map(({ Icon, label, minutes, color }, i) => (
             <div key={i} className={styles.exerciseItem}>
               <div className={styles.exerciseIcon} style={{ color }}>
@@ -989,8 +1051,8 @@ export default function FoodDiaryNew() {
               <div className={styles.exerciseLabel}>{label}</div>
               <div className={styles.exerciseTime}>
                 {minutes > 60
-                  ? `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`
-                  : `${minutes} phút`
+                  ? `${Math.floor(minutes / 60)} h ${minutes % 60} min`
+                  : `${minutes} min`
                 }
               </div>
             </div>
@@ -1006,10 +1068,11 @@ export default function FoodDiaryNew() {
               <path d="M9 12l2 2 4-4" />
               <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />
             </svg>
-            Xây dựng bài tập
+            Build workout
           </button>
         </div>
       </div>
     </div>
   );
 }
+

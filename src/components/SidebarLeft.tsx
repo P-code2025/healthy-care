@@ -19,7 +19,7 @@ import styles from "./SidebarLeft.module.css";
 const menuItems = [
   { name: "Dashboard", icon: <LuLayoutDashboard size={20} />, path: "/" },
   { name: "Calendar", icon: <LuCalendar size={20} />, path: "/calendar" },
-  { name: "Messages", icon: <LuMessageSquare size={20} />, path: "/messages" },
+  { name: "AI Chat", icon: <LuMessageSquare size={20} />, path: "/messages" },
   { name: "Healthy Menu", icon: <LuSalad size={20} />, path: "/healthy-menu" },
   {
     name: "Meal Plan",
@@ -120,7 +120,7 @@ const SidebarLeft: React.FC = () => {
         )}
       </nav>
 
-      {/* Banner quảng cáo */}
+      {/* Promotional banner */}
       <div className={styles.adCard}>
         <div className={styles.adCardInner}>
           <h4>Start your health journey</h4>

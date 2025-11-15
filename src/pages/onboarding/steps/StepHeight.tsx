@@ -21,8 +21,8 @@ export default function StepHeight({ onNext, onPrev }: Props) {
 
   return (
     <div className={styles.step}>
-      {/* <img src={heightIcon} alt="Chiều cao" className={styles.icon} /> */}
-      <h1>Chiều cao của bạn?</h1>
+      {/* <img src={heightIcon} alt="Height" className={styles.icon} /> */}
+      <h1>What is your height?</h1>
 
       <div className={styles.inputWrapper}>
         <input
@@ -41,7 +41,7 @@ export default function StepHeight({ onNext, onPrev }: Props) {
         disabled={!height || parseInt(height) < 100 || parseInt(height) > 250}
         className={styles.nextBtn}
       >
-        Tiếp theo
+        Next
       </button>
     </div>
   );

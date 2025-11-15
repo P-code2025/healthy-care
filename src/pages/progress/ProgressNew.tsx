@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './ProgressNew.module.css';
+import { api } from '../../services/api';
+import type { DailyStatistics } from '../../services/api';
 
 interface BodyMeasurement {
   label: string;
@@ -32,13 +34,6 @@ const WEEKLY_DATA: WeekData[] = [
   { week: 'Week 4', chest: 93.0, arm: 28.5, waist: 77.5, hips: 98.0, thigh: 58.5 },
 ];
 
-const CALORIES_DATA = [
-  { day: 'Mon', consumed: 2100, burned: 500 },
-  { day: 'Tue', consumed: 1795, burned: 400 },
-  { day: 'Wed', consumed: 2300, burned: 600 },
-  { day: 'Thu', consumed: 2000, burned: 450 },
-];
-
 const SLEEP_DATA = [
   { day: 'Mon', deepSleep: 3, lightSleep: 3, remPhase: 1.5, awake: 0.5 },
   { day: 'Tue', deepSleep: 2.5, lightSleep: 3.5, remPhase: 1.5, awake: 0.5 },
@@ -59,6 +54,29 @@ const HYDRATION_DATA = [
 export default function ProgressNew() {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
   const [selectedChartPeriod, setSelectedChartPeriod] = useState('Last 5 Days');
+  const [weeklyStats, setWeeklyStats] = useState<DailyStatistics[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWeeklyStats = async () => {
+      try {
+        const today = new Date();
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 6);
+        
+        const endDate = today.toISOString().split('T')[0];
+        const startDate = sevenDaysAgo.toISOString().split('T')[0];
+        
+        const stats = await api.getWeeklyStatistics(startDate, endDate);
+        setWeeklyStats(stats);
+      } catch (error) {
+        console.error('Failed to fetch weekly statistics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWeeklyStats();
+  }, []);
 
   return (
     <div className={styles.container}>
@@ -306,21 +324,32 @@ export default function ProgressNew() {
               <div className={styles.caloriesSubtext}>Calorie Goal: 3,000 kcal</div>
             </div>
             <div className={styles.barChartWrapper}>
-              {CALORIES_DATA.map((day, index) => (
-                <div key={index} className={styles.barGroup}>
-                  <div className={styles.bars}>
-                    <div 
-                      className={styles.barConsumed}
-                      style={{ height: `${(day.consumed / 2500) * 100}%` }}
-                    ></div>
-                    <div 
-                      className={styles.barBurned}
-                      style={{ height: `${(day.burned / 2500) * 100}%` }}
-                    ></div>
-                  </div>
-                  <span className={styles.barLabel}>{day.day}</span>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
+              ) : weeklyStats.length > 0 ? (
+                weeklyStats.slice(-7).map((stat, index) => {
+                  const dayName = new Date(stat.date).toLocaleDateString('en-US', { weekday: 'short' });
+                  return (
+                    <div key={index} className={styles.barGroup}>
+                      <div className={styles.bars}>
+                        <div 
+                          className={styles.barConsumed}
+                          style={{ height: `${Math.min((stat.total_calories / 2500) * 100, 100)}%` }}
+                        ></div>
+                        <div 
+                          className={styles.barBurned}
+                          style={{ height: `${Math.min((stat.calories_burned / 2500) * 100, 100)}%` }}
+                        ></div>
+                      </div>
+                      <span className={styles.barLabel}>{dayName}</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#6B7280' }}>
+                  No data available. Start tracking your meals and workouts!
                 </div>
-              ))}
+              )}
             </div>
             <div className={styles.legend}>
               <div className={styles.legendItem}>

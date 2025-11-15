@@ -11,21 +11,21 @@ interface Props {
 export default function StepGender({ onNext, onPrev }: Props) {
   return (
     <div className={styles.step}>
-      <img src={genderIcon} alt="Giới tính" className={styles.icon} />
-      <h1>Giới tính của bạn?</h1>
+      <img src={genderIcon} alt="Gender" className={styles.icon} />
+      <h1>What is your gender?</h1>
 
       <div className={styles.buttonGroup}>
         <button
           onClick={() => onNext({ gender: "Nam" })}
           className={styles.genderBtn}
         >
-          Nam
+          Male
         </button>
         <button
           onClick={() => onNext({ gender: "Nữ" })}
           className={styles.genderBtn}
         >
-          Nữ
+          Female
         </button>
       </div>
     </div>

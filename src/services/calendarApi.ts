@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+import { http } from "./http";
 
 export type CalendarApiCategory = "meal" | "activity" | "appointment";
 export type CalendarApiModule =
@@ -29,49 +29,33 @@ export interface CalendarEventPayload {
   linkedModule?: CalendarApiModule | null;
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
-
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(message || "Calendar API error");
-  }
-  if (res.status === 204) {
-    return undefined as T;
-  }
-  return res.json();
-}
-
 export const calendarApi = {
-  list(userId: number) {
-    return request<CalendarEventDto[]>(
-      `/api/calendar-events?userId=${userId}`
+  list(userId: number, params?: { start?: string; end?: string; category?: CalendarApiCategory; linkedModule?: CalendarApiModule }) {
+    const query = new URLSearchParams({ userId: userId.toString() });
+    if (params?.start) query.set("start", params.start);
+    if (params?.end) query.set("end", params.end);
+    if (params?.category) query.set("category", params.category);
+    if (params?.linkedModule) query.set("linkedModule", params.linkedModule);
+    return http.request<CalendarEventDto[]>(
+      `/api/calendar-events?${query.toString()}`
     );
   },
   create(userId: number, payload: CalendarEventPayload) {
-    return request<CalendarEventDto>("/api/calendar-events", {
+    return http.request<CalendarEventDto>("/api/calendar-events", {
       method: "POST",
-      body: JSON.stringify({ ...payload, userId }),
+      json: { ...payload, userId },
     });
   },
   update(id: number, userId: number, payload: CalendarEventPayload) {
-    return request<CalendarEventDto>(`/api/calendar-events/${id}`, {
+    return http.request<CalendarEventDto>(`/api/calendar-events/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ ...payload, userId }),
+      json: { ...payload, userId },
     });
   },
   remove(id: number, userId: number) {
-    return request<void>(`/api/calendar-events/${id}?userId=${userId}`, {
-      method: "DELETE",
-    });
+    return http.request<void>(
+      `/api/calendar-events/${id}?userId=${userId}`,
+      { method: "DELETE" }
+    );
   },
 };

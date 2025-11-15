@@ -21,13 +21,13 @@ export default function StepAge({ onNext, onPrev }: Props) {
 
   return (
     <div className={styles.step}>
-      <img src={cakeIcon} alt="Tuổi" className={styles.icon} />
-      <h1>Bạn bao nhiêu tuổi?</h1>
+      <img src={cakeIcon} alt="Age" className={styles.icon} />
+      <h1>How old are you?</h1>
 
       <div className={styles.inputWrapper}>
         <input
           type="number"
-          placeholder="age"
+          placeholder="Enter your age"
           value={age}
           onChange={(e) => setAge(e.target.value)}
           className={styles.input}
@@ -35,7 +35,7 @@ export default function StepAge({ onNext, onPrev }: Props) {
           max="100"
           autoFocus
         />
-        <span className={styles.unit}>tuổi</span>
+        <span className={styles.unit}>years</span>
       </div>
 
       <button
@@ -43,7 +43,7 @@ export default function StepAge({ onNext, onPrev }: Props) {
         disabled={!age || parseInt(age) < 10 || parseInt(age) > 100}
         className={styles.nextBtn}
       >
-        Tiếp theo
+        Next
       </button>
     </div>
   );

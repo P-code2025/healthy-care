@@ -21,8 +21,8 @@ export default function StepWeight({ onNext, onPrev }: Props) {
 
   return (
     <div className={styles.step}>
-      {/* <img src={weightIcon} alt="Cân nặng" className={styles.icon} /> */}
-      <h1>Bạn nặng bao nhiêu?</h1>
+      {/* <img src={weightIcon} alt="Weight" className={styles.icon} /> */}
+      <h1>What is your current weight?</h1>
 
       <div className={styles.inputWrapper}>
         <input
@@ -42,7 +42,7 @@ export default function StepWeight({ onNext, onPrev }: Props) {
         disabled={!weight || parseFloat(weight) < 30 || parseFloat(weight) > 200}
         className={styles.nextBtn}
       >
-        Tiếp theo
+        Next
       </button>
     </div>
   );

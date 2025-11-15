@@ -14,12 +14,12 @@ export default function StepName({ onNext, onPrev }: Props) {
 
   return (
     <div className={styles.step}>
-      {/* <img src={badgeIcon} alt="Tên" className={styles.icon} /> */}
-      <h1>Tên của bạn là gì?</h1>
+      {/* <img src={badgeIcon} alt="Name" className={styles.icon} /> */}
+      <h1>What is your name?</h1>
 
       <input
         type="text"
-        placeholder="Nhập tên của bạn"
+        placeholder="Enter your name"
         value={name}
         onChange={(e) => setName(e.target.value)}
         className={styles.input}
@@ -31,7 +31,7 @@ export default function StepName({ onNext, onPrev }: Props) {
         disabled={!name.trim()}
         className={styles.nextBtn}
       >
-        Tiếp theo
+        Next
       </button>
     </div>
   );

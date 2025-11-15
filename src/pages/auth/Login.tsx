@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styles from "./Auth.module.css";
 import { useAuth } from "../../context/AuthContext";
@@ -6,24 +6,34 @@ import { useAuth } from "../../context/AuthContext";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // LƯU EMAIL VÀO localStorage TRƯỚC KHI ĐĂNG NHẬP
-    localStorage.setItem("userEmail", email.trim());
-
-    login(); // Lưu trạng thái đăng nhập
-    navigate("/onboarding");
+    try {
+      setSubmitting(true);
+      setError(null);
+      await login(email.trim(), password);
+      navigate("/");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Unable to sign in. Please try again.";
+      setError(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className={styles.authContainer}>
       <div className={styles.authCard}>
-        <h1>Chào mừng trở lại!</h1>
-        <p>Đăng nhập để tiếp tục hành trình khỏe mạnh.</p>
+        <h1>Welcome back!</h1>
+        <p>Sign in to continue your wellness journey.</p>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <input
@@ -33,23 +43,27 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
             className={styles.input}
+            disabled={submitting}
           />
           <input
             type="password"
-            placeholder="Mật khẩu"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             className={styles.input}
+            disabled={submitting}
           />
 
-          <button type="submit" className={styles.submitBtn}>
-            Đăng nhập
+          {error && <div className={styles.error}>{error}</div>}
+
+          <button type="submit" className={styles.submitBtn} disabled={submitting}>
+            {submitting ? "Working..." : "Sign in"}
           </button>
         </form>
 
         <p className={styles.switchText}>
-          Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
+          No account yet? <Link to="/register">Create one</Link>
         </p>
       </div>
     </div>

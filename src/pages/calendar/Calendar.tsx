@@ -14,6 +14,7 @@ import {
   type CalendarApiModule,
 } from "../../services/calendarApi";
 import styles from "./Calendar.module.css";
+import { useAuth } from "../../context/AuthContext";
 
 type EventCategory = "meal" | "activity" | "appointment";
 
@@ -70,8 +71,6 @@ const MODULE_TO_API: Record<CalendarModuleKey, CalendarApiModule> = {
   "food-diary": "food_diary",
   messages: "messages",
 };
-
-const ACTIVE_USER_ID = 1;
 
 const sortEvents = (items: CalendarEvent[]) =>
   [...items].sort((a, b) =>
@@ -185,18 +184,26 @@ export default function Calendar() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const activeUserId = user?.user_id;
 
   useEffect(() => {
     let active = true;
+    if (!activeUserId) return () => {
+      active = false;
+    };
+
     setLoading(true);
     calendarApi
-      .list(ACTIVE_USER_ID)
+      .list(activeUserId)
       .then((records) => {
         if (!active) return;
         const mapped = sortEvents(records.map(mapFromApi));
         setEvents(mapped);
-        if (mapped.length > 0 && !mapped.some((event) => event.date === selectedDate)) {
-          setSelectedDate(mapped[0].date);
+        if (mapped.length > 0) {
+          setSelectedDate((prev) =>
+            mapped.some((event) => event.date === prev) ? prev : mapped[0].date
+          );
         }
         setError(null);
       })
@@ -212,7 +219,7 @@ export default function Calendar() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeUserId]);
 
   const monthEvents = useMemo(
     () => events.filter((event) => isSameMonth(event.date, currentDate)),
@@ -294,19 +301,23 @@ export default function Calendar() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!formState.title.trim()) return;
+    if (!activeUserId) {
+      setError("Please sign in again to manage your calendar.");
+      return;
+    }
 
     const payload = buildPayload(formState);
 
     try {
       if (editingId) {
-        const updated = await calendarApi.update(Number(editingId), ACTIVE_USER_ID, payload);
+        const updated = await calendarApi.update(Number(editingId), activeUserId, payload);
         setEvents((prev) =>
           sortEvents(
             prev.map((item) => (item.id === editingId ? mapFromApi(updated) : item))
           )
         );
       } else {
-        const created = await calendarApi.create(ACTIVE_USER_ID, payload);
+        const created = await calendarApi.create(activeUserId, payload);
         setEvents((prev) => sortEvents([...prev, mapFromApi(created)]));
       }
       setSelectedDate(payload.date);
@@ -319,8 +330,9 @@ export default function Calendar() {
   };
 
   const handleRemove = async (id: string) => {
+    if (!activeUserId) return;
     try {
-      await calendarApi.remove(Number(id), ACTIVE_USER_ID);
+      await calendarApi.remove(Number(id), activeUserId);
       setEvents((prev) => prev.filter((event) => event.id !== id));
     } catch (err) {
       console.error("Calendar delete error", err);

@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { body, validationResult } from "express-validator";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../node_modules/@prisma/client/index.js";
 import { getImage, hasImage } from "./imageCache.js";
 
 const app = express();
@@ -42,7 +42,7 @@ if (!CLOVA_API_KEY) {
 
 // Middleware
 const allowedOrigins =
-  process.env.CORS_ORIGINS?.split(",") || ["http://localhost:5173"];
+  process.env.CORS_ORIGINS?.split(",") || ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"];
 app.use(
   cors({
     origin: allowedOrigins,
@@ -98,6 +98,10 @@ const mapFoodLog = (log) => ({
   fat_g: log.fatGrams,
   health_consideration: log.healthConsideration,
   is_corrected: log.isCorrected,
+  amount: log.amount,
+  sugar: log.sugarGrams,
+  status: log.status,
+  thoughts: log.thoughts,
 });
 
 const mapWorkoutLog = (log) => ({
@@ -317,6 +321,28 @@ app.get("/api/users/me", requireAuth, async (req, res) => {
   }
 });
 
+app.put("/api/users/me", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { age, gender, heightCm, weightKg, goal, activityLevel, exercisePreferences } = req.body;
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        age: age !== undefined ? Number(age) : undefined,
+        gender,
+        heightCm: heightCm !== undefined ? Number(heightCm) : undefined,
+        weightKg: weightKg !== undefined ? Number(weightKg) : undefined,
+        goal,
+        activityLevel,
+        exercisePreferences: exercisePreferences !== undefined ? exercisePreferences : undefined,
+      },
+    });
+    res.json(mapUser(updated));
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to update user profile");
+  }
+});
+
 // ========== FOOD LOGS ==========
 app.get("/api/food-log", async (req, res) => {
   const userId = getUserIdOrFallback(req);
@@ -352,6 +378,10 @@ app.post("/api/food-log", requireAuth, async (req, res) => {
     fat,
     healthConsideration,
     isCorrected,
+    amount,
+    sugar,
+    status,
+    thoughts,
   } = req.body;
   try {
     const created = await prisma.foodLog.create({
@@ -366,6 +396,10 @@ app.post("/api/food-log", requireAuth, async (req, res) => {
         fatGrams: Number(fat) || 0,
         healthConsideration: healthConsideration || null,
         isCorrected: Boolean(isCorrected),
+        amount: amount || null,
+        sugarGrams: sugar !== undefined ? Number(sugar) : null,
+        status: status || null,
+        thoughts: thoughts || null,
       },
     });
     res.status(201).json(mapFoodLog(created));
@@ -388,6 +422,10 @@ app.put("/api/food-log/:id", requireAuth, async (req, res) => {
     fat,
     healthConsideration,
     isCorrected,
+    amount,
+    sugar,
+    status,
+    thoughts,
   } = req.body;
   try {
     const updated = await prisma.foodLog.update({
@@ -403,6 +441,10 @@ app.put("/api/food-log/:id", requireAuth, async (req, res) => {
         healthConsideration,
         isCorrected:
           typeof isCorrected === "boolean" ? isCorrected : undefined,
+        amount,
+        sugarGrams: sugar !== undefined ? Number(sugar) : undefined,
+        status,
+        thoughts,
       },
     });
     res.json(mapFoodLog(updated));
@@ -420,6 +462,26 @@ app.delete("/api/food-log/:id", requireAuth, async (req, res) => {
     res.status(204).send();
   } catch (error) {
     handlePrismaError(res, error, "Failed to delete food log");
+  }
+});
+
+app.post("/api/food-log/batch-delete", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "ids must be a non-empty array" });
+  }
+  try {
+    const result = await prisma.foodLog.deleteMany({
+      where: {
+        id: { in: ids.map(Number) },
+        userId,
+      },
+    });
+    res.json({ deleted: result.count });
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to batch delete food logs");
   }
 });
 
@@ -545,10 +607,21 @@ app.post(
 // ========== CALENDAR ==========
 app.get("/api/calendar-events", async (req, res) => {
   const userId = getUserIdOrFallback(req);
+  const { start, end, category, linkedModule } = req.query;
+  
+  const where = { userId };
+  if (start || end) {
+    where.eventDate = {};
+    if (start) where.eventDate.gte = new Date(start);
+    if (end) where.eventDate.lte = new Date(end);
+  }
+  if (category) where.category = category;
+  if (linkedModule) where.linkedModule = linkedModule;
+
   try {
     const events = await prisma.calendarEvent.findMany({
-      where: { userId },
-      orderBy: [{ eventDate: "asc" }, { timeSlot: "asc" }],
+      where,
+      orderBy: { eventDate: "asc" },
     });
     res.json(events.map(mapCalendarEvent));
   } catch (error) {
@@ -588,10 +661,15 @@ app.put("/api/calendar-events/:id", requireAuth, async (req, res) => {
   if (!userId) return;
   const id = Number(req.params.id);
   try {
+    const existing = await prisma.calendarEvent.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+
     const { title, date, time, category, location, note, linkedModule } =
       req.body;
     const updated = await prisma.calendarEvent.update({
-      where: { id, userId },
+      where: { id },
       data: {
         title,
         eventDate: date ? parseDateOnly(date) : undefined,
@@ -613,10 +691,175 @@ app.delete("/api/calendar-events/:id", requireAuth, async (req, res) => {
   if (!userId) return;
   const id = Number(req.params.id);
   try {
-    await prisma.calendarEvent.delete({ where: { id, userId } });
+    const existing = await prisma.calendarEvent.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    await prisma.calendarEvent.delete({ where: { id } });
     res.status(204).send();
   } catch (error) {
     handlePrismaError(res, error, "Failed to delete calendar event");
+  }
+});
+
+// ========== STATISTICS ==========
+app.get("/api/statistics/daily", async (req, res) => {
+  const userId = getUserIdOrFallback(req);
+  const { date } = req.query;
+  
+  try {
+    if (!date) {
+      return res.status(400).json({ error: "Date parameter is required (format: YYYY-MM-DD)" });
+    }
+
+    const targetDate = parseDateOnly(date);
+    const nextDay = new Date(targetDate);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+
+    // Aggregate food logs
+    const foodStats = await prisma.foodLog.aggregate({
+      where: {
+        userId,
+        eatenAt: {
+          gte: targetDate,
+          lt: nextDay,
+        },
+      },
+      _sum: {
+        calories: true,
+        proteinGrams: true,
+        carbsGrams: true,
+        fatGrams: true,
+      },
+      _count: true,
+    });
+
+    // Aggregate workout logs
+    const workoutStats = await prisma.workoutLog.aggregate({
+      where: {
+        userId,
+        completedAt: {
+          gte: targetDate,
+          lt: nextDay,
+        },
+      },
+      _sum: {
+        caloriesBurnedEstimated: true,
+        durationMinutes: true,
+      },
+      _count: true,
+    });
+
+    res.json({
+      date: date,
+      total_calories: foodStats._sum.calories || 0,
+      total_protein: foodStats._sum.proteinGrams || 0,
+      total_carbs: foodStats._sum.carbsGrams || 0,
+      total_fat: foodStats._sum.fatGrams || 0,
+      calories_burned: workoutStats._sum.caloriesBurnedEstimated || 0,
+      exercise_duration: workoutStats._sum.durationMinutes || 0,
+      meals_count: foodStats._count || 0,
+      workouts_count: workoutStats._count || 0,
+    });
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to fetch daily statistics");
+  }
+});
+
+app.get("/api/statistics/weekly", async (req, res) => {
+  const userId = getUserIdOrFallback(req);
+  const { startDate, endDate } = req.query;
+
+  try {
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "startDate and endDate parameters are required (format: YYYY-MM-DD)" });
+    }
+
+    const start = parseDateOnly(startDate);
+    const end = parseDateOnly(endDate);
+    end.setUTCDate(end.getUTCDate() + 1); // Include end date
+
+    // Get all food logs in range
+    const foodLogs = await prisma.foodLog.findMany({
+      where: {
+        userId,
+        eatenAt: { gte: start, lt: end },
+      },
+      select: {
+        eatenAt: true,
+        calories: true,
+        proteinGrams: true,
+        carbsGrams: true,
+        fatGrams: true,
+      },
+    });
+
+    // Get all workout logs in range
+    const workoutLogs = await prisma.workoutLog.findMany({
+      where: {
+        userId,
+        completedAt: { gte: start, lt: end },
+      },
+      select: {
+        completedAt: true,
+        caloriesBurnedEstimated: true,
+        durationMinutes: true,
+      },
+    });
+
+    // Group by date
+    const dailyData = {};
+    
+    foodLogs.forEach(log => {
+      const dateKey = log.eatenAt.toISOString().split('T')[0];
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = {
+          date: dateKey,
+          total_calories: 0,
+          total_protein: 0,
+          total_carbs: 0,
+          total_fat: 0,
+          calories_burned: 0,
+          exercise_duration: 0,
+          meals_count: 0,
+          workouts_count: 0,
+        };
+      }
+      dailyData[dateKey].total_calories += log.calories;
+      dailyData[dateKey].total_protein += log.proteinGrams;
+      dailyData[dateKey].total_carbs += log.carbsGrams;
+      dailyData[dateKey].total_fat += log.fatGrams;
+      dailyData[dateKey].meals_count += 1;
+    });
+
+    workoutLogs.forEach(log => {
+      const dateKey = log.completedAt.toISOString().split('T')[0];
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = {
+          date: dateKey,
+          total_calories: 0,
+          total_protein: 0,
+          total_carbs: 0,
+          total_fat: 0,
+          calories_burned: 0,
+          exercise_duration: 0,
+          meals_count: 0,
+          workouts_count: 0,
+        };
+      }
+      dailyData[dateKey].calories_burned += log.caloriesBurnedEstimated;
+      dailyData[dateKey].exercise_duration += log.durationMinutes;
+      dailyData[dateKey].workouts_count += 1;
+    });
+
+    // Convert to array and sort by date
+    const weeklyStats = Object.values(dailyData).sort((a, b) => 
+      new Date(a.date) - new Date(b.date)
+    );
+
+    res.json(weeklyStats);
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to fetch weekly statistics");
   }
 });
 
@@ -708,11 +951,16 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
     let nutritionData;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        nutritionData = JSON.parse(jsonMatch[0]);
-      } else {
-        nutritionData = JSON.parse(content);
-      }
+      let jsonString = jsonMatch ? jsonMatch[0] : content;
+      
+      // Clean up invalid JSON values like "24 grams" -> 24
+      jsonString = jsonString
+        .replace(/"protein":\s*"?(\d+\.?\d*)\s*grams?"?/gi, '"protein": $1')
+        .replace(/"carbs":\s*"?(\d+\.?\d*)\s*grams?"?/gi, '"carbs": $1')
+        .replace(/"fats":\s*"?(\d+\.?\d*)\s*grams?"?/gi, '"fats": $1')
+        .replace(/"calories":\s*"?(\d+\.?\d*)\s*kcal?"?/gi, '"calories": $1');
+      
+      nutritionData = JSON.parse(jsonString);
     } catch (parseError) {
       console.error("❌ Failed to parse AI response:", content);
       return res.status(500).json({

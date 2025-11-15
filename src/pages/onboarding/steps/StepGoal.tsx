@@ -21,8 +21,8 @@ export default function StepGoal({ onNext, onPrev }: Props) {
 
   return (
     <div className={styles.step}>
-      <img src={targetIcon} alt="Mục tiêu" className={styles.icon} />
-      <h1>Mục tiêu cân nặng của bạn là bao nhiêu?</h1>
+      <img src={targetIcon} alt="Goal" className={styles.icon} />
+      <h1>What is your target weight?</h1>
 
       <div className={styles.inputWrapper}>
         <input
@@ -42,7 +42,7 @@ export default function StepGoal({ onNext, onPrev }: Props) {
         disabled={!goalWeight || parseFloat(goalWeight) < 30 || parseFloat(goalWeight) > 200}
         className={styles.nextBtn}
       >
-        Tiếp theo
+        Next
       </button>
     </div>
   );

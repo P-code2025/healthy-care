@@ -26,16 +26,16 @@ export default function StepMeasurements({ data, onNext, onPrev }: Props) {
 
   return (
     <div className={styles.step}>
-      {/* <img src={measureIcon} alt="Số đo" className={styles.icon} /> */}
-      <h1>Vui lòng cập nhật số đo cơ thể bạn</h1>
+      {/* <img src={measureIcon} alt="Body measurements" className={styles.icon} /> */}
+      <h1>Please update your body measurements</h1>
 
       <div className={styles.measureGrid}>
         {[
-          { label: "Cổ", key: "neck" },
-          { label: "Eo", key: "waist" },
-          { label: "Hông", key: "hip" },
-          { label: "Bắp tay", key: "biceps" },
-          { label: "Đùi", key: "thigh" },
+          { label: "Neck", key: "neck" },
+          { label: "Waist", key: "waist" },
+          { label: "Hip", key: "hip" },
+          { label: "Biceps", key: "biceps" },
+          { label: "Thigh", key: "thigh" },
         ].map((item) => (
           <div key={item.key} className={styles.measureItem}>
             <label>{item.label}:</label>
@@ -60,7 +60,7 @@ export default function StepMeasurements({ data, onNext, onPrev }: Props) {
         className={styles.nextBtn}
         style={{ marginTop: 32 }}
       >
-        Tiếp theo
+        Next
       </button>
     </div>
   );

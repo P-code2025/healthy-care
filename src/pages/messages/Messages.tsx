@@ -1,12 +1,13 @@
-// src/pages/Messages.tsx
+﻿// src/pages/Messages.tsx
 import { useState, useEffect, useRef } from 'react';
 import styles from './Messages.module.css';
 
-import { TrendingUp, TrendingDown, Camera, Dumbbell, Plus, X } from 'lucide-react';
+import { Camera, Dumbbell } from 'lucide-react';
 import type { AnalysisResult, FoodEntry } from '../../lib/types';
 import { generateAIExercisePlan, type AIExercisePlan } from '../../services/aiExercisePlan';
 import { analyzeFood } from '../../services/analyzeFood';
-import { SAMPLE_WORKOUT_PLANS } from '../exercies/workoutPlans';
+import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from '../../services/foodDiaryApi';
+import { useAuth } from '../../context/AuthContext';
 
 interface Message {
   id: string;
@@ -23,29 +24,56 @@ interface UserProfile {
   age: number;
   weight: number;
   height: number;
-  gender: 'Nam' | 'Nữ';
+  gender: 'Male' | 'Female';
   goal: 'lose' | 'maintain' | 'gain';
   workoutDays: number;
 }
 
 const AI_AVATAR = 'AI';
-const USER_AVATAR = 'User';
 
 export default function Messages() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const today = new Date().toISOString().split('T')[0];
+  const [diaryEntries, setDiaryEntries] = useState<FoodEntry[]>([]);
 
   // Load data
   useEffect(() => {
     const saved = localStorage.getItem('aiChatMessages');
-    const profile = localStorage.getItem('userProfile');
     if (saved) setMessages(JSON.parse(saved));
-    if (profile) setUserProfile(JSON.parse(profile));
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const normalizedGender: UserProfile['gender'] =
+      user.gender?.toLowerCase() === 'female' ? 'Female' : 'Male';
+    setUserProfile({
+      age: user.age || 0,
+      weight: user.weight_kg || 0,
+      height: user.height_cm || 0,
+      gender: normalizedGender,
+      goal:
+        (user.goal as UserProfile['goal']) ||
+        (user.goal === 'lose_weight' ? 'lose' : 'maintain'),
+      workoutDays: 3,
+    });
+  }, [user]);
+
+  useEffect(() => {
+    const todayOnly = new Date().toISOString().split('T')[0];
+    const loadEntries = async () => {
+      try {
+        const logs = await foodDiaryApi.list({ start: todayOnly, end: todayOnly });
+        setDiaryEntries(logs.map(mapFoodLogToEntry));
+      } catch (err) {
+        console.error('Failed to load diary entries for chat assistant', err);
+      }
+    };
+    loadEntries();
   }, []);
 
   // Save messages
@@ -54,13 +82,8 @@ export default function Messages() {
   }, [messages]);
 
   // Get today's total calories
-  const getTodayCalories = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const entries: FoodEntry[] = JSON.parse(localStorage.getItem('foodDiary_entries_v2') || '[]');
-    return entries
-      .filter(e => e.date === today)
-      .reduce((sum, e) => sum + e.calories, 0);
-  };
+  const getTodayCalories = () =>
+    diaryEntries.reduce((sum, entry) => sum + entry.calories, 0);
 
   // Handle text input
   const handleSend = async () => {
@@ -70,7 +93,7 @@ export default function Messages() {
       id: Date.now().toString(),
       content: input,
       isUser: true,
-      timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -83,7 +106,7 @@ export default function Messages() {
         id: (Date.now() + 1).toString(),
         content: aiResponse.content,
         isUser: false,
-        timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         nutritionData: aiResponse.nutritionData,
         exercisePlan: aiResponse.exercisePlan
       };
@@ -158,24 +181,22 @@ if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi
         id: Date.now().toString(),
         content: 'Đang phân tích ảnh món ăn...',
         isUser: false,
-        timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         isLoading: true
       };
       setMessages(prev => [...prev, loadingMsg]);
 
       try {
         const { analysis } = await analyzeFood(dataUri);
-        // LẤY mealType TỪ THỜI GIAN
-        const hour = new Date().getHours();
+        const now = new Date();
+        const hour = now.getHours();
         const mealType = hour >= 5 && hour < 11 ? 'Breakfast' :
           hour >= 11 && hour < 14 ? 'Lunch' :
             hour >= 18 && hour < 22 ? 'Dinner' : 'Snack';
 
-        // TẠO ENTRY ĐÚNG FORMAT
-        const newEntry: FoodEntry = {
-          id: Date.now().toString(),
-          date: new Date().toISOString().split('T')[0],
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        const entryPayload: FoodEntryInput = {
+          date: now.toISOString().split('T')[0],
+          time: now.toISOString().slice(11, 16),
           mealType,
           foodName: analysis.foodName,
           amount: analysis.amount,
@@ -185,25 +206,13 @@ if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi
           fat: analysis.fat,
           sugar: analysis.sugar,
           status: 'Satisfied',
-          thoughts: ''
+          thoughts: '',
         };
 
-        // LẤY + LƯU
-        const existing: FoodEntry[] = JSON.parse(localStorage.getItem('foodDiary_entries_v2') || '[]');
-        const updated = [...existing, newEntry];
-        localStorage.setItem('foodDiary_entries_v2', JSON.stringify(updated));
+        const createdLog = await foodDiaryApi.create(entryPayload);
+        const mappedEntry = mapFoodLogToEntry(createdLog);
+        setDiaryEntries(prev => [mappedEntry, ...prev]);
 
-        // CẬP NHẬT DAILY CALORIES
-        const todayCalories = updated.filter(e => e.date === newEntry.date).reduce((s, e) => s + e.calories, 0);
-        // Sau khi lưu vào localStorage
-        localStorage.setItem('dailyCalories', todayCalories.toString());
-        localStorage.setItem('dailyCalorieDate', today);
-
-        // XÓA CACHE NGÀY ĐỂ BUỘC GỌI LẠI AI
-        const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-        const profileKey = `${profile.age}_${profile.gender}_${profile.weight}_${profile.height}_${profile.goalWeight}`;
-        const dailyCacheKey = `aiPlan_daily_${today}_${todayCalories}_${profileKey.substring(0, 50)}`;
-        localStorage.removeItem(dailyCacheKey);
         const resultMsg: Message = {
           id: (Date.now() + 1).toString(),
           content: `**${analysis.foodName}** – ${analysis.amount}\n\n` +
@@ -211,16 +220,17 @@ if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi
             `Protein: ${analysis.protein}g | Carbs: ${analysis.carbs}g | Fat: ${analysis.fat}g | Sugar: ${analysis.sugar}g\n\n` +
             `Đã lưu vào **Food Diary**!`,
           isUser: false,
-          timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
           nutritionData: analysis
         };
         setMessages(prev => prev.filter(m => !m.isLoading).concat(resultMsg));
       } catch (err) {
+        console.error('Image analysis failed', err);
         setMessages(prev => prev.filter(m => !m.isLoading).concat({
           id: Date.now().toString(),
           content: 'Lỗi phân tích ảnh. Vui lòng thử lại!',
           isUser: false,
-          timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' })
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
         }));
       }
     };
@@ -317,22 +327,25 @@ if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi
             <input placeholder="Tuổi" type="number" onChange={e => setUserProfile(p => ({ ...p!, age: +e.target.value }))} />
             <input placeholder="Cân nặng (kg)" type="number" onChange={e => setUserProfile(p => ({ ...p!, weight: +e.target.value }))} />
             <input placeholder="Chiều cao (cm)" type="number" onChange={e => setUserProfile(p => ({ ...p!, height: +e.target.value }))} />
-            <select onChange={e => setUserProfile(p => ({ ...p!, gender: e.target.value as any }))}>
+            <select onChange={e => setUserProfile(p => ({ ...p!, gender: e.target.value as UserProfile['gender'] }))}>
               <option>Giới tính</option>
               <option value="Nam">Nam</option>
               <option value="Nữ">Nữ</option>
             </select>
-            <select onChange={e => setUserProfile(p => ({ ...p!, goal: e.target.value as any }))}>
+            <select onChange={e => setUserProfile(p => ({ ...p!, goal: e.target.value as UserProfile['goal'] }))}>
               <option>Mục tiêu</option>
               <option value="lose">Giảm cân</option>
               <option value="maintain">Duy trì</option>
               <option value="gain">Tăng cơ</option>
             </select>
             <input placeholder="Số buổi tập/tuần" type="number" onChange={e => setUserProfile(p => ({ ...p!, workoutDays: +e.target.value }))} />
-            <button onClick={() => {
-              localStorage.setItem('userProfile', JSON.stringify(userProfile));
-              setShowProfileForm(false);
-            }}>Lưu</button>
+            <button
+              onClick={() => {
+                setShowProfileForm(false);
+              }}
+            >
+              Lưu
+            </button>
           </div>
         </div>
       )}

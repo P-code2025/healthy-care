@@ -1,5 +1,40 @@
-import { ClovaXClient } from '../api/clovax/client';
-import type { AnalysisResult } from '../lib/types';
+﻿import type { AnalysisResult } from '../lib/types';
+import { http } from './http';
+
+interface RecognizeFoodResponse {
+  foodName?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  portionSize?: string;
+}
+
+const EMPTY_ANALYSIS: AnalysisResult = {
+  foodName: 'Không xác định',
+  amount: '',
+  calories: 0,
+  protein: 0,
+  carbs: 0,
+  fat: 0,
+  sugar: 0,
+};
+
+const computeBase100g = (analysis: AnalysisResult) => {
+  const amountMatch = analysis.amount.match(/(\d+(\.\d+)?)/);
+  const baseAmount = amountMatch ? parseFloat(amountMatch[0]) : 100;
+  const ratio = baseAmount ? 100 / baseAmount : 1;
+  return {
+    baseAmount,
+    values: {
+      calories: Math.round(analysis.calories * ratio),
+      protein: Math.round(analysis.protein * ratio),
+      carbs: Math.round(analysis.carbs * ratio),
+      fat: Math.round(analysis.fat * ratio),
+      sugar: Math.round(analysis.sugar * ratio),
+    },
+  };
+};
 
 export async function analyzeFood(
   imageData: string,
@@ -7,150 +42,39 @@ export async function analyzeFood(
   overrideAmount?: string
 ): Promise<{ analysis: AnalysisResult; error?: string }> {
   try {
-    const client = new ClovaXClient("HCX-005");
-
-    const userPrompt = overrideName || overrideAmount
-      ? `Analyze "${overrideName || 'this food'}" with amount "${overrideAmount || 'standard'}". Return JSON only.`
-      : "Analyze this food image and return JSON only.";
-
-    const messages: any[] = [
-      {
-        role: "system",
-        content: [
-          {
-            type: "text",
-            text: `You are a nutrition assistant. Analyze the food in the image and return ONLY a valid JSON object with this exact format:
-
-{
-  "foodName": "string",
-  "amount": "string (e.g. 1 phần, 200g)",
-  "calories": number,
-  "protein": number,
-  "carbs": number,
-  "fat": number,
-  "sugar": number
-}
-
-RULES:
-- Return ONLY raw JSON, no code blocks, no markdown, no extra text.
-- All nutritional values (calories, protein, carbs, fat, sugar) MUST be numbers (e.g. 120, not "120", not "120g").
-- If unsure, use 0.
-- Example: {"foodName":"rice","amount":"1 bowl","calories":200,"protein":4,"carbs":45,"fat":1,"sugar":0}
-
-Return JSON only.`
-          },
-        ],
+    const result = await http.request<{ data?: RecognizeFoodResponse }>('/api/recognize-food', {
+      method: 'POST',
+      json: {
+        base64Image: imageData,
+        overrideName,
+        overrideAmount,
       },
-      {
-        role: "user",
-        content: [
-          { type: "image_url", imageUrl: null, dataUri: { data: imageData } },
-          { type: "text", text: userPrompt },
-          
-        ],
-      },
-    ];
+    });
 
-    const request = {
-      messages,
-      topP: 0.8,
-      temperature: 0.5,
-      repetitionPenalty: 1.1,
-      maxTokens: 800,
-      // Required by ClovaCompletionRequest
-      includeAiFilters: false,
-      stop: [],
-      seed: 0,
+    const payload = (result?.data ?? result) as RecognizeFoodResponse;
+    const amount = overrideAmount || payload.portionSize || '100g';
+
+    const analysis: AnalysisResult = {
+      foodName: (overrideName || payload.foodName || EMPTY_ANALYSIS.foodName).trim(),
+      amount,
+      calories: Math.round(payload.calories || 0),
+      protein: Math.round(payload.protein || 0),
+      carbs: Math.round(payload.carbs || 0),
+      fat: Math.round(payload.fats || 0),
+      sugar: 0,
     };
 
-    const response = await client.createChatCompletion(request);
-    const assistantMessage = response.result.message;
+    const { baseAmount, values } = computeBase100g(analysis);
+    analysis.baseAmount = baseAmount;
+    analysis.base100g = values;
 
-    let analysisText = "";
-    if (typeof assistantMessage.content === "string") {
-      analysisText = assistantMessage.content;
-    } else if (Array.isArray(assistantMessage.content)) {
-      analysisText = assistantMessage.content
-        .filter((part: any) => part.type === "text" && part.text)
-        .map((part: any) => part.text)
-        .join("\n");
-    }
-
-    // LÀM SẠCH DỮ LIỆU
-    analysisText = analysisText
-      .trim()
-      .replace(/```json|```/g, '')
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      .replace(/(\w+):\s*(\d+(?:\.\d+)?)g?\b/g, (match, key, num) => {
-        if (['calories', 'protein', 'carbs', 'fat', 'sugar'].includes(key)) {
-          return `${key}: ${parseFloat(num)}`;
-        }
-        return match;
-      });
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(analysisText);
-    } catch (e) {
-      console.error("Parse failed:", analysisText);
-      return {
-        analysis: {
-          foodName: "Không nhận diện",
-          amount: "",
-          calories: 0,
-          protein: 0,
-          carbs: 0,
-          fat: 0,
-          sugar: 0,
-        },
-        error: "AI trả về định dạng không hợp lệ",
-      };
-    }
-
-    const fallback: AnalysisResult = {
-      foodName: String(parsed.foodName || "Không xác định").trim(),
-      amount: String(parsed.amount || "").trim(),
-      calories: Math.round(Number(parsed.calories) || 0),
-      protein: Math.round(Number(parsed.protein) || 0),
-      carbs: Math.round(Number(parsed.carbs) || 0),
-      fat: Math.round(Number(parsed.fat) || 0),
-      sugar: Math.round(Number(parsed.sugar) || 0),
-    };
-
-    const amountMatch = fallback.amount.match(/(\d+(\.\d+)?)/);
-const baseAmount = amountMatch ? parseFloat(amountMatch[0]) : 100;
-
-const base100g = {
-  calories: Math.round(fallback.calories * 100 / baseAmount),
-  protein: Math.round(fallback.protein * 100 / baseAmount),
-  carbs: Math.round(fallback.carbs * 100 / baseAmount),
-  fat: Math.round(fallback.fat * 100 / baseAmount),
-  sugar: Math.round(fallback.sugar * 100 / baseAmount),
-};
-
-// Trả về kết quả có base100g
-return {
-  analysis: {
-    ...fallback,
-    base100g,
-    baseAmount,
-  }
-};
-
+    return { analysis };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const message =
+      error instanceof Error ? error.message : 'Không thể phân tích món ăn';
     return {
-      analysis: {
-        foodName: "Lỗi phân tích",
-        amount: "",
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0,
-        sugar: 0,
-      },
-      error: errorMessage,
+      analysis: { ...EMPTY_ANALYSIS },
+      error: message,
     };
   }
 }

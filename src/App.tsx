@@ -33,11 +33,11 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* ---------- ONBOARDING ---------- */}
-        <Route path="/onboarding" element={<Onboarding />} />
-
         {/* ---------- PROTECTED ---------- */}
         <Route element={<ProtectedRoute />}>
+          {/* ---------- ONBOARDING ---------- */}
+          <Route path="/onboarding" element={<Onboarding />} />
+          
           <Route element={<Layout />}>
             <Route path="/" element={<DashboardNew />} />
             <Route path="/calendar" element={<Calendar />} />

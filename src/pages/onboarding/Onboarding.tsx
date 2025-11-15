@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { api } from "../../services/api";
+import { formatGoalWeight } from "../../utils/profile";
+import { messages } from "../../i18n/messages";
 
 import styles from "./Onboarding.module.css";
 import StepName from "./steps/StepName";
@@ -39,22 +42,38 @@ export default function Onboarding() {
   });
 
   const navigate = useNavigate();
-  const { finishOnboarding } = useAuth();
+  const { refreshUser } = useAuth();
   const CurrentStep = steps[step];
 
-  const next = (data: Partial<typeof formData>) => {
+  const next = async (data: Partial<typeof formData>) => {
     const newData = { ...formData, ...data };
-    const savedEmail = localStorage.getItem("userEmail") || "";
-    const finalData = { ...newData, email: savedEmail };
     setFormData(newData);
 
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      // LƯU VÀO LOCALSTORAGE
-      localStorage.setItem("userProfile", JSON.stringify(finalData));
-      finishOnboarding();
-      navigate("/");
+      try {
+        // Save to backend API
+        const goalWeightValue = Number(newData.goalWeight) || 0;
+        await api.updateCurrentUser({
+          age: parseInt(newData.age) || undefined,
+          gender: newData.gender || undefined,
+          height_cm: parseFloat(newData.height) || undefined,
+          weight_kg: parseFloat(newData.weight) || undefined,
+          goal: formatGoalWeight(goalWeightValue),
+        });
+        // Refresh user profile in auth context
+        const updatedUser = await refreshUser();
+        // Verify user is properly onboarded before navigating
+        if (updatedUser?.weight_kg && updatedUser?.height_cm) {
+          navigate("/");
+        } else {
+          alert(messages.onboarding.verificationError);
+        }
+      } catch (error) {
+        console.error("Failed to save onboarding data:", error);
+        alert(messages.onboarding.saveError);
+      }
     }
   };
 
@@ -67,7 +86,7 @@ export default function Onboarding() {
       <CurrentStep data={formData} onNext={next} onPrev={prev} />
       {step > 0 && (
         <button onClick={prev} className={styles.backBtn}>
-          Back
+          {messages.common.goBack}
         </button>
       )}
     </div>

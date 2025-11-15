@@ -79,3 +79,9 @@
 .switchText a:hover {
   text-decoration: underline;
 }
+
+.error {
+  color: #f87171;
+  text-align: left;
+  font-size: 14px;
+}

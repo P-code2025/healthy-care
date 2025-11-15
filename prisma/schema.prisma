@@ -72,6 +72,10 @@ model FoodLog {
   fatGrams             Float
   healthConsideration  String?
   isCorrected          Boolean  @default(false)
+  amount               String?
+  sugarGrams           Float?
+  status               String?
+  thoughts             String?
   createdAt            DateTime @default(now())
 }
 
@@ -96,4 +100,23 @@ model AiSuggestion {
   isApplied      Boolean        @default(false)
   contentDetails Json
   createdAt      DateTime       @default(now())
+}
+
+model DailyStatistics {
+  id                  Int      @id @default(autoincrement())
+  userId              Int
+  date                DateTime @db.Date
+  totalCalories       Int      @default(0)
+  totalProtein        Float    @default(0)
+  totalCarbs          Float    @default(0)
+  totalFat            Float    @default(0)
+  caloriesBurned      Int      @default(0)
+  exerciseDuration    Int      @default(0)
+  mealsCount          Int      @default(0)
+  workoutsCount       Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }

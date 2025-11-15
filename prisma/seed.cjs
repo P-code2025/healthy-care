@@ -84,6 +84,11 @@ async function seed() {
         fatGrams: Number(log.fat_g),
         healthConsideration: log.health_consideration,
         isCorrected: Boolean(log.is_corrected),
+        amount: log.amount || null,
+        sugarGrams:
+          log.sugar !== undefined ? Number(log.sugar) : null,
+        status: log.status || null,
+        thoughts: log.thoughts || null,
       },
     });
   }

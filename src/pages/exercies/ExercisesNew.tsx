@@ -13,47 +13,88 @@ import styles from './ExercisesNew.module.css';
 import YouTubePlayer from '../../components/YouTubePlayer';
 import { SAMPLE_WORKOUT_PLANS, type WorkoutPlan } from './workoutPlans';
 import { generateAIExercisePlan, type AIExercisePlan } from '../../services/aiExercisePlan';
+import type { FoodEntry } from '../../lib/types';
+import { foodDiaryApi, mapFoodLogToEntry } from '../../services/foodDiaryApi';
+import { useAuth } from '../../context/AuthContext';
+import { determineGoalIntent, getGoalWeightFromUser } from '../../utils/profile';
 
-const TABS = ['Tất cả', 'Cá nhân hóa', 'Đã lưu', 'Lịch sử'] as const;
+const TABS = ['All', 'Personalized', 'Saved', 'History'] as const;
 type TabType = typeof TABS[number];
 
+interface ExerciseUserProfile {
+  age: number;
+  gender: 'Nam' | 'Nữ' | string;
+  weight: number;
+  height: number;
+  goalWeight: number;
+  goal: 'lose' | 'maintain' | 'gain';
+  workoutPreference?: string[];
+}
+
 export default function ExercisesNew() {
-  const [activeTab, setActiveTab] = useState<TabType>('Cá nhân hóa');
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabType>('Personalized');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
   const [savedPlans, setSavedPlans] = useState<Set<string>>(new Set(['2', '5']));
   const [plans, setPlans] = useState<WorkoutPlan[]>(SAMPLE_WORKOUT_PLANS);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<ExerciseUserProfile | null>(null);
   const [dailyCalories, setDailyCalories] = useState(0);
-  const foodEntries = JSON.parse(localStorage.getItem('foodDiary_entries_v2') || '[]')
-  .filter((e: any) => e.date === new Date().toISOString().split('T')[0]);
+  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
 
   // AI State
   const [aiPlan, setAiPlan] = useState<AIExercisePlan>(() => {
   // Tạo fallback ngay khi khởi tạo
   return {
-    summary: "AI đang chuẩn bị kế hoạch cho bạn...",
-    intensity: 'vừa',
+    summary: "AI is preparing a personalized plan for you...",
+    intensity: 'medium',
     exercises: [],
     totalBurnEstimate: "0 kcal",
-    advice: "Vui lòng đợi trong giây lát."
+    advice: "Please hold on for a moment.",
   };
 });
   const [isLoadingAI, setIsLoadingAI] = useState(false);
 
-  // Load profile
+  // Load profile from auth context
   useEffect(() => {
-    const profile = localStorage.getItem('userProfile');
-    const savedCal = localStorage.getItem('daily_calories');
-    const calDate = localStorage.getItem('daily_calorie_date');
-    const today = new Date().toISOString().split('T')[0];
+    if (!user) return;
+    const normalizedGender =
+      user.gender?.toLowerCase() === 'male'
+        ? 'Nam'
+        : user.gender?.toLowerCase() === 'female'
+        ? 'Nữ'
+        : user.gender || 'Nam';
+    const weight = user.weight_kg || 0;
+    const goalWeight = getGoalWeightFromUser(user);
+    setUserProfile({
+      age: user.age || 0,
+      gender: normalizedGender,
+      weight,
+      height: user.height_cm || 0,
+      goalWeight,
+      goal: determineGoalIntent(weight, goalWeight),
+      workoutPreference: [],
+    });
+  }, [user]);
 
-    if (profile) setUserProfile(JSON.parse(profile));
-    if (savedCal && calDate === today) {
-      setDailyCalories(parseInt(savedCal));
-    }
+  // Load today's food entries
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const loadEntries = async () => {
+      try {
+        const logs = await foodDiaryApi.list({ start: today, end: today });
+        setFoodEntries(logs.map(mapFoodLogToEntry));
+      } catch (err) {
+        console.error('Failed to load food diary for exercises', err);
+      }
+    };
+    loadEntries();
   }, []);
+
+  useEffect(() => {
+    const total = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
+    setDailyCalories(total);
+  }, [foodEntries]);
 
   // Tính BMI + TDEE
   const analysis = useMemo(() => {
@@ -127,7 +168,7 @@ useEffect(() => {
   };
 
   fetchAI();
-}, [activeTab, analysis, userProfile, dailyCalories]);
+}, [activeTab, analysis, userProfile, dailyCalories, foodEntries]);
 
   // Filter plans
   const filteredPlans = useMemo(() => {
@@ -138,11 +179,9 @@ useEffect(() => {
   } 
   else if (activeTab === 'Cá nhân hóa') {
     if (aiPlan && aiPlan.exercises.length > 0) {
-      const normalize = (str: string) => str.toLowerCase().replace(/[-_]/g, ' ').trim();
-
       const matchedPlans = plans.filter(p => {
-  return aiPlan.exercises.some(ex => {
-    const exName = ex.name.toLowerCase();
+        return aiPlan.exercises.some(ex => {
+          const exName = ex.name.toLowerCase();
     const planTitle = p.title.toLowerCase();
     return planTitle.includes(exName) || exName.includes(planTitle);
   });

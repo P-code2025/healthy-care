@@ -91,7 +91,7 @@ const YouTubePlayer = forwardRef<YouTubePlayerRef, YouTubePlayerProps>(
             fontSize: '14px',
           }}
         >
-          Video không khả dụng
+          Video unavailable
         </div>
       );
     }

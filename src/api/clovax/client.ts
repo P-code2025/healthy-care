@@ -34,7 +34,7 @@ export class ClovaXClient {
       topP: 0.8,
       temperature: 0.5,
       repetitionPenalty: 1.1,
-      maxTokens: 4091, // TỐI ĐA CLOVA X
+      maxTokens: 4091, // Maximum tokens supported by CLOVA X
       includeAiFilters: true,
       stop: [],
       seed: 0,

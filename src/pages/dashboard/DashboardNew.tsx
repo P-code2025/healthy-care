@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './DashboardNew.module.css';
+import { api } from '../../services/api';
+import type { DailyStatistics } from '../../services/api';
 
 interface MealItem {
   id: string;
@@ -163,6 +165,30 @@ const RECENT_ACTIVITIES: Activity[] = [
 export default function DashboardNew() {
   const [currentDate] = useState(new Date());
   const currentMonth = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const [dailyStats, setDailyStats] = useState<DailyStatistics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0];
+        const [stats, profile] = await Promise.all([
+          api.getDailyStatistics(dateStr),
+          api.getCurrentUser()
+        ]);
+        console.log('📊 Dashboard data:', { stats, profile });
+        setDailyStats(stats);
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
   // Calendar data
   const getDaysInMonth = () => {
@@ -196,7 +222,9 @@ export default function DashboardNew() {
             </div>
             <div className={styles.statContent}>
               <div className={styles.statLabel}>Weight</div>
-              <div className={styles.statValue}>78 kg</div>
+              <div className={styles.statValue}>
+                {loading ? '...' : userProfile?.weight_kg ? `${userProfile.weight_kg} kg` : 'N/A'}
+              </div>
             </div>
             <div className={styles.miniChart}>
               {[40, 60, 30, 80, 50, 70, 60].map((height, i) => (
@@ -210,8 +238,10 @@ export default function DashboardNew() {
               👣
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statLabel}>Steps</div>
-              <div className={styles.statValue}>8,000</div>
+              <div className={styles.statLabel}>Exercise</div>
+              <div className={styles.statValue}>
+                {loading ? '...' : dailyStats ? `${dailyStats.workouts_count} workouts` : '0 workouts'}
+              </div>
             </div>
             <div className={styles.miniChart}>
               {[50, 70, 40, 90, 60, 80, 70].map((height, i) => (
@@ -222,11 +252,13 @@ export default function DashboardNew() {
 
           <div className={styles.statCard}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)' }}>
-              😴
+              ⏱️
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statLabel}>Sleep</div>
-              <div className={styles.statValue}>6.5 hrs</div>
+              <div className={styles.statLabel}>Exercise Time</div>
+              <div className={styles.statValue}>
+                {loading ? '...' : dailyStats ? `${dailyStats.exercise_duration} min` : '0 min'}
+              </div>
             </div>
             <div className={styles.miniChart}>
               {[60, 50, 70, 80, 60, 90, 75].map((height, i) => (
@@ -237,16 +269,21 @@ export default function DashboardNew() {
 
           <div className={styles.statCard}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFD4A3 0%, #FFB84D 100%)' }}>
-              💧
+              🍽️
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statLabel}>Water Intake</div>
-              <div className={styles.statValue}>1.5 L</div>
+              <div className={styles.statLabel}>Meals Today</div>
+              <div className={styles.statValue}>
+                {loading ? '...' : dailyStats ? `${dailyStats.meals_count} meals` : '0 meals'}
+              </div>
             </div>
             <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{ width: '75%', background: '#FFB84D' }}></div>
+              <div className={styles.progressFill} style={{ 
+                width: dailyStats ? `${Math.min((dailyStats.meals_count / 4) * 100, 100)}%` : '0%', 
+                background: '#FFB84D' 
+              }}></div>
             </div>
-            <div className={styles.progressLabel}>1,312 mL</div>
+            <div className={styles.progressLabel}>{dailyStats?.meals_count || 0} / 4 meals</div>
           </div>
         </div>
 
@@ -263,7 +300,9 @@ export default function DashboardNew() {
                 <circle cx="100" cy="100" r="70" fill="none" stroke="#FFE5B4" strokeWidth="28"/>
                 <circle cx="100" cy="100" r="70" fill="none" stroke="#FFB84D" strokeWidth="28" 
                   strokeDasharray="308 440" strokeDashoffset="0" transform="rotate(-90 100 100)"/>
-                <text x="100" y="95" textAnchor="middle" fontSize="36" fontWeight="700" fill="#1a1a1a">78</text>
+                <text x="100" y="95" textAnchor="middle" fontSize="36" fontWeight="700" fill="#1a1a1a">
+                  {loading ? '...' : userProfile?.weight_kg || 'N/A'}
+                </text>
                 <text x="100" y="115" textAnchor="middle" fontSize="14" fill="#6B7280">kg</text>
               </svg>
               <div className={styles.donutLegend}>
@@ -294,7 +333,9 @@ export default function DashboardNew() {
                   <circle cx="100" cy="100" r="80" fill="none" stroke="#F3F4F6" strokeWidth="24"/>
                   <circle cx="100" cy="100" r="80" fill="none" stroke="#FFB84D" strokeWidth="24"
                     strokeDasharray="377 503" strokeDashoffset="0" transform="rotate(-90 100 100)"/>
-                  <text x="100" y="95" textAnchor="middle" fontSize="32" fontWeight="700" fill="#1a1a1a">1240</text>
+                  <text x="100" y="95" textAnchor="middle" fontSize="32" fontWeight="700" fill="#1a1a1a">
+                    {loading ? '...' : dailyStats?.total_calories || 0}
+                  </text>
                   <text x="100" y="115" textAnchor="middle" fontSize="14" fill="#6B7280">kcal</text>
                 </svg>
               </div>
@@ -305,10 +346,17 @@ export default function DashboardNew() {
                     <span>Carbohydrates</span>
                   </div>
                   <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ width: '37%', background: '#FFB84D' }}></div>
+                    <div className={styles.breakdownFill} style={{ 
+                      width: dailyStats ? `${Math.min((dailyStats.total_carbs / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100, 100)}%` : '0%', 
+                      background: '#FFB84D' 
+                    }}></div>
                   </div>
-                  <span className={styles.breakdownValue}>120 mg</span>
-                  <span className={styles.breakdownPercent}>37%</span>
+                  <span className={styles.breakdownValue}>{dailyStats?.total_carbs.toFixed(1) || 0}g</span>
+                  <span className={styles.breakdownPercent}>
+                    {dailyStats && (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat) > 0
+                      ? `${Math.round((dailyStats.total_carbs / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100)}%`
+                      : '0%'}
+                  </span>
                 </div>
                 <div className={styles.breakdownItem}>
                   <div className={styles.breakdownLabel}>
@@ -316,10 +364,17 @@ export default function DashboardNew() {
                     <span>Proteins</span>
                   </div>
                   <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ width: '53%', background: '#A7E9AF' }}></div>
+                    <div className={styles.breakdownFill} style={{ 
+                      width: dailyStats ? `${Math.min((dailyStats.total_protein / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100, 100)}%` : '0%', 
+                      background: '#A7E9AF' 
+                    }}></div>
                   </div>
-                  <span className={styles.breakdownValue}>70 mg</span>
-                  <span className={styles.breakdownPercent}>53%</span>
+                  <span className={styles.breakdownValue}>{dailyStats?.total_protein.toFixed(1) || 0}g</span>
+                  <span className={styles.breakdownPercent}>
+                    {dailyStats && (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat) > 0
+                      ? `${Math.round((dailyStats.total_protein / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100)}%`
+                      : '0%'}
+                  </span>
                 </div>
                 <div className={styles.breakdownItem}>
                   <div className={styles.breakdownLabel}>
@@ -327,10 +382,17 @@ export default function DashboardNew() {
                     <span>Fats</span>
                   </div>
                   <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ width: '45%', background: '#FFD89B' }}></div>
+                    <div className={styles.breakdownFill} style={{ 
+                      width: dailyStats ? `${Math.min((dailyStats.total_fat / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100, 100)}%` : '0%', 
+                      background: '#FFD89B' 
+                    }}></div>
                   </div>
-                  <span className={styles.breakdownValue}>20 mg</span>
-                  <span className={styles.breakdownPercent}>45%</span>
+                  <span className={styles.breakdownValue}>{dailyStats?.total_fat.toFixed(1) || 0}g</span>
+                  <span className={styles.breakdownPercent}>
+                    {dailyStats && (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat) > 0
+                      ? `${Math.round((dailyStats.total_fat / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100)}%`
+                      : '0%'}
+                  </span>
                 </div>
               </div>
             </div>

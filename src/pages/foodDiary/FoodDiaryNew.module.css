@@ -116,6 +116,12 @@
   transform: translateY(-1px);
 }
 
+.deleteBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .deleteBtn svg {
   width: 16px;
   height: 16px;
@@ -414,6 +420,29 @@
   margin-bottom: 20px;
 }
 
+.errorBanner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #FEF2F2;
+  color: #991B1B;
+  font-size: 14px;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  margin: 0 20px 16px;
+}
+
+.errorBanner button {
+  background: transparent;
+  border: 1px solid #F87171;
+  color: #B91C1C;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -454,6 +483,14 @@
   font-size: 14px;
   color: #1a1a1a;
   vertical-align: middle;
+}
+
+.loadingRow,
+.emptyRow {
+  text-align: center;
+  font-size: 14px;
+  color: #4B5563;
+  padding: 40px 16px;
 }
 
 .ghostRow {
