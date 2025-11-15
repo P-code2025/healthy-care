@@ -1,0 +1,526 @@
+/*
+ * THAY THẾ TOÀN BỘ file src/pages/exercies/ExercisesNew.module.css bằng code này
+ */
+
+.container {
+  padding: 24px;
+  background: #f8fafb;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #d4f4dd 0%, #a7e9af 100%);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(167, 233, 175, 0.3);
+}
+
+.addButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(167, 233, 175, 0.4);
+}
+
+.addIcon {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Filters Section */
+.filtersSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.leftFilters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  min-width: 320px;
+  transition: all 0.2s ease;
+}
+
+.searchBox:focus-within {
+  border-color: #a7e9af;
+  box-shadow: 0 0 0 3px rgba(167, 233, 175, 0.1);
+}
+
+.searchBox svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.searchBox input {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+  color: #374151;
+}
+
+.searchBox input::placeholder {
+  color: #9ca3af;
+}
+
+.filterSelect {
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  min-width: 140px;
+}
+
+.filterSelect:hover {
+  border-color: #d1d5db;
+}
+
+.filterSelect:focus {
+  border-color: #a7e9af;
+  box-shadow: 0 0 0 3px rgba(167, 233, 175, 0.1);
+}
+
+.rightFilters {
+  display: flex;
+  gap: 12px;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.iconButton:hover {
+  border-color: #a7e9af;
+  background: #f9fafb;
+}
+
+.iconButton span {
+  font-size: 16px;
+}
+
+/* [SỬA LỖI VỠ LAYOUT] CSS CHO LƯỚI VIDEO */
+.workoutGrid {
+  display: grid;
+  /* Hiển thị 3-4 cột tùy kích thước màn hình */
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* Pagination (Giữ nguyên từ file gốc của anh) */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.paginationInfo {
+  font-size: 14px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perPageSelect {
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  margin: 0 4px;
+  font-weight: 600;
+  color: #374151;
+  background: white;
+}
+
+.perPageSelect:focus {
+  border-color: #a7e9af;
+}
+
+.paginationControls {
+  display: flex;
+  gap: 8px;
+}
+
+.pageBtn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: #a7e9af;
+  background: #f0fdf4;
+  color: #059669;
+}
+
+.pageBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageBtn:first-child:not(:disabled) {
+  background: #d4f4dd;
+  color: #059669;
+  border-color: #a7e9af;
+}
+
+/* Promo Banner (Giữ nguyên) */
+.promoBanner {
+  background: linear-gradient(135deg, #d4f4dd 0%, #a7e9af 100%);
+  border-radius: 16px;
+  padding: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+  margin-top: 24px; /* Thêm margin-top */
+}
+
+/* ... (Các style promo-banner khác giữ nguyên) ... */
+.promoBanner::before {
+  content: "";
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+.promoContent {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
+}
+.promoVeggies {
+  font-size: 80px;
+  line-height: 1;
+}
+.promoText {
+  font-size: 16px;
+  color: #1a1a1a;
+  line-height: 1.6;
+}
+.promoTitle {
+  margin: 0 0 4px 0;
+  font-weight: 500;
+}
+.promoSubtitle {
+  margin: 0;
+  font-size: 18px;
+}
+.promoSubtitle strong {
+  font-weight: 700;
+  font-size: 20px;
+  color: #16a34a;
+}
+.claimBtn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #ffb84d 0%, #ff9800 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+.claimBtn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(255, 152, 0, 0.4);
+}
+
+/* [THÊM MỚI] CSS CHO MODAL VIDEO */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+.modalContent {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 900px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalContent h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+}
+
+.modalContent p {
+  font-size: 15px;
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.videoWrapper {
+  position: relative;
+  padding-bottom: 56.25%; /* Tỷ lệ 16:9 */
+  height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #000;
+}
+
+.videoWrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.closeModalBtn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeModalBtn:hover {
+  background: #e5e7eb;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .filtersSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .leftFilters,
+  .rightFilters {
+    width: 100%;
+  }
+  .searchBox {
+    min-width: 100%;
+  }
+  .workoutGrid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .addButton {
+    width: 100%;
+    justify-content: center;
+  }
+  .leftFilters {
+    flex-direction: column;
+    width: 100%;
+  }
+  .filterSelect {
+    width: 100%;
+  }
+  .pagination {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .paginationControls {
+    justify-content: center;
+  }
+  .promoBanner {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  .promoContent {
+    flex-direction: column;
+    text-align: center;
+  }
+  .workoutGrid {
+    grid-template-columns: 1fr; /* 1 cột trên điện thoại */
+  }
+}
+/*
+ * THÊM CÁC CLASS NÀY VÀO CUỐI FILE
+ * src/pages/exercies/ExercisesNew.module.css
+ */
+
+/* ... (toàn bộ CSS cũ cho .container, .header, .filtersSection, .workoutGrid, .pagination, .modalOverlay ... giữ nguyên) ... */
+
+/* [THÊM MỚI] CSS cho Form Add Exercise */
+.addForm {
+  max-width: 900px; /* Tăng chiều rộng cho form */
+  max-height: 90vh; /* Giới hạn chiều cao */
+  overflow-y: auto; /* Cho phép cuộn nếu form quá dài */
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 cột */
+  gap: 20px 24px; /* Khoảng cách giữa các hàng và cột */
+}
+
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroup label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.formGroup input[type="text"],
+.formGroup input[type="number"],
+.formGroup select,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.formGroup textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Nút bấm ở cuối form */
+.formActions {
+  grid-column: 1 / -1; /* Nút bấm chiếm trọn 2 cột */
+  display: flex;
+  justify-content: flex-end; /* Căn lề phải */
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Tái sử dụng style nút Bắt đầu */
+.formActions .startBtn {
+  flex-grow: 0; /* Không co giãn */
+  background: #22c55e;
+}
+.formActions .startBtn:hover {
+  background: #16a34a;
+}
