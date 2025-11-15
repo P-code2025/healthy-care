@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CalendarCategory {
+  meal
+  activity
+  appointment
+}
+
+enum CalendarModule {
+  meal_plan
+  exercises
+  food_diary
+  messages
+}
+
+enum SuggestionType {
+  nutrition
+  workout
+}
+
+model User {
+  id                   Int              @id @default(autoincrement())
+  email                String           @unique
+  passwordHash         String
+  age                  Int?
+  gender               String?
+  heightCm             Float?
+  weightKg             Float?
+  goal                 String?
+  activityLevel        String?
+  exercisePreferences  Json?
+  calendarEvents       CalendarEvent[]
+  foodLogs             FoodLog[]
+  workoutLogs          WorkoutLog[]
+  aiSuggestions        AiSuggestion[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+}
+
+model CalendarEvent {
+  id           Int               @id @default(autoincrement())
+  userId       Int
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  eventDate    DateTime
+  timeSlot     String
+  category     CalendarCategory
+  location     String?
+  note         String?
+  linkedModule CalendarModule?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model FoodLog {
+  id                   Int      @id @default(autoincrement())
+  userId               Int
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eatenAt              DateTime
+  mealType             String
+  foodName             String
+  calories             Int
+  proteinGrams         Float
+  carbsGrams           Float
+  fatGrams             Float
+  healthConsideration  String?
+  isCorrected          Boolean  @default(false)
+  createdAt            DateTime @default(now())
+}
+
+model WorkoutLog {
+  id                       Int      @id @default(autoincrement())
+  userId                   Int
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completedAt              DateTime
+  exerciseName             String
+  durationMinutes          Int
+  caloriesBurnedEstimated  Int
+  isAiSuggested            Boolean  @default(false)
+  createdAt                DateTime @default(now())
+}
+
+model AiSuggestion {
+  id             Int            @id @default(autoincrement())
+  userId         Int
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generatedAt    DateTime
+  type           SuggestionType
+  isApplied      Boolean        @default(false)
+  contentDetails Json
+  createdAt      DateTime       @default(now())
+}
