@@ -40,6 +40,8 @@ model User {
   foodLogs             FoodLog[]
   workoutLogs          WorkoutLog[]
   aiSuggestions        AiSuggestion[]
+  aiFeedback           AiFeedback[]
+  aiFeedback           AiFeedback[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -119,4 +121,17 @@ model DailyStatistics {
 
   @@unique([userId, date])
   @@index([userId, date])
+}
+
+model AiFeedback {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planSummary String
+  planPayload Json
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

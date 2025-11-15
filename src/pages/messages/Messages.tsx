@@ -1,15 +1,24 @@
-﻿// src/pages/Messages.tsx
-import { useState, useEffect, useRef } from 'react';
-import styles from './Messages.module.css';
+﻿// src/pages/messages/Messages.tsx
+import { useEffect, useRef, useState } from "react";
+import { Camera, Dumbbell } from "lucide-react";
+import { toast } from "react-toastify";
 
-import { Camera, Dumbbell } from 'lucide-react';
-import type { AnalysisResult, FoodEntry } from '../../lib/types';
-import { generateAIExercisePlan, type AIExercisePlan } from '../../services/aiExercisePlan';
-import { analyzeFood } from '../../services/analyzeFood';
-import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from '../../services/foodDiaryApi';
-import { useAuth } from '../../context/AuthContext';
+import styles from "./Messages.module.css";
+import { useAuth } from "../../context/AuthContext";
+import type { AnalysisResult, FoodEntry } from "../../lib/types";
+import {
+  foodDiaryApi,
+  mapFoodLogToEntry,
+  type FoodEntryInput,
+} from "../../services/foodDiaryApi";
+import { analyzeFood } from "../../services/analyzeFood";
+import {
+  generateAIExercisePlan,
+  type AIExercisePlan,
+} from "../../services/aiExercisePlan";
+import { messages as i18nMessages } from "../../i18n/messages";
 
-interface Message {
+interface ChatMessage {
   id: string;
   content: string;
   isUser: boolean;
@@ -19,183 +28,264 @@ interface Message {
   exercisePlan?: AIExercisePlan;
 }
 
-
 interface UserProfile {
   age: number;
   weight: number;
   height: number;
-  gender: 'Male' | 'Female';
-  goal: 'lose' | 'maintain' | 'gain';
+  gender: "Male" | "Female";
+  goal: "lose" | "maintain" | "gain";
   workoutDays: number;
 }
 
-const AI_AVATAR = 'AI';
+const AI_AVATAR = "AI";
+const DEFAULT_PROFILE: UserProfile = {
+  age: 0,
+  weight: 0,
+  height: 0,
+  gender: "Male",
+  goal: "maintain",
+  workoutDays: 3,
+};
+
+const formatTimestamp = () =>
+  new Date().toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const titleCase = (text: string) =>
+  text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 
 export default function Messages() {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [diaryEntries, setDiaryEntries] = useState<FoodEntry[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load data
+  // Load persisted chat history
   useEffect(() => {
-    const saved = localStorage.getItem('aiChatMessages');
-    if (saved) setMessages(JSON.parse(saved));
+    const saved = localStorage.getItem("aiChatMessages");
+    if (saved) {
+      try {
+        setChatMessages(JSON.parse(saved));
+      } catch {
+        localStorage.removeItem("aiChatMessages");
+      }
+    }
   }, []);
 
+  // Persist chat history
+  useEffect(() => {
+    localStorage.setItem("aiChatMessages", JSON.stringify(chatMessages));
+  }, [chatMessages]);
+
+  // Prepare profile defaults from the authenticated user
   useEffect(() => {
     if (!user) return;
-    const normalizedGender: UserProfile['gender'] =
-      user.gender?.toLowerCase() === 'female' ? 'Female' : 'Male';
+    const genderValue = (user.gender ?? "").toLowerCase();
+    const normalizedGender =
+      genderValue.includes("female") || genderValue.includes("nu")
+        ? "Female"
+        : "Male";
     setUserProfile({
-      age: user.age || 0,
-      weight: user.weight_kg || 0,
-      height: user.height_cm || 0,
+      age: user.age || DEFAULT_PROFILE.age,
+      weight: user.weight_kg || DEFAULT_PROFILE.weight,
+      height: user.height_cm || DEFAULT_PROFILE.height,
       gender: normalizedGender,
-      goal:
-        (user.goal as UserProfile['goal']) ||
-        (user.goal === 'lose_weight' ? 'lose' : 'maintain'),
-      workoutDays: 3,
+      goal: (user.goal as UserProfile["goal"]) || DEFAULT_PROFILE.goal,
+      workoutDays: DEFAULT_PROFILE.workoutDays,
     });
   }, [user]);
 
+  // Load today's diary entries so we can reply with calorie context
   useEffect(() => {
-    const todayOnly = new Date().toISOString().split('T')[0];
+    const todayOnly = new Date().toISOString().split("T")[0];
     const loadEntries = async () => {
       try {
-        const logs = await foodDiaryApi.list({ start: todayOnly, end: todayOnly });
+        const logs = await foodDiaryApi.list({
+          start: todayOnly,
+          end: todayOnly,
+        });
         setDiaryEntries(logs.map(mapFoodLogToEntry));
-      } catch (err) {
-        console.error('Failed to load diary entries for chat assistant', err);
+      } catch (error) {
+        console.error("Failed to load diary entries for chat assistant", error);
+        toast.error(i18nMessages.errors.diaryLoad);
       }
     };
+
     loadEntries();
   }, []);
 
-  // Save messages
-  useEffect(() => {
-    localStorage.setItem('aiChatMessages', JSON.stringify(messages));
-  }, [messages]);
-
-  // Get today's total calories
   const getTodayCalories = () =>
     diaryEntries.reduce((sum, entry) => sum + entry.calories, 0);
 
-  // Handle text input
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    const userMsg: Message = {
+    const outgoing: ChatMessage = {
       id: Date.now().toString(),
       content: input,
       isUser: true,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      timestamp: formatTimestamp(),
     };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
+    setChatMessages((prev) => [...prev, outgoing]);
+    const pendingQuestion = input;
+    setInput("");
     setIsTyping(true);
 
-    // AI Response
     setTimeout(async () => {
-      const aiResponse = await processUserQuery(input);
-      const aiMsg: Message = {
+      const aiResponse = await processUserQuery(pendingQuestion);
+      const reply: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: aiResponse.content,
         isUser: false,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: formatTimestamp(),
         nutritionData: aiResponse.nutritionData,
-        exercisePlan: aiResponse.exercisePlan
+        exercisePlan: aiResponse.exercisePlan,
       };
-      setMessages(prev => [...prev, aiMsg]);
+      setChatMessages((prev) => [...prev, reply]);
       setIsTyping(false);
-    }, 1000);
+    }, 600);
   };
 
-  // Process query
-  const processUserQuery = async (query: string): Promise<{ content: string; nutritionData?: AnalysisResult; exercisePlan?: AIExercisePlan }> => {
-    const lower = query.toLowerCase();
+  const processUserQuery = async (
+    query: string
+  ): Promise<{
+    content: string;
+    nutritionData?: AnalysisResult;
+    exercisePlan?: AIExercisePlan;
+  }> => {
+    const normalized = query.toLowerCase();
+    const mentionsCalories =
+      normalized.includes("calo") ||
+      normalized.includes("kcal") ||
+      normalized.includes("calorie");
+    const mentionsToday =
+      normalized.includes("hom nay") ||
+      normalized.includes("hÃ´m nay") ||
+      normalized.includes("today") ||
+      normalized.includes("nay");
 
-    // 1. Tổng hợp calo hôm nay
-    if (lower.includes('calo') && (lower.includes('hôm nay') || lower.includes('nay') || lower.includes('today'))) {
+    if (mentionsCalories && mentionsToday) {
       const total = getTodayCalories();
       const goal = 2000;
       const diff = total - goal;
-      return {
-        content: `Bạn đã nạp **${total} kcal** hôm nay (${diff > 0 ? `dư ${diff}` : `thiếu ${-diff}`} kcal so với mục tiêu ${goal} kcal).\n\n` +
-          `${diff > 0 ? 'Không nên ăn thêm. Hãy đi bộ 40 phút để bù đắp!' : 'Bạn có thể ăn thêm một bữa nhẹ (~200 kcal).'}`
-      };
+      const diffText = diff > 0 ? `+${diff}` : `${diff}`;
+      const summary = i18nMessages.aiChat.todayCaloriesSummary
+        .replace("{calories}", String(total))
+        .replace("{diff}", diffText)
+        .replace("{goal}", String(goal));
+      const advice =
+        diff > 0
+          ? i18nMessages.aiChat.todayCaloriesAdviceAbove
+          : i18nMessages.aiChat.todayCaloriesAdviceBelow;
+
+      return { content: `${summary}\n\n${advice}` };
     }
 
-    // 2. Tư vấn tập luyện → TRUYỀN userQuery
-    // Trong processUserQuery
-if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi ý') || lower.includes('đau') || lower.includes('mỏi')) {
-  if (!userProfile) {
-    setShowProfileForm(true);
-    return { content: 'Vui lòng nhập thông tin cá nhân để tôi tư vấn chính xác!' };
-  }
+        const workoutKeywords = [
+      "workout",
+      "exercise",
+      "plan",
+      "routine",
+      "tap",
+      "lich",
+      "goi y",
+      "suggest",
+      "dau",
+      "moi",
+      "ache",
+      "sore",
+    ];
+    const wantsWorkout = workoutKeywords.some((keyword) =>
+      normalized.includes(keyword)
+    );
 
-  const dailyIntake = getTodayCalories();
-  const plans = [
-    'Morning Yoga Flow',
-    'HIIT Cardio',
-    'Full Body Strength',
-    'Core & Mobility',
-    '20 Min HIIT Fat Loss - No Repeat Workout',
-    'HIIT Fat Burn',
-    'Upper Body Power',
-    'Core & Abs Crusher'
-  ];
+    if (wantsWorkout) {
+      if (!userProfile) {
+        setShowProfileForm(true);
+        toast.info(i18nMessages.errors.incompleteProfile);
+        return { content: i18nMessages.aiChat.missingProfilePrompt };
+      }
 
-  // → GỌI AI MỚI, KHÔNG DÙNG CACHE
-  const plan = await generateAIExercisePlan(dailyIntake, userProfile, plans, query, 'query');
+      try {
+        const planNames = [
+          "Morning Yoga Flow",
+          "HIIT Cardio",
+          "Full Body Strength",
+          "Core & Mobility",
+          "20 Min HIIT Fat Loss - No Repeat Workout",
+          "HIIT Fat Burn",
+          "Upper Body Power",
+          "Core & Abs Crusher",
+        ];
 
-  const exerciseList = plan.exercises
-    .map(e => `• **${e.name}** – ${e.duration}\n _${e.reason}_`)
-    .join('\n\n');
+        const plan = await generateAIExercisePlan(
+          getTodayCalories(),
+          userProfile,
+          planNames,
+          query,
+          "query"
+        );
 
-  return {
-    content: `**Kế hoạch tập hôm nay (${plan.intensity})**\n\n${exerciseList}\n\n` +
-      `**Đốt ước tính**: ${plan.totalBurnEstimate}\n\n_${plan.advice}_`,
-    exercisePlan: plan
+        const planTitle = i18nMessages.aiChat.workoutPlanTitle.replace(
+          "{intensity}",
+          plan.intensity
+        );
+        const exerciseList = plan.exercises
+          .map(
+            (exercise) =>
+              `â€¢ **${exercise.name}** - ${exercise.duration}\n _${exercise.reason}_`
+          )
+          .join("\n\n");
+        const response = `${planTitle}\n\n${exerciseList}\n\n**${i18nMessages.aiChat.exerciseBurnLabel}**: ${plan.totalBurnEstimate}\n\n_${i18nMessages.aiChat.workoutPlanAdvicePrefix} ${plan.advice}_`;
+
+        return { content: response, exercisePlan: plan };
+      } catch (error) {
+        console.error("Workout plan generation failed", error);
+        toast.error(i18nMessages.errors.workoutPlan);
+        return { content: i18nMessages.errors.workoutPlan };
+      }
+    }
+
+    return { content: i18nMessages.aiChat.defaultHelper };
   };
-}
 
-    // 3. Mặc định
-    return { content: 'Tôi có thể giúp bạn phân tích bữa ăn hoặc tư vấn tập luyện. Hãy chụp ảnh món ăn hoặc hỏi về lịch tập!' };
-  };
-
-  // Handle image
-  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUri = reader.result as string;
-
-      const loadingMsg: Message = {
+      const loadingMessage: ChatMessage = {
         id: Date.now().toString(),
-        content: 'Đang phân tích ảnh món ăn...',
+        content: i18nMessages.aiChat.analyzingImage,
         isUser: false,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        isLoading: true
+        timestamp: formatTimestamp(),
+        isLoading: true,
       };
-      setMessages(prev => [...prev, loadingMsg]);
+      setChatMessages((prev) => [...prev, loadingMessage]);
 
       try {
         const { analysis } = await analyzeFood(dataUri);
         const now = new Date();
         const hour = now.getHours();
-        const mealType = hour >= 5 && hour < 11 ? 'Breakfast' :
-          hour >= 11 && hour < 14 ? 'Lunch' :
-            hour >= 18 && hour < 22 ? 'Dinner' : 'Snack';
+        const mealType =
+          hour >= 5 && hour < 11
+            ? "Breakfast"
+            : hour >= 11 && hour < 14
+            ? "Lunch"
+            : hour >= 18 && hour < 22
+            ? "Dinner"
+            : "Snack";
 
         const entryPayload: FoodEntryInput = {
-          date: now.toISOString().split('T')[0],
+          date: now.toISOString().split("T")[0],
           time: now.toISOString().slice(11, 16),
           mealType,
           foodName: analysis.foodName,
@@ -205,146 +295,245 @@ if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi
           carbs: analysis.carbs,
           fat: analysis.fat,
           sugar: analysis.sugar,
-          status: 'Satisfied',
-          thoughts: '',
+          status: "Satisfied",
+          thoughts: "",
         };
 
         const createdLog = await foodDiaryApi.create(entryPayload);
         const mappedEntry = mapFoodLogToEntry(createdLog);
-        setDiaryEntries(prev => [mappedEntry, ...prev]);
+        setDiaryEntries((prev) => [mappedEntry, ...prev]);
 
-        const resultMsg: Message = {
+        const resultMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
-          content: `**${analysis.foodName}** – ${analysis.amount}\n\n` +
-            `Calories: ${analysis.calories} kcal\n` +
-            `Protein: ${analysis.protein}g | Carbs: ${analysis.carbs}g | Fat: ${analysis.fat}g | Sugar: ${analysis.sugar}g\n\n` +
-            `Đã lưu vào **Food Diary**!`,
+          content: `**${analysis.foodName}** - ${analysis.amount}\n\nCalories: ${analysis.calories} kcal\nProtein: ${analysis.protein} g | Carbs: ${analysis.carbs} g | Fat: ${analysis.fat} g | Sugar: ${analysis.sugar} g\n\n${i18nMessages.aiChat.diarySaveSuccess}`,
           isUser: false,
-          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          nutritionData: analysis
+          timestamp: formatTimestamp(),
+          nutritionData: analysis,
         };
-        setMessages(prev => prev.filter(m => !m.isLoading).concat(resultMsg));
-      } catch (err) {
-        console.error('Image analysis failed', err);
-        setMessages(prev => prev.filter(m => !m.isLoading).concat({
-          id: Date.now().toString(),
-          content: 'Lỗi phân tích ảnh. Vui lòng thử lại!',
-          isUser: false,
-          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-        }));
+        setChatMessages((prev) =>
+          prev.filter((msg) => !msg.isLoading).concat(resultMessage)
+        );
+        toast.success(i18nMessages.aiChat.diarySaveSuccess);
+      } catch (error) {
+        console.error("Image analysis failed", error);
+        setChatMessages((prev) =>
+          prev
+            .filter((msg) => !msg.isLoading)
+            .concat({
+              id: Date.now().toString(),
+              content: i18nMessages.errors.imageAnalysis,
+              isUser: false,
+              timestamp: formatTimestamp(),
+            })
+        );
+        toast.error(i18nMessages.errors.imageAnalysis);
       }
     };
+
     reader.readAsDataURL(file);
   };
 
+  const profileValues = userProfile ?? DEFAULT_PROFILE;
+
   return (
     <div className={styles.container}>
-      {/* Chat Area */}
       <div className={styles.chatArea}>
         <div className={styles.header}>
           <div className={styles.avatar}>{AI_AVATAR}</div>
           <div>
-            <h3>AI Expert</h3>
-            <p>Phân tích bữa ăn • Tư vấn tập luyện</p>
+            <h3>{i18nMessages.aiChat.headerTitle}</h3>
+            <p>{i18nMessages.aiChat.headerSubtitle}</p>
           </div>
         </div>
 
         <div className={styles.messages}>
-          {messages.length === 0 && (
+          {chatMessages.length === 0 && (
             <div className={styles.welcome}>
-              <div className={styles.icon}>AI</div>
-              <h3>Xin chào! Tôi là AI Expert</h3>
-              <p>Chụp ảnh bữa ăn hoặc hỏi về lịch tập!</p>
+              <div className={styles.icon}>{AI_AVATAR}</div>
+              <h3>{i18nMessages.aiChat.welcomeTitle}</h3>
+              <p>{i18nMessages.aiChat.welcomeSubtitle}</p>
             </div>
           )}
-          {messages.map(msg => (
-            <div key={msg.id} className={`${styles.message} ${msg.isUser ? styles.user : styles.ai}`}>
-              {!msg.isUser && <div className={styles.avatar}>{AI_AVATAR}</div>}
+
+          {chatMessages.map((message) => (
+            <div
+              key={message.id}
+              className={`${styles.message} ${
+                message.isUser ? styles.user : styles.ai
+              }`}
+            >
+              {!message.isUser && <div className={styles.avatar}>{AI_AVATAR}</div>}
               <div className={styles.bubble}>
-                {msg.isLoading ? (
-                  <div className={styles.loading}>•••</div>
+                {message.isLoading ? (
+                  <div className={styles.loading}>...</div>
                 ) : (
                   <>
-                    <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-                    {msg.nutritionData && (
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: message.content.replace(
+                          /\*\*(.*?)\*\*/g,
+                          "<strong>$1</strong>"
+                        ),
+                      }}
+                    />
+                    {message.nutritionData && (
                       <div className={styles.nutritionCard}>
-                        <div><strong>{msg.nutritionData.calories}</strong> kcal</div>
-                        <div>P: {msg.nutritionData.protein}g</div>
-                        <div>C: {msg.nutritionData.carbs}g</div>
-                        <div>F: {msg.nutritionData.fat}g</div>
+                        <div>
+                          <strong>{message.nutritionData.calories}</strong> kcal
+                        </div>
+                        <div>P: {message.nutritionData.protein}g</div>
+                        <div>C: {message.nutritionData.carbs}g</div>
+                        <div>F: {message.nutritionData.fat}g</div>
                       </div>
                     )}
-                    {msg.exercisePlan && (
+                    {message.exercisePlan && (
                       <div className={styles.exerciseCard}>
-                        <div className={styles.intensity}>{msg.exercisePlan.intensity}</div>
-                        {msg.exercisePlan.exercises.map((e, i) => (
-                          <div key={i} className={styles.exerciseItem}>
+                        <div className={styles.intensity}>
+                          {titleCase(message.exercisePlan.intensity)}
+                        </div>
+                        {message.exercisePlan.exercises.map((exercise, index) => (
+                          <div key={index} className={styles.exerciseItem}>
                             <Dumbbell className="w-4 h-4" />
                             <div>
-                              <div><strong>{e.name}</strong></div>
-                              <div className={styles.reason}>{e.duration} – {e.reason}</div>
+                              <div>
+                                <strong>{exercise.name}</strong>
+                              </div>
+                              <div className={styles.reason}>
+                                {exercise.duration} - {exercise.reason}
+                              </div>
                             </div>
                           </div>
                         ))}
-                        <div className={styles.burn}>Đốt: {msg.exercisePlan.totalBurnEstimate}</div>
+                        <div className={styles.burn}>
+                          {i18nMessages.aiChat.exerciseBurnLabel}:{" "}
+                          {message.exercisePlan.totalBurnEstimate}
+                        </div>
                       </div>
                     )}
                   </>
                 )}
-                <div className={styles.time}>{msg.timestamp}</div>
+                <div className={styles.time}>{message.timestamp}</div>
               </div>
             </div>
           ))}
+
           {isTyping && (
             <div className={styles.message}>
               <div className={styles.avatar}>{AI_AVATAR}</div>
-              <div className={styles.bubble}><div className={styles.loading}>•••</div></div>
+              <div className={styles.bubble}>
+                <div className={styles.loading}>...</div>
+              </div>
             </div>
           )}
         </div>
 
         <div className={styles.inputArea}>
-          <input type="file" ref={fileInputRef} accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
-          <button onClick={() => fileInputRef.current?.click()} className={styles.attach}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImage}
+            style={{ display: "none" }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className={styles.attach}
+            aria-label="Upload meal photo"
+          >
             <Camera className="w-5 h-5" />
           </button>
           <input
             type="text"
-            placeholder="Hỏi về calo, lịch tập..."
+            placeholder={i18nMessages.aiChat.inputPlaceholder}
             value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyPress={e => e.key === 'Enter' && handleSend()}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => event.key === "Enter" && handleSend()}
           />
-          <button onClick={handleSend} className={styles.send}>Gửi</button>
+          <button onClick={handleSend} className={styles.send}>
+            {i18nMessages.aiChat.sendLabel}
+          </button>
         </div>
       </div>
 
-      {/* Profile Form */}
       {showProfileForm && (
         <div className={styles.modal} onClick={() => setShowProfileForm(false)}>
-          <div className={styles.form} onClick={e => e.stopPropagation()}>
-            <h3>Thông tin cá nhân</h3>
-            <input placeholder="Tuổi" type="number" onChange={e => setUserProfile(p => ({ ...p!, age: +e.target.value }))} />
-            <input placeholder="Cân nặng (kg)" type="number" onChange={e => setUserProfile(p => ({ ...p!, weight: +e.target.value }))} />
-            <input placeholder="Chiều cao (cm)" type="number" onChange={e => setUserProfile(p => ({ ...p!, height: +e.target.value }))} />
-            <select onChange={e => setUserProfile(p => ({ ...p!, gender: e.target.value as UserProfile['gender'] }))}>
-              <option>Giới tính</option>
-              <option value="Nam">Nam</option>
-              <option value="Nữ">Nữ</option>
-            </select>
-            <select onChange={e => setUserProfile(p => ({ ...p!, goal: e.target.value as UserProfile['goal'] }))}>
-              <option>Mục tiêu</option>
-              <option value="lose">Giảm cân</option>
-              <option value="maintain">Duy trì</option>
-              <option value="gain">Tăng cơ</option>
-            </select>
-            <input placeholder="Số buổi tập/tuần" type="number" onChange={e => setUserProfile(p => ({ ...p!, workoutDays: +e.target.value }))} />
-            <button
-              onClick={() => {
-                setShowProfileForm(false);
-              }}
+          <div className={styles.form} onClick={(event) => event.stopPropagation()}>
+            <h3>{i18nMessages.aiChat.profileFormTitle}</h3>
+            <input
+              placeholder={i18nMessages.aiChat.profileAgePlaceholder}
+              type="number"
+              value={profileValues.age || ""}
+              onChange={(event) =>
+                setUserProfile((prev) => ({
+                  ...(prev ?? DEFAULT_PROFILE),
+                  age: Number(event.target.value),
+                }))
+              }
+            />
+            <input
+              placeholder={i18nMessages.aiChat.profileWeightPlaceholder}
+              type="number"
+              value={profileValues.weight || ""}
+              onChange={(event) =>
+                setUserProfile((prev) => ({
+                  ...(prev ?? DEFAULT_PROFILE),
+                  weight: Number(event.target.value),
+                }))
+              }
+            />
+            <input
+              placeholder={i18nMessages.aiChat.profileHeightPlaceholder}
+              type="number"
+              value={profileValues.height || ""}
+              onChange={(event) =>
+                setUserProfile((prev) => ({
+                  ...(prev ?? DEFAULT_PROFILE),
+                  height: Number(event.target.value),
+                }))
+              }
+            />
+            <select
+              value={profileValues.gender}
+              onChange={(event) =>
+                setUserProfile((prev) => ({
+                  ...(prev ?? DEFAULT_PROFILE),
+                  gender: event.target.value as UserProfile["gender"],
+                }))
+              }
             >
-              Lưu
+              <option value="Male">{i18nMessages.aiChat.profileGenderMale}</option>
+              <option value="Female">
+                {i18nMessages.aiChat.profileGenderFemale}
+              </option>
+            </select>
+            <select
+              value={profileValues.goal}
+              onChange={(event) =>
+                setUserProfile((prev) => ({
+                  ...(prev ?? DEFAULT_PROFILE),
+                  goal: event.target.value as UserProfile["goal"],
+                }))
+              }
+            >
+              <option value="lose">{i18nMessages.aiChat.profileGoalLose}</option>
+              <option value="maintain">
+                {i18nMessages.aiChat.profileGoalMaintain}
+              </option>
+              <option value="gain">{i18nMessages.aiChat.profileGoalGain}</option>
+            </select>
+            <input
+              placeholder={i18nMessages.aiChat.profileWorkoutDaysPlaceholder}
+              type="number"
+              value={profileValues.workoutDays || ""}
+              onChange={(event) =>
+                setUserProfile((prev) => ({
+                  ...(prev ?? DEFAULT_PROFILE),
+                  workoutDays: Number(event.target.value),
+                }))
+              }
+            />
+            <button onClick={() => setShowProfileForm(false)}>
+              {i18nMessages.aiChat.profileSaveCta}
             </button>
           </div>
         </div>
@@ -352,3 +541,4 @@ if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi
     </div>
   );
 }
+

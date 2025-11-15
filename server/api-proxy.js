@@ -205,6 +205,60 @@ const handlePrismaError = (res, error, message) => {
   res.status(500).json({ error: message });
 };
 
+const buildAiContext = async (userId) => {
+  const [user, meals, feedback] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        age: true,
+        gender: true,
+        heightCm: true,
+        weightKg: true,
+        goal: true,
+        activityLevel: true,
+        exercisePreferences: true,
+      },
+    }),
+    prisma.foodLog.findMany({
+      where: { userId },
+      orderBy: { eatenAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        eatenAt: true,
+        mealType: true,
+        foodName: true,
+        calories: true,
+        proteinGrams: true,
+        carbsGrams: true,
+        fatGrams: true,
+        status: true,
+      },
+    }),
+    prisma.aiFeedback.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        planSummary: true,
+        planPayload: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+      },
+    }),
+  ]);
+
+  return {
+    user,
+    meals,
+    feedback,
+  };
+};
+
 // ========== BASIC ROUTES ==========
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "API Proxy is running" });
@@ -992,6 +1046,59 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
   }
 });
 
+
+// ========== AI FEEDBACK & CONTEXT ==========
+app.post(
+  "/api/ai-feedback",
+  requireAuth,
+  body("planSummary").isLength({ min: 3 }).withMessage("planSummary required"),
+  body("planPayload").notEmpty().withMessage("planPayload is required"),
+  body("rating").isInt({ min: 1, max: 5 }).withMessage("rating must be between 1 and 5"),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const entry = await prisma.aiFeedback.create({
+        data: {
+          userId: req.user.id,
+          planSummary: req.body.planSummary.trim(),
+          planPayload: req.body.planPayload,
+          rating: Number(req.body.rating),
+          comment: req.body.comment?.trim() || null,
+        },
+      });
+      res.status(201).json(entry);
+    } catch (error) {
+      handlePrismaError(res, error, "Failed to store AI feedback");
+    }
+  }
+);
+
+app.get("/api/ai-feedback", requireAuth, async (req, res) => {
+  try {
+    const take = Math.min(Number(req.query.limit) || 20, 100);
+    const entries = await prisma.aiFeedback.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: "desc" },
+      take,
+    });
+    res.json(entries);
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to fetch AI feedback");
+  }
+});
+
+app.get("/api/ai/context", requireAuth, async (req, res) => {
+  try {
+    const context = await buildAiContext(req.user.id);
+    res.json(context);
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to build AI context");
+  }
+});
 app.listen(PORT, () => {
   console.log(`
 🚀 API Proxy Server is running!
@@ -1001,3 +1108,4 @@ app.listen(PORT, () => {
 🍱 Food recognition: POST /api/recognize-food
 `);
 });
+

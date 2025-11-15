@@ -1,5 +1,8 @@
-import { useState } from 'react';
-import styles from './MealPlanNew.module.css';
+﻿import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
+
+import styles from "./MealPlanNew.module.css";
+import { messages as i18nMessages } from "../../i18n/messages";
 
 interface Meal {
   id: string;
@@ -254,9 +257,34 @@ const WEEKLY_MEALS: DayMeals[] = [
 ];
 
 export default function MealPlanNew() {
-  const [selectedWeek, setSelectedWeek] = useState('Week 2');
-  const [currentMonth, setCurrentMonth] = useState('September 2028');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedWeek, setSelectedWeek] = useState("Week 2");
+  const currentMonth = "September 2028";
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredMeals = useMemo(() => {
+    if (!normalizedQuery) return WEEKLY_MEALS;
+    return WEEKLY_MEALS.filter((dayMeals) => {
+      const haystack = [
+        dayMeals.day,
+        dayMeals.date,
+        dayMeals.breakfast?.name,
+        dayMeals.lunch?.name,
+        dayMeals.snack?.name,
+        dayMeals.dinner?.name,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [normalizedQuery]);
+
+  useEffect(() => {
+    if (normalizedQuery && filteredMeals.length === 0) {
+      toast.info(i18nMessages.mealPlan.noResults);
+    }
+  }, [normalizedQuery, filteredMeals.length]);
 
   const getMealCardColor = (category: string) => {
     const colors: Record<string, string> = {
@@ -268,13 +296,20 @@ export default function MealPlanNew() {
     return colors[category] || 'linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%)';
   };
 
+  const handleComingSoon = () =>
+    toast.info(i18nMessages.mealPlan.notImplemented);
+
   return (
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <button className={styles.navBtn}>‹</button>
-          <button className={styles.navBtn}>›</button>
+          <button className={styles.navBtn} aria-label="Previous month" onClick={handleComingSoon}>
+            {i18nMessages.mealPlan.navPrev}
+          </button>
+          <button className={styles.navBtn} aria-label="Next month" onClick={handleComingSoon}>
+            {i18nMessages.mealPlan.navNext}
+          </button>
           <h1 className={styles.pageTitle}>{currentMonth}</h1>
         </div>
         <div className={styles.headerRight}>
@@ -284,29 +319,30 @@ export default function MealPlanNew() {
             </svg>
             <input
               type="text"
-              placeholder="Search plan/meals/etc"
+              placeholder={i18nMessages.mealPlan.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className={styles.filterBtn}>
+          <button className={styles.filterBtn} onClick={handleComingSoon}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            Filter
+            {i18nMessages.mealPlan.filterLabel}
           </button>
-          <button className={styles.addButton}>
-            <span>+</span> Add Menu
+          <button className={styles.addButton} onClick={handleComingSoon}>
+            <span>+</span> {i18nMessages.mealPlan.addMenuCta}
           </button>
         </div>
       </div>
 
       {/* Week Selector */}
       <div className={styles.weekSelector}>
-        <select 
+        <select
           className={styles.weekSelect}
           value={selectedWeek}
           onChange={(e) => setSelectedWeek(e.target.value)}
+          aria-label={i18nMessages.mealPlan.weekLabel}
         >
           <option>Week 1</option>
           <option>Week 2</option>
@@ -334,7 +370,7 @@ export default function MealPlanNew() {
 
       {/* Weekly Meal Plan */}
       <div className={styles.weeklyPlan}>
-        {WEEKLY_MEALS.map((dayMeals, index) => (
+        {filteredMeals.map((dayMeals, index) => (
           <div key={index} className={styles.dayRow}>
             {/* Day Info */}
             <div className={styles.dayInfo}>
@@ -348,7 +384,9 @@ export default function MealPlanNew() {
                 <>
                   <div className={styles.mealImage}>
                     <img src={dayMeals.breakfast.image} alt={dayMeals.breakfast.name} />
-                    <button className={styles.checkBtn}>✓</button>
+                    <button className={styles.checkBtn} onClick={handleComingSoon}>
+                      {i18nMessages.mealPlan.checkButton}
+                    </button>
                   </div>
                   <div className={styles.mealInfo}>
                     <h3 className={styles.mealName}>{dayMeals.breakfast.name}</h3>
@@ -363,7 +401,9 @@ export default function MealPlanNew() {
                 <>
                   <div className={styles.mealImage}>
                     <img src={dayMeals.lunch.image} alt={dayMeals.lunch.name} />
-                    <button className={styles.checkBtn}>✓</button>
+                    <button className={styles.checkBtn} onClick={handleComingSoon}>
+                      {i18nMessages.mealPlan.checkButton}
+                    </button>
                   </div>
                   <div className={styles.mealInfo}>
                     <h3 className={styles.mealName}>{dayMeals.lunch.name}</h3>
@@ -378,7 +418,9 @@ export default function MealPlanNew() {
                 <>
                   <div className={styles.mealImage}>
                     <img src={dayMeals.snack.image} alt={dayMeals.snack.name} />
-                    <button className={styles.checkBtn}>✓</button>
+                    <button className={styles.checkBtn} onClick={handleComingSoon}>
+                      {i18nMessages.mealPlan.checkButton}
+                    </button>
                   </div>
                   <div className={styles.mealInfo}>
                     <h3 className={styles.mealName}>{dayMeals.snack.name}</h3>
@@ -393,7 +435,9 @@ export default function MealPlanNew() {
                 <>
                   <div className={styles.mealImage}>
                     <img src={dayMeals.dinner.image} alt={dayMeals.dinner.name} />
-                    <button className={styles.checkBtn}>✓</button>
+                    <button className={styles.checkBtn} onClick={handleComingSoon}>
+                      {i18nMessages.mealPlan.checkButton}
+                    </button>
                   </div>
                   <div className={styles.mealInfo}>
                     <h3 className={styles.mealName}>{dayMeals.dinner.name}</h3>
@@ -408,15 +452,20 @@ export default function MealPlanNew() {
       {/* Promotional Banner */}
       <div className={styles.promoBanner}>
         <div className={styles.promoContent}>
-          <div className={styles.promoVeggies}>🥬</div>
+          <div className={styles.promoVeggies}>{i18nMessages.mealPlan.promoBadge}</div>
           <div className={styles.promoText}>
-            <p className={styles.promoTitle}>Start your health journey</p>
-            <p className={styles.promoSubtitle}>with a <strong>FREE 1-month</strong></p>
-            <p className={styles.promoSubtitle}>access to Nutrigo</p>
+            <p className={styles.promoTitle}>{i18nMessages.mealPlan.promoTitle}</p>
+            <p className={styles.promoSubtitle}>{i18nMessages.mealPlan.promoSubtitle}</p>
           </div>
         </div>
-        <button className={styles.claimBtn}>Claim Now!</button>
+        <button className={styles.claimBtn} onClick={handleComingSoon}>
+          {i18nMessages.mealPlan.claimCta}
+        </button>
       </div>
     </div>
   );
 }
+
+
+
+

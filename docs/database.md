@@ -59,6 +59,7 @@
 | `FoodLog`        | Entries from Food Diary / AI recognition (macros + notes).                 |
 | `WorkoutLog`     | Exercise history (duration, calories, AI suggested flag).                  |
 | `AiSuggestion`   | Nutrition/workout advice returned by the AI services (JSON payload stored).|
+| `AiFeedback`     | Stores user ratings/comments plus the serialized AI plan payload for feedback loops.|
 
 Enums:  
 - `CalendarCategory`: `meal`, `activity`, `appointment`.  
@@ -66,3 +67,4 @@ Enums:
 - `SuggestionType`: `nutrition`, `workout`.
 
 Every table has timestamps so you can build timelines or analytics easily. Add more fields or relations by editing `prisma/schema.prisma` and running a new migration.***
+
