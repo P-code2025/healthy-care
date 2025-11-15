@@ -1,46 +1,77 @@
-// Backend Proxy Server for CLOVA Studio API
-// This fixes CORS issues when calling from browser
+// Backend API + Proxy Server for CLOVA Studio + App data
 
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import fetch from 'node-fetch';
-import { PrismaClient } from '@prisma/client';
-import { saveImageTemporarily, getImage, hasImage } from './imageCache.js';
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import fetch from "node-fetch";
+import cookieParser from "cookie-parser";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { body, validationResult } from "express-validator";
+import { PrismaClient } from "@prisma/client";
+import { getImage, hasImage } from "./imageCache.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const prisma = new PrismaClient();
 
+const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || "dev-access-secret";
+const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET || "dev-refresh-secret";
+const ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "30m";
+const REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+const REFRESH_COOKIE_NAME = "refreshToken";
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+  maxAge: 1000 * 60 * 60 * 24 * 7,
+};
+const DEFAULT_USER_ID = Number(process.env.DEFAULT_USER_ID || 1);
+const ALLOW_GUEST_MODE = process.env.ALLOW_GUEST_MODE !== "false";
+
 // CLOVA Studio credentials from environment variables
 const CLOVA_API_KEY = process.env.CLOVA_API_KEY;
-const CLOVA_API_URL = process.env.CLOVA_API_URL || 'https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005';
+const CLOVA_API_URL =
+  process.env.CLOVA_API_URL ||
+  "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005";
 
 if (!CLOVA_API_KEY) {
-  console.error('❌ ERROR: CLOVA_API_KEY not found in .env file!');
-  process.exit(1);
-}
-
-if (!CLOVA_API_KEY) {
-  console.error('❌ ERROR: CLOVA_API_KEY not found in .env file!');
+  console.error("❌ ERROR: CLOVA_API_KEY not found in .env file!");
   process.exit(1);
 }
 
 // Middleware
-const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173'];
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
-app.use(express.json({ limit: '50mb' })); // Support large base64 images
+const allowedOrigins =
+  process.env.CORS_ORIGINS?.split(",") || ["http://localhost:5173"];
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: "50mb" }));
+app.use(cookieParser());
+
+const attachUserIfPresent = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return next();
+  try {
+    req.user = jwt.verify(token, ACCESS_TOKEN_SECRET);
+  } catch {
+    // ignore invalid tokens for optional routes
+  }
+  next();
+};
+
+app.use(attachUserIfPresent);
 
 const cleanup = async () => {
   await prisma.$disconnect();
   process.exit(0);
 };
 
-process.on('SIGINT', cleanup);
-process.on('SIGTERM', cleanup);
+process.on("SIGINT", cleanup);
+process.on("SIGTERM", cleanup);
 
 const mapUser = (user) => ({
   user_id: user.id,
@@ -101,192 +132,525 @@ const mapCalendarEvent = (event) => ({
 });
 
 const parseDateOnly = (dateStr) => {
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const [year, month, day] = dateStr.split("-").map(Number);
   if (!year || !month || !day) {
-    throw new Error('Invalid date value');
+    throw new Error("Invalid date value");
   }
   return new Date(Date.UTC(year, month - 1, day));
 };
 
-const ensureCalendarPayload = (payload) => {
-  const { title, date, time, category } = payload;
-  if (!title || !date || !time || !category) {
-    throw new Error('Missing required calendar fields');
-  }
+const createTokens = (user) => {
+  const payload = { id: user.id, email: user.email };
+  const accessToken = jwt.sign(payload, ACCESS_TOKEN_SECRET, {
+    expiresIn: ACCESS_EXPIRES_IN,
+  });
+  const refreshToken = jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+    expiresIn: REFRESH_EXPIRES_IN,
+  });
+  return { accessToken, refreshToken };
 };
 
-app.get('/api/users', async (req, res) => {
+const attachRefreshCookie = (res, refreshToken) => {
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS);
+};
+
+const sendAuthResponse = (res, user) => {
+  const tokens = createTokens(user);
+  attachRefreshCookie(res, tokens.refreshToken);
+  res.json({
+    user: mapUser(user),
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+  });
+};
+
+const requireAuth = (req, res, next) => {
+  if (req.user?.id) return next();
+  const header = req.headers.authorization?.split(" ")[1];
+  if (header) {
+    try {
+      req.user = jwt.verify(header, ACCESS_TOKEN_SECRET);
+      return next();
+    } catch {
+      if (!ALLOW_GUEST_MODE) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+    }
+  }
+  if (ALLOW_GUEST_MODE) {
+    req.user = { id: DEFAULT_USER_ID };
+    return next();
+  }
+  return res.status(401).json({ error: "Unauthorized" });
+};
+
+const getUserIdOrFallback = (req) =>
+  req.user?.id ||
+  Number(req.query.userId || req.body?.userId) ||
+  DEFAULT_USER_ID;
+
+const ensureUserIdentity = (req, res) => {
+  if (req.user?.id) return req.user.id;
+  if (ALLOW_GUEST_MODE) return DEFAULT_USER_ID;
+  res.status(401).json({ error: "Unauthorized" });
+  return null;
+};
+
+const handlePrismaError = (res, error, message) => {
+  console.error(message, error);
+  res.status(500).json({ error: message });
+};
+
+// ========== BASIC ROUTES ==========
+app.get("/health", (req, res) => {
+  res.json({ status: "OK", message: "API Proxy is running" });
+});
+
+app.get("/temp-image/:imageId", (req, res) => {
+  const { imageId } = req.params;
+  if (!hasImage(imageId)) {
+    return res.status(404).json({ error: "Image not found" });
+  }
+  const base64Image = getImage(imageId);
+  const buffer = Buffer.from(base64Image, "base64");
+  res.set("Content-Type", "image/jpeg");
+  res.send(buffer);
+});
+
+// ========== AUTH ROUTES ==========
+app.post(
+  "/api/auth/register",
+  body("email").isEmail().withMessage("Valid email required"),
+  body("password")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters"),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, password, age, gender, height, weight, goal, activityLevel } =
+      req.body;
+    try {
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        return res.status(409).json({ error: "Email already registered" });
+      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = await prisma.user.create({
+        data: {
+          email,
+          passwordHash,
+          age: age ? Number(age) : null,
+          gender: gender || null,
+          heightCm: height ? Number(height) : null,
+          weightKg: weight ? Number(weight) : null,
+          goal: goal || null,
+          activityLevel: activityLevel || null,
+        },
+      });
+      sendAuthResponse(res, user);
+    } catch (error) {
+      handlePrismaError(res, error, "Failed to register user");
+    }
+  }
+);
+
+app.post(
+  "/api/auth/login",
+  body("email").isEmail(),
+  body("password").isLength({ min: 6 }),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, password } = req.body;
+    try {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) return res.status(401).json({ error: "Invalid credentials" });
+
+      sendAuthResponse(res, user);
+    } catch (error) {
+      handlePrismaError(res, error, "Failed to login");
+    }
+  }
+);
+
+app.post("/api/auth/refresh", async (req, res) => {
+  const token =
+    req.body?.refreshToken || req.cookies?.[REFRESH_COOKIE_NAME] || null;
+  if (!token) return res.status(401).json({ error: "Missing refresh token" });
+
   try {
-    const users = await prisma.user.findMany({
-      orderBy: { id: 'asc' },
-    });
-    res.json(users.map(mapUser));
+    const payload = jwt.verify(token, REFRESH_TOKEN_SECRET);
+    const user = await prisma.user.findUnique({ where: { id: payload.id } });
+    if (!user) return res.status(401).json({ error: "Invalid refresh token" });
+    sendAuthResponse(res, user);
   } catch (error) {
-    console.error('Users endpoint error', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    console.error("Refresh token error", error);
+    res.status(401).json({ error: "Invalid refresh token" });
   }
 });
 
-app.get('/api/food-log', async (req, res) => {
+app.post("/api/auth/logout", (req, res) => {
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    ...REFRESH_COOKIE_OPTIONS,
+    maxAge: 0,
+  });
+  res.status(204).send();
+});
+
+// ========== USER PROFILE ==========
+app.get("/api/users/me", requireAuth, async (req, res) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(mapUser(user));
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to fetch profile");
+  }
+});
+
+// ========== FOOD LOGS ==========
+app.get("/api/food-log", async (req, res) => {
+  const userId = getUserIdOrFallback(req);
+  const { start, end } = req.query;
+  try {
+    const where = { userId };
+    if (start || end) {
+      where.eatenAt = {};
+      if (start) where.eatenAt.gte = new Date(start);
+      if (end) where.eatenAt.lte = new Date(end);
+    }
+
     const logs = await prisma.foodLog.findMany({
-      orderBy: { eatenAt: 'desc' },
+      where,
+      orderBy: { eatenAt: "desc" },
     });
     res.json(logs.map(mapFoodLog));
   } catch (error) {
-    console.error('Food log endpoint error', error);
-    res.status(500).json({ error: 'Failed to fetch food logs' });
+    handlePrismaError(res, error, "Failed to fetch food logs");
   }
 });
 
-app.get('/api/workout-log', async (req, res) => {
+app.post("/api/food-log", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const {
+    eatenAt,
+    mealType,
+    foodName,
+    calories,
+    protein,
+    carbs,
+    fat,
+    healthConsideration,
+    isCorrected,
+  } = req.body;
+  try {
+    const created = await prisma.foodLog.create({
+      data: {
+        userId,
+        eatenAt: eatenAt ? new Date(eatenAt) : new Date(),
+        mealType: mealType || "Meal",
+        foodName: foodName || "Food Item",
+        calories: Number(calories) || 0,
+        proteinGrams: Number(protein) || 0,
+        carbsGrams: Number(carbs) || 0,
+        fatGrams: Number(fat) || 0,
+        healthConsideration: healthConsideration || null,
+        isCorrected: Boolean(isCorrected),
+      },
+    });
+    res.status(201).json(mapFoodLog(created));
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to create food log");
+  }
+});
+
+app.put("/api/food-log/:id", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const id = Number(req.params.id);
+  const {
+    eatenAt,
+    mealType,
+    foodName,
+    calories,
+    protein,
+    carbs,
+    fat,
+    healthConsideration,
+    isCorrected,
+  } = req.body;
+  try {
+    const updated = await prisma.foodLog.update({
+      where: { id, userId },
+      data: {
+        eatenAt: eatenAt ? new Date(eatenAt) : undefined,
+        mealType,
+        foodName,
+        calories: calories !== undefined ? Number(calories) : undefined,
+        proteinGrams: protein !== undefined ? Number(protein) : undefined,
+        carbsGrams: carbs !== undefined ? Number(carbs) : undefined,
+        fatGrams: fat !== undefined ? Number(fat) : undefined,
+        healthConsideration,
+        isCorrected:
+          typeof isCorrected === "boolean" ? isCorrected : undefined,
+      },
+    });
+    res.json(mapFoodLog(updated));
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to update food log");
+  }
+});
+
+app.delete("/api/food-log/:id", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const id = Number(req.params.id);
+  try {
+    await prisma.foodLog.delete({ where: { id, userId } });
+    res.status(204).send();
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to delete food log");
+  }
+});
+
+// ========== WORKOUT LOGS ==========
+app.get("/api/workout-log", async (req, res) => {
+  const userId = getUserIdOrFallback(req);
   try {
     const logs = await prisma.workoutLog.findMany({
-      orderBy: { completedAt: 'desc' },
+      where: { userId },
+      orderBy: { completedAt: "desc" },
     });
     res.json(logs.map(mapWorkoutLog));
   } catch (error) {
-    console.error('Workout log endpoint error', error);
-    res.status(500).json({ error: 'Failed to fetch workout logs' });
+    handlePrismaError(res, error, "Failed to fetch workout logs");
   }
 });
 
-app.get('/api/ai-suggestions', async (req, res) => {
+app.post("/api/workout-log", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const {
+    completedAt,
+    exerciseName,
+    durationMinutes,
+    caloriesBurnedEstimated,
+    isAiSuggested,
+  } = req.body;
+  try {
+    const created = await prisma.workoutLog.create({
+      data: {
+        userId,
+        completedAt: completedAt ? new Date(completedAt) : new Date(),
+        exerciseName: exerciseName || "Workout",
+        durationMinutes: Number(durationMinutes) || 0,
+        caloriesBurnedEstimated: Number(caloriesBurnedEstimated) || 0,
+        isAiSuggested: Boolean(isAiSuggested),
+      },
+    });
+    res.status(201).json(mapWorkoutLog(created));
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to create workout log");
+  }
+});
+
+app.put("/api/workout-log/:id", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const id = Number(req.params.id);
+  const {
+    completedAt,
+    exerciseName,
+    durationMinutes,
+    caloriesBurnedEstimated,
+    isAiSuggested,
+  } = req.body;
+  try {
+    const updated = await prisma.workoutLog.update({
+      where: { id, userId },
+      data: {
+        completedAt: completedAt ? new Date(completedAt) : undefined,
+        exerciseName,
+        durationMinutes:
+          durationMinutes !== undefined ? Number(durationMinutes) : undefined,
+        caloriesBurnedEstimated:
+          caloriesBurnedEstimated !== undefined
+            ? Number(caloriesBurnedEstimated)
+            : undefined,
+        isAiSuggested:
+          typeof isAiSuggested === "boolean" ? isAiSuggested : undefined,
+      },
+    });
+    res.json(mapWorkoutLog(updated));
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to update workout log");
+  }
+});
+
+app.delete("/api/workout-log/:id", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const id = Number(req.params.id);
+  try {
+    await prisma.workoutLog.delete({ where: { id, userId } });
+    res.status(204).send();
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to delete workout log");
+  }
+});
+
+// ========== AI SUGGESTIONS ==========
+app.get("/api/ai-suggestions", async (req, res) => {
+  const userId = getUserIdOrFallback(req);
   try {
     const suggestions = await prisma.aiSuggestion.findMany({
-      orderBy: { generatedAt: 'desc' },
+      where: { userId },
+      orderBy: { generatedAt: "desc" },
     });
     res.json(suggestions.map(mapSuggestion));
   } catch (error) {
-    console.error('AI suggestions endpoint error', error);
-    res.status(500).json({ error: 'Failed to fetch AI suggestions' });
+    handlePrismaError(res, error, "Failed to fetch AI suggestions");
   }
 });
 
-app.get('/api/calendar-events', async (req, res) => {
+app.post(
+  "/api/ai-suggestions/:id/apply",
+  requireAuth,
+  async (req, res) => {
+    const userId = ensureUserIdentity(req, res);
+    if (!userId) return;
+    const id = Number(req.params.id);
+    try {
+      const updated = await prisma.aiSuggestion.update({
+        where: { id, userId },
+        data: { isApplied: true },
+      });
+      res.json(mapSuggestion(updated));
+    } catch (error) {
+      handlePrismaError(res, error, "Failed to update suggestion");
+    }
+  }
+);
+
+// ========== CALENDAR ==========
+app.get("/api/calendar-events", async (req, res) => {
+  const userId = getUserIdOrFallback(req);
   try {
-    const userId = Number(req.query.userId) || 1;
     const events = await prisma.calendarEvent.findMany({
       where: { userId },
-      orderBy: [{ eventDate: 'asc' }, { timeSlot: 'asc' }],
+      orderBy: [{ eventDate: "asc" }, { timeSlot: "asc" }],
     });
     res.json(events.map(mapCalendarEvent));
   } catch (error) {
-    console.error('Calendar list error', error);
-    res.status(500).json({ error: 'Failed to fetch calendar events' });
+    handlePrismaError(res, error, "Failed to fetch calendar events");
   }
 });
 
-app.post('/api/calendar-events', async (req, res) => {
+app.post("/api/calendar-events", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
   try {
-    const userId = Number(req.body.userId) || 1;
-    ensureCalendarPayload(req.body);
+    const { title, date, time, category, location, note, linkedModule } =
+      req.body;
+    if (!title || !date || !time || !category) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
     const created = await prisma.calendarEvent.create({
       data: {
         userId,
-        title: req.body.title,
-        eventDate: parseDateOnly(req.body.date),
-        timeSlot: req.body.time,
-        category: req.body.category,
-        location: req.body.location,
-        note: req.body.note,
-        linkedModule: req.body.linkedModule,
+        title,
+        eventDate: parseDateOnly(date),
+        timeSlot: time,
+        category,
+        location: location || null,
+        note: note || null,
+        linkedModule: linkedModule || null,
       },
     });
     res.status(201).json(mapCalendarEvent(created));
   } catch (error) {
-    console.error('Calendar create error', error);
-    res.status(400).json({ error: error.message || 'Failed to create calendar event' });
+    handlePrismaError(res, error, "Failed to create calendar event");
   }
 });
 
-app.put('/api/calendar-events/:id', async (req, res) => {
+app.put("/api/calendar-events/:id", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const id = Number(req.params.id);
   try {
-    const id = Number(req.params.id);
-    const userId = Number(req.body.userId) || 1;
-    ensureCalendarPayload(req.body);
+    const { title, date, time, category, location, note, linkedModule } =
+      req.body;
     const updated = await prisma.calendarEvent.update({
       where: { id, userId },
       data: {
-        title: req.body.title,
-        eventDate: parseDateOnly(req.body.date),
-        timeSlot: req.body.time,
-        category: req.body.category,
-        location: req.body.location,
-        note: req.body.note,
-        linkedModule: req.body.linkedModule,
+        title,
+        eventDate: date ? parseDateOnly(date) : undefined,
+        timeSlot: time,
+        category,
+        location,
+        note,
+        linkedModule: linkedModule || null,
       },
     });
     res.json(mapCalendarEvent(updated));
   } catch (error) {
-    console.error('Calendar update error', error);
-    res.status(400).json({ error: error.message || 'Failed to update calendar event' });
+    handlePrismaError(res, error, "Failed to update calendar event");
   }
 });
 
-app.delete('/api/calendar-events/:id', async (req, res) => {
+app.delete("/api/calendar-events/:id", requireAuth, async (req, res) => {
+  const userId = ensureUserIdentity(req, res);
+  if (!userId) return;
+  const id = Number(req.params.id);
   try {
-    const id = Number(req.params.id);
-    await prisma.calendarEvent.delete({ where: { id } });
+    await prisma.calendarEvent.delete({ where: { id, userId } });
     res.status(204).send();
   } catch (error) {
-    console.error('Calendar delete error', error);
-    res.status(400).json({ error: error.message || 'Failed to delete calendar event' });
+    handlePrismaError(res, error, "Failed to delete calendar event");
   }
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'API Proxy is running' });
-});
-
-// Serve temporary images
-app.get('/temp-image/:imageId', (req, res) => {
-  const { imageId } = req.params;
-  
-  if (!hasImage(imageId)) {
-    return res.status(404).json({ error: 'Image not found' });
-  }
-  
-  const base64Image = getImage(imageId);
-  const buffer = Buffer.from(base64Image, 'base64');
-  
-  res.set('Content-Type', 'image/jpeg');
-  res.send(buffer);
-});
-
-// Proxy endpoint for food recognition
-app.post('/api/recognize-food', async (req, res) => {
+// ========== CLOVA AI FOOD RECOGNITION ==========
+app.post("/api/recognize-food", requireAuth, async (req, res) => {
   try {
     const { base64Image } = req.body;
 
     if (!base64Image) {
-      return res.status(400).json({ 
-        error: 'Missing base64Image in request body' 
+      return res.status(400).json({
+        error: "Missing base64Image in request body",
       });
     }
 
-    console.log('📸 Receiving food image for AI analysis...');
-    console.log(`📦 Image size: ${(base64Image.length / 1024).toFixed(2)} KB`);
+    console.log("📸 Receiving food image for AI analysis...");
+    console.log(
+      `ℹ️  Image size: ${(base64Image.length / 1024).toFixed(2)} KB`
+    );
 
-    // Call CLOVA Studio API with base64 dataUri
-    console.log('🤖 Calling CLOVA Studio API with base64 data...');
-    
     const response = await fetch(CLOVA_API_URL, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${CLOVA_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-NCP-CLOVASTUDIO-REQUEST-ID': `food-recognition-${Date.now()}`,
+        Authorization: `Bearer ${CLOVA_API_KEY}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-NCP-CLOVASTUDIO-REQUEST-ID": `food-recognition-${Date.now()}`,
       },
       body: JSON.stringify({
         messages: [
           {
-            role: 'system',
+            role: "system",
             content: [
               {
-                type: 'text',
+                type: "text",
                 text: `You are a professional nutritionist AI assistant. Analyze food images and provide detailed nutritional information.
 
 IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdown, no explanations):
@@ -298,22 +662,19 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
   "fats": số fats (grams) cho 100g,
   "portion_size": "100g",
   "confidence": độ tin cậy từ 0.0 đến 1.0
-}
-
-Example:
-{"food_name":"Cơm gà chiên","calories":165,"protein":31,"carbs":12,"fats":3.6,"portion_size":"100g","confidence":0.85}`,
+}`,
               },
             ],
           },
           {
-            role: 'user',
+            role: "user",
             content: [
               {
-                type: 'text',
-                text: 'Hãy phân tích món ăn trong ảnh này và trả về thông tin dinh dưỡng theo format JSON đã cho.',
+                type: "text",
+                text: "Hãy phân tích món ăn trong ảnh này và trả về thông tin dinh dưỡng theo format JSON đã cho.",
               },
               {
-                type: 'image_url',
+                type: "image_url",
                 dataUri: {
                   data: base64Image,
                 },
@@ -332,8 +693,8 @@ Example:
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('❌ CLOVA API Error:', response.status, errorData);
-      
+      console.error("❌ CLOVA API Error:", response.status, errorData);
+
       return res.status(response.status).json({
         error: errorData.message || `API Error: ${response.statusText}`,
         status: response.status,
@@ -341,12 +702,9 @@ Example:
     }
 
     const data = await response.json();
-    console.log('✅ CLOVA API Response received');
+    console.log("✅ CLOVA API Response received");
 
-    // Extract content from response
-    const content = data.result?.message?.content || '';
-    
-    // Parse JSON from response
+    const content = data.result?.message?.content || "";
     let nutritionData;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -356,46 +714,42 @@ Example:
         nutritionData = JSON.parse(content);
       }
     } catch (parseError) {
-      console.error('❌ Failed to parse AI response:', content);
+      console.error("❌ Failed to parse AI response:", content);
       return res.status(500).json({
-        error: 'AI không thể phân tích được món ăn',
+        error: "AI không thể phân tích món ăn",
         raw_content: content,
       });
     }
 
-    console.log('🍜 Food recognized:', nutritionData.food_name);
+    console.log("🍱 Food recognized:", nutritionData.food_name);
 
-    // Return formatted result
     res.json({
       success: true,
       data: {
-        foodName: nutritionData.food_name || 'Món ăn không xác định',
+        foodName: nutritionData.food_name || "Món ăn chưa xác định",
         calories: parseFloat(nutritionData.calories) || 0,
         protein: parseFloat(nutritionData.protein) || 0,
         carbs: parseFloat(nutritionData.carbs) || 0,
         fats: parseFloat(nutritionData.fats) || 0,
-        portionSize: nutritionData.portion_size || '100g',
+        portionSize: nutritionData.portion_size || "100g",
         confidence: parseFloat(nutritionData.confidence) || 0.5,
       },
       usage: data.result?.usage,
     });
-
   } catch (error) {
-    console.error('❌ Server error:', error);
+    console.error("❌ Server error:", error);
     res.status(500).json({
-      error: error.message || 'Internal server error',
+      error: error.message || "Internal server error",
     });
   }
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`
 🚀 API Proxy Server is running!
-📡 URL: http://localhost:${PORT}
-🔗 Health check: http://localhost:${PORT}/health
-📸 Food recognition: POST http://localhost:${PORT}/api/recognize-food
-
-💡 Don't forget to update DEMO_MODE to false in aiService.ts
-  `);
+🌐 URL: http://localhost:${PORT}
+❤️ Health check: http://localhost:${PORT}/health
+📅 Calendar API: /api/calendar-events
+🍱 Food recognition: POST /api/recognize-food
+`);
 });
