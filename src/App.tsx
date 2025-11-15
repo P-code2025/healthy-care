@@ -10,7 +10,7 @@ import MealPlanNew from "./pages/mealPlan/MealPlanNew";
 import GroceryListNew from "./pages/groceryList/GroceryListNew";
 import Messages from "./pages/messages/Messages";
 import HealthyMenu from "./pages/healthyMenu/HealthyMenu";
-import ExercisesNew from "./pages/exercies/ExercisesNew";
+import ExercisesNew from "./pages/exercises/ExercisesNew";
 import HealthInsightsNew from "./pages/healthInsights/HealthInsightsNew";
 import HealthInsightDetail from "./pages/healthInsights/HealthInsightDetail";
 import Settings from "./pages/settings/Settings";
