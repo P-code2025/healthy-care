@@ -375,9 +375,13 @@
   color: #6b7280;
 }
 
-.detailIcon {
-  font-size: 16px;
+.detailLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  min-width: 48px;
 }
+
 
 .scheduleNote {
   padding: 12px;
@@ -475,6 +479,176 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* ===== Calendar interactions ===== */
+.selectedDay {
+  box-shadow: 0 0 0 2px #22c55e inset;
+}
+
+.sidebarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sidebarSubtitle {
+  margin: 4px 0 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.addSmallButton {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #22c55e;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.addSmallButton:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+}
+
+.emptyState {
+  background: #f9fafb;
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.emptyIcon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  width: min(520px, 100%);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.modalClose {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+  color: #6b7280;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cancelButton,
+.saveButton {
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cancelButton {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.cancelButton:hover {
+  background: #e5e7eb;
+}
+
+.saveButton {
+  background: #22c55e;
+  color: #fff;
+}
+
+.saveButton:hover {
+  background: #16a34a;
+}
 @media (max-width: 1400px) {
   .mainLayout {
     grid-template-columns: 1fr 350px;
@@ -515,4 +689,82 @@
     font-size: 10px;
     padding: 4px 6px;
   }
+}
+
+.templateSection {
+  background: #f9fafb;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.templateTitle {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.templateRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.templateRow:last-child {
+  margin-bottom: 0;
+}
+
+.templateSelect {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.templateButton {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #10b981;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.templateButton:hover {
+  background: #059669;
+}
+
+.conflictCard {
+  border-color: #f97316 !important;
+}
+
+.conflictBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.linkButton svg {
+  stroke-width: 2;
 }

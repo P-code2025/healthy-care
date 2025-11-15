@@ -21,7 +21,7 @@ const BODY_MEASUREMENTS: BodyMeasurement[] = [
   { label: 'Arm', value: 28.5, unit: 'cm', position: { top: '15%', left: '25%' } },
   { label: 'Chest', value: 93.0, unit: 'cm', position: { top: '25%', left: '15%' } },
   { label: 'Waist', value: 77.5, unit: 'cm', position: { top: '40%', left: '25%' } },
-  { label: 'Hips', value: 98.0, unit: 'cm', position: { top: '55%', right: '25%' } },
+  { label: 'Hips', value: 98.0, unit: 'cm', position: { top: '55%', left: '25%' } },
   { label: 'Thigh', value: 58.5, unit: 'cm', position: { top: '75%', left: '20%' } },
 ];
 

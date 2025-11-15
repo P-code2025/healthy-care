@@ -1,385 +1,338 @@
-import { useState } from 'react';
+// src/pages/Messages.tsx
+import { useState, useEffect, useRef } from 'react';
 import styles from './Messages.module.css';
-import { 
-  recognizeFoodFromImage, 
-  formatNutritionInfo, 
-  saveFoodLog,
-  type FoodRecognitionResult 
-} from '../../services/aiService';
+
+import { TrendingUp, TrendingDown, Camera, Dumbbell, Plus, X } from 'lucide-react';
+import type { AnalysisResult, FoodEntry } from '../../lib/types';
+import { generateAIExercisePlan, type AIExercisePlan } from '../../services/aiExercisePlan';
+import { analyzeFood } from '../../services/analyzeFood';
+import { SAMPLE_WORKOUT_PLANS } from '../exercies/workoutPlans';
 
 interface Message {
   id: string;
-  sender: string;
-  role: string;
   content: string;
-  timestamp: string;
   isUser: boolean;
-  avatar?: string;
-  isLoading?: boolean;
-  nutritionData?: FoodRecognitionResult;
-}
-
-interface Contact {
-  id: string;
-  name: string;
-  role: string;
-  lastMessage: string;
   timestamp: string;
-  avatar: string;
-  online: boolean;
+  isLoading?: boolean;
+  nutritionData?: AnalysisResult;
+  exercisePlan?: AIExercisePlan;
 }
 
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: '1',
-    sender: 'Alex Foster',
-    role: 'Personal Trainer',
-    content: 'Hey Adam, great job on completing your 5th strength training session today! You\'re making awesome progress with the 80kg squats 💪',
-    timestamp: '9:40 AM',
-    isUser: false,
-    avatar: '💪',
-  },
-  {
-    id: '2',
-    sender: 'Adam',
-    role: '',
-    content: 'Thanks, Alex! It\'s definitely challenging, but I\'m feeling stronger each time.',
-    timestamp: '9:47 AM',
-    isUser: true,
-  },
-];
+
+interface UserProfile {
+  age: number;
+  weight: number;
+  height: number;
+  gender: 'Nam' | 'Nữ';
+  goal: 'lose' | 'maintain' | 'gain';
+  workoutDays: number;
+}
+
+const AI_AVATAR = 'AI';
+const USER_AVATAR = 'User';
 
 export default function Messages() {
-  const [selectedContact, setSelectedContact] = useState<string>('alex-foster');
-  const [messageInput, setMessageInput] = useState('');
-  const [showProfile, setShowProfile] = useState(true);
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [showProfileForm, setShowProfileForm] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const today = new Date().toISOString().split('T')[0];
 
-  const contacts: Contact[] = [
-    {
-      id: 'mia-johnson',
-      name: 'Mia Johnson',
-      role: 'Yoga Inst...',
-      lastMessage: 'It was great to see you at the...',
-      timestamp: '11:40 AM',
-      avatar: '🧘‍♀️',
-      online: true,
-    },
-    {
-      id: 'dr-emily',
-      name: 'Dr. Emily Lawson',
-      role: 'Doctor',
-      lastMessage: 'I\'ll review your blood test results...',
-      timestamp: '11:16 AM',
-      avatar: '👩‍⚕️',
-      online: true,
-    },
-    {
-      id: 'alex-foster',
-      name: 'Alex Foster',
-      role: 'Personal Tr...',
-      lastMessage: 'You\'ve got this! See you at our next s...',
-      timestamp: '9:50 AM',
-      avatar: '💪',
-      online: true,
-    },
+  // Load data
+  useEffect(() => {
+    const saved = localStorage.getItem('aiChatMessages');
+    const profile = localStorage.getItem('userProfile');
+    if (saved) setMessages(JSON.parse(saved));
+    if (profile) setUserProfile(JSON.parse(profile));
+  }, []);
+
+  // Save messages
+  useEffect(() => {
+    localStorage.setItem('aiChatMessages', JSON.stringify(messages));
+  }, [messages]);
+
+  // Get today's total calories
+  const getTodayCalories = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const entries: FoodEntry[] = JSON.parse(localStorage.getItem('foodDiary_entries_v2') || '[]');
+    return entries
+      .filter(e => e.date === today)
+      .reduce((sum, e) => sum + e.calories, 0);
+  };
+
+  // Handle text input
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      content: input,
+      isUser: true,
+      timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsTyping(true);
+
+    // AI Response
+    setTimeout(async () => {
+      const aiResponse = await processUserQuery(input);
+      const aiMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        content: aiResponse.content,
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
+        nutritionData: aiResponse.nutritionData,
+        exercisePlan: aiResponse.exercisePlan
+      };
+      setMessages(prev => [...prev, aiMsg]);
+      setIsTyping(false);
+    }, 1000);
+  };
+
+  // Process query
+  const processUserQuery = async (query: string): Promise<{ content: string; nutritionData?: AnalysisResult; exercisePlan?: AIExercisePlan }> => {
+    const lower = query.toLowerCase();
+
+    // 1. Tổng hợp calo hôm nay
+    if (lower.includes('calo') && (lower.includes('hôm nay') || lower.includes('nay') || lower.includes('today'))) {
+      const total = getTodayCalories();
+      const goal = 2000;
+      const diff = total - goal;
+      return {
+        content: `Bạn đã nạp **${total} kcal** hôm nay (${diff > 0 ? `dư ${diff}` : `thiếu ${-diff}`} kcal so với mục tiêu ${goal} kcal).\n\n` +
+          `${diff > 0 ? 'Không nên ăn thêm. Hãy đi bộ 40 phút để bù đắp!' : 'Bạn có thể ăn thêm một bữa nhẹ (~200 kcal).'}`
+      };
+    }
+
+    // 2. Tư vấn tập luyện → TRUYỀN userQuery
+    // Trong processUserQuery
+if (lower.includes('tập') || lower.includes('lịch') || lower.includes('gợi ý') || lower.includes('đau') || lower.includes('mỏi')) {
+  if (!userProfile) {
+    setShowProfileForm(true);
+    return { content: 'Vui lòng nhập thông tin cá nhân để tôi tư vấn chính xác!' };
+  }
+
+  const dailyIntake = getTodayCalories();
+  const plans = [
+    'Morning Yoga Flow',
+    'HIIT Cardio',
+    'Full Body Strength',
+    'Core & Mobility',
+    '20 Min HIIT Fat Loss - No Repeat Workout',
+    'HIIT Fat Burn',
+    'Upper Body Power',
+    'Core & Abs Crusher'
   ];
 
-  const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
+  // → GỌI AI MỚI, KHÔNG DÙNG CACHE
+  const plan = await generateAIExercisePlan(dailyIntake, userProfile, plans, query, 'query');
+
+  const exerciseList = plan.exercises
+    .map(e => `• **${e.name}** – ${e.duration}\n _${e.reason}_`)
+    .join('\n\n');
+
+  return {
+    content: `**Kế hoạch tập hôm nay (${plan.intensity})**\n\n${exerciseList}\n\n` +
+      `**Đốt ước tính**: ${plan.totalBurnEstimate}\n\n_${plan.advice}_`,
+    exercisePlan: plan
+  };
+}
+
+    // 3. Mặc định
+    return { content: 'Tôi có thể giúp bạn phân tích bữa ăn hoặc tư vấn tập luyện. Hãy chụp ảnh món ăn hoặc hỏi về lịch tập!' };
   };
 
-  const handleSendMessage = () => {
-    if (messageInput.trim()) {
-      const newMessage: Message = {
-        id: `msg-${Date.now()}`,
-        sender: 'Adam',
-        role: '',
-        content: messageInput,
-        timestamp: getCurrentTime(),
-        isUser: true,
-      };
-      
-      setMessages([...messages, newMessage]);
-      setMessageInput('');
-    }
-  };
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  // Handle image
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    try {
-      const loadingMessage: Message = {
-        id: `loading-${Date.now()}`,
-        sender: 'AI Nutritionist',
-        role: 'AI Assistant',
-        content: '🔄 Đang phân tích ảnh món ăn của bạn...',
-        timestamp: getCurrentTime(),
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUri = reader.result as string;
+
+      const loadingMsg: Message = {
+        id: Date.now().toString(),
+        content: 'Đang phân tích ảnh món ăn...',
         isUser: false,
-        avatar: '🤖',
-        isLoading: true,
+        timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
+        isLoading: true
       };
-      
-      setMessages(prev => [...prev, loadingMessage]);
+      setMessages(prev => [...prev, loadingMsg]);
 
-      const result = await recognizeFoodFromImage(file);
+      try {
+        const { analysis } = await analyzeFood(dataUri);
+        // LẤY mealType TỪ THỜI GIAN
+        const hour = new Date().getHours();
+        const mealType = hour >= 5 && hour < 11 ? 'Breakfast' :
+          hour >= 11 && hour < 14 ? 'Lunch' :
+            hour >= 18 && hour < 22 ? 'Dinner' : 'Snack';
 
-      setMessages(prev => {
-        const filtered = prev.filter(m => m.id !== loadingMessage.id);
-        
-        const resultMessage: Message = {
-          id: `ai-${Date.now()}`,
-          sender: 'AI Nutritionist',
-          role: 'AI Assistant',
-          content: formatNutritionInfo(result),
-          timestamp: getCurrentTime(),
-          isUser: false,
-          avatar: '🤖',
-          nutritionData: result,
+        // TẠO ENTRY ĐÚNG FORMAT
+        const newEntry: FoodEntry = {
+          id: Date.now().toString(),
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          mealType,
+          foodName: analysis.foodName,
+          amount: analysis.amount,
+          calories: analysis.calories,
+          protein: analysis.protein,
+          carbs: analysis.carbs,
+          fat: analysis.fat,
+          sugar: analysis.sugar,
+          status: 'Satisfied',
+          thoughts: ''
         };
-        
-        return [...filtered, resultMessage];
-      });
 
-      await saveFoodLog(result);
+        // LẤY + LƯU
+        const existing: FoodEntry[] = JSON.parse(localStorage.getItem('foodDiary_entries_v2') || '[]');
+        const updated = [...existing, newEntry];
+        localStorage.setItem('foodDiary_entries_v2', JSON.stringify(updated));
 
-      event.target.value = '';
-      
-      setTimeout(() => {
-        const successMsg: Message = {
-          id: `success-${Date.now()}`,
-          sender: 'System',
-          role: 'System',
-          content: '✅ Đã lưu vào nhật ký thực phẩm!',
-          timestamp: getCurrentTime(),
+        // CẬP NHẬT DAILY CALORIES
+        const todayCalories = updated.filter(e => e.date === newEntry.date).reduce((s, e) => s + e.calories, 0);
+        // Sau khi lưu vào localStorage
+        localStorage.setItem('dailyCalories', todayCalories.toString());
+        localStorage.setItem('dailyCalorieDate', today);
+
+        // XÓA CACHE NGÀY ĐỂ BUỘC GỌI LẠI AI
+        const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        const profileKey = `${profile.age}_${profile.gender}_${profile.weight}_${profile.height}_${profile.goalWeight}`;
+        const dailyCacheKey = `aiPlan_daily_${today}_${todayCalories}_${profileKey.substring(0, 50)}`;
+        localStorage.removeItem(dailyCacheKey);
+        const resultMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          content: `**${analysis.foodName}** – ${analysis.amount}\n\n` +
+            `Calories: ${analysis.calories} kcal\n` +
+            `Protein: ${analysis.protein}g | Carbs: ${analysis.carbs}g | Fat: ${analysis.fat}g | Sugar: ${analysis.sugar}g\n\n` +
+            `Đã lưu vào **Food Diary**!`,
           isUser: false,
-          avatar: '✅',
+          timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
+          nutritionData: analysis
         };
-        setMessages(prev => [...prev, successMsg]);
-      }, 1000);
-
-    } catch (error: any) {
-      setMessages(prev => prev.filter(m => !m.isLoading));
-
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        sender: 'AI Nutritionist',
-        role: 'AI Assistant',
-        content: `❌ Lỗi: ${error.message}\n\nVui lòng thử lại hoặc nhập thông tin thủ công.`,
-        timestamp: getCurrentTime(),
-        isUser: false,
-        avatar: '🤖',
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-      
-      event.target.value = '';
-    }
+        setMessages(prev => prev.filter(m => !m.isLoading).concat(resultMsg));
+      } catch (err) {
+        setMessages(prev => prev.filter(m => !m.isLoading).concat({
+          id: Date.now().toString(),
+          content: 'Lỗi phân tích ảnh. Vui lòng thử lại!',
+          isUser: false,
+          timestamp: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' })
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
     <div className={styles.container}>
-      {/* Sidebar - Contact List */}
-      <div className={styles.sidebar}>
-        <div className={styles.sidebarHeader}>
-          <h2 className={styles.pageTitle}>Messages</h2>
-        </div>
-
-        <div className={styles.searchBar}>
-          <span className={styles.searchIcon}>🔍</span>
-          <input
-            type="text"
-            placeholder="Search name, chat, etc"
-            className={styles.searchInput}
-          />
-          <button className={styles.filterBtn}>☰</button>
-        </div>
-
-        <div className={styles.contactList}>
-          {contacts.map((contact) => (
-            <div
-              key={contact.id}
-              className={`${styles.contactItem} ${
-                selectedContact === contact.id ? styles.active : ''
-              }`}
-              onClick={() => setSelectedContact(contact.id)}
-            >
-              <div className={styles.contactAvatar}>
-                <span>{contact.avatar}</span>
-                {contact.online && <span className={styles.onlineDot}></span>}
-              </div>
-              <div className={styles.contactInfo}>
-                <div className={styles.contactHeader}>
-                  <span className={styles.contactName}>{contact.name}</span>
-                  <span className={styles.contactTime}>{contact.timestamp}</span>
-                </div>
-                <div className={styles.contactPreview}>
-                  <span className={styles.contactRole}>{contact.role}</span>
-                  <span className={styles.lastMessage}>{contact.lastMessage}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Ad Banner */}
-        <div className={styles.adBanner}>
-          <div className={styles.adContent}>
-            <div className={styles.adImage}>🥬🥕</div>
-            <h3>AI nhận diện món ăn thông minh - Chụp ảnh là biết calo!</h3>
-            <button className={styles.adButton}>Thử ngay!</button>
-          </div>
-        </div>
-      </div>
-
       {/* Chat Area */}
       <div className={styles.chatArea}>
-        <div className={styles.chatHeader}>
-          <div className={styles.chatHeaderInfo}>
-            <div className={styles.chatAvatar}>💪</div>
-            <div>
-              <h3 className={styles.chatName}>Alex Foster</h3>
-              <p className={styles.chatStatus}>Active recently</p>
-            </div>
-          </div>
-          <div className={styles.chatActions}>
-            <button className={styles.iconBtn}>📞</button>
-            <button className={styles.iconBtn}>📹</button>
-            <button className={styles.iconBtn}>📋</button>
+        <div className={styles.header}>
+          <div className={styles.avatar}>{AI_AVATAR}</div>
+          <div>
+            <h3>AI Expert</h3>
+            <p>Phân tích bữa ăn • Tư vấn tập luyện</p>
           </div>
         </div>
 
-        <div className={styles.messagesContainer}>
-          <div className={styles.dateLabel}>Today, Sept 8</div>
-          
-          <div className={styles.aiTip}>
-            <span>💡</span>
-            <p><strong>Mẹo:</strong> Click nút 📎 và chụp ảnh món ăn để AI tự động phân tích dinh dưỡng!</p>
-          </div>
-          
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`${styles.message} ${
-                message.isUser ? styles.messageUser : styles.messageOther
-              }`}
-            >
-              {!message.isUser && (
-                <div className={styles.messageAvatar}>{message.avatar}</div>
-              )}
-              <div className={styles.messageContent}>
-                <div className={`${styles.messageBubble} ${message.isLoading ? styles.loading : ''}`}>
-                  {message.content.split('\n').map((line, i) => (
-                    <span key={i}>
-                      {line}
-                      {i < message.content.split('\n').length - 1 && <br />}
-                    </span>
-                  ))}
-                </div>
-                <div className={styles.messageTime}>
-                  {message.timestamp}
-                  {message.isUser && <span className={styles.readCheck}>✓✓</span>}
-                </div>
-                
-                {message.nutritionData && (
-                  <div className={styles.messageActions}>
-                    <button className={styles.actionBtn}>✏️ Chỉnh sửa</button>
-                    <button className={styles.actionBtn}>💾 Lưu lại</button>
-                  </div>
+        <div className={styles.messages}>
+          {messages.length === 0 && (
+            <div className={styles.welcome}>
+              <div className={styles.icon}>AI</div>
+              <h3>Xin chào! Tôi là AI Expert</h3>
+              <p>Chụp ảnh bữa ăn hoặc hỏi về lịch tập!</p>
+            </div>
+          )}
+          {messages.map(msg => (
+            <div key={msg.id} className={`${styles.message} ${msg.isUser ? styles.user : styles.ai}`}>
+              {!msg.isUser && <div className={styles.avatar}>{AI_AVATAR}</div>}
+              <div className={styles.bubble}>
+                {msg.isLoading ? (
+                  <div className={styles.loading}>•••</div>
+                ) : (
+                  <>
+                    <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                    {msg.nutritionData && (
+                      <div className={styles.nutritionCard}>
+                        <div><strong>{msg.nutritionData.calories}</strong> kcal</div>
+                        <div>P: {msg.nutritionData.protein}g</div>
+                        <div>C: {msg.nutritionData.carbs}g</div>
+                        <div>F: {msg.nutritionData.fat}g</div>
+                      </div>
+                    )}
+                    {msg.exercisePlan && (
+                      <div className={styles.exerciseCard}>
+                        <div className={styles.intensity}>{msg.exercisePlan.intensity}</div>
+                        {msg.exercisePlan.exercises.map((e, i) => (
+                          <div key={i} className={styles.exerciseItem}>
+                            <Dumbbell className="w-4 h-4" />
+                            <div>
+                              <div><strong>{e.name}</strong></div>
+                              <div className={styles.reason}>{e.duration} – {e.reason}</div>
+                            </div>
+                          </div>
+                        ))}
+                        <div className={styles.burn}>Đốt: {msg.exercisePlan.totalBurnEstimate}</div>
+                      </div>
+                    )}
+                  </>
                 )}
+                <div className={styles.time}>{msg.timestamp}</div>
               </div>
             </div>
           ))}
+          {isTyping && (
+            <div className={styles.message}>
+              <div className={styles.avatar}>{AI_AVATAR}</div>
+              <div className={styles.bubble}><div className={styles.loading}>•••</div></div>
+            </div>
+          )}
         </div>
 
         <div className={styles.inputArea}>
-          <input
-            type="file"
-            id="imageUpload"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleImageUpload}
-          />
-          <button
-            className={styles.attachBtn}
-            onClick={() => document.getElementById('imageUpload')?.click()}
-            title="📸 Chụp ảnh món ăn để AI phân tích dinh dưỡng"
-          >
-            📎
+          <input type="file" ref={fileInputRef} accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
+          <button onClick={() => fileInputRef.current?.click()} className={styles.attach}>
+            <Camera className="w-5 h-5" />
           </button>
           <input
             type="text"
-            placeholder="Type a message..."
-            className={styles.messageInput}
-            value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Hỏi về calo, lịch tập..."
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyPress={e => e.key === 'Enter' && handleSend()}
           />
-          <button className={styles.sendBtn} onClick={handleSendMessage}>
-            Send ➤
-          </button>
+          <button onClick={handleSend} className={styles.send}>Gửi</button>
         </div>
       </div>
 
-      {/* Profile Sidebar */}
-      {showProfile && (
-        <div className={styles.profileSidebar}>
-          <div className={styles.profileHeader}>
-            <h3>Profile</h3>
-            <button onClick={() => setShowProfile(false)}>✕</button>
-          </div>
-
-          <div className={styles.profileCard}>
-            <div className={styles.profileAvatar}>💪</div>
-            <h3>Alex Foster</h3>
-            <span className={styles.profileBadge}>Personal Trainer</span>
-            <button className={styles.profileBtn}>📋 About</button>
-          </div>
-
-          <div className={styles.profileInfo}>
-            <p>
-              A certified personal trainer with 8 years of experience, specializing in strength training
-              and personalized fitness plans to help you reach your goals.
-            </p>
-          </div>
-
-          <div className={styles.mediaSection}>
-            <div className={styles.sectionHeader}>
-              <span>📷 Media (2)</span>
-              <button>Show All</button>
-            </div>
-            <div className={styles.mediaGrid}>
-              <div className={styles.mediaItem}>🏋️</div>
-              <div className={styles.mediaItem}>💪</div>
-            </div>
-          </div>
-
-          <div className={styles.linksSection}>
-            <div className={styles.sectionHeader}>
-              <span>🔗 AI Features</span>
-            </div>
-            <div className={styles.linkList}>
-              <div className={styles.aiFeature}>
-                <span className={styles.aiIcon}>🤖</span>
-                <div>
-                  <div className={styles.featureName}>AI Food Recognition</div>
-                  <div className={styles.featureDesc}>Chụp ảnh → Nhận diện món ăn → Tính calo tự động</div>
-                </div>
-              </div>
-              <div className={styles.aiFeature}>
-                <span className={styles.aiIcon}>📊</span>
-                <div>
-                  <div className={styles.featureName}>Smart Nutrition</div>
-                  <div className={styles.featureDesc}>Phân tích protein, carbs, fats chi tiết</div>
-                </div>
-              </div>
-            </div>
+      {/* Profile Form */}
+      {showProfileForm && (
+        <div className={styles.modal} onClick={() => setShowProfileForm(false)}>
+          <div className={styles.form} onClick={e => e.stopPropagation()}>
+            <h3>Thông tin cá nhân</h3>
+            <input placeholder="Tuổi" type="number" onChange={e => setUserProfile(p => ({ ...p!, age: +e.target.value }))} />
+            <input placeholder="Cân nặng (kg)" type="number" onChange={e => setUserProfile(p => ({ ...p!, weight: +e.target.value }))} />
+            <input placeholder="Chiều cao (cm)" type="number" onChange={e => setUserProfile(p => ({ ...p!, height: +e.target.value }))} />
+            <select onChange={e => setUserProfile(p => ({ ...p!, gender: e.target.value as any }))}>
+              <option>Giới tính</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+            </select>
+            <select onChange={e => setUserProfile(p => ({ ...p!, goal: e.target.value as any }))}>
+              <option>Mục tiêu</option>
+              <option value="lose">Giảm cân</option>
+              <option value="maintain">Duy trì</option>
+              <option value="gain">Tăng cơ</option>
+            </select>
+            <input placeholder="Số buổi tập/tuần" type="number" onChange={e => setUserProfile(p => ({ ...p!, workoutDays: +e.target.value }))} />
+            <button onClick={() => {
+              localStorage.setItem('userProfile', JSON.stringify(userProfile));
+              setShowProfileForm(false);
+            }}>Lưu</button>
           </div>
         </div>
       )}

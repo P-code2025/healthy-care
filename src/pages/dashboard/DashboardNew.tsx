@@ -187,13 +187,6 @@ export default function DashboardNew() {
   return (
     <div className={styles.container}>
       <div className={styles.mainContent}>
-        {/* Header */}
-        <div className={styles.dashboardHeader}>
-          <div>
-            <h1 className={styles.greeting}>Hello, Adam! 👋</h1>
-            <p className={styles.subtitle}>Let's begin our journey to better health today</p>
-          </div>
-        </div>
 
         {/* Stats Overview */}
         <div className={styles.statsGrid}>
@@ -432,16 +425,6 @@ export default function DashboardNew() {
           </div>
         </div>
 
-        {/* Promotional Banner */}
-        <div className={styles.promoBanner}>
-          <div className={styles.promoImage}>🥬</div>
-          <div className={styles.promoContent}>
-            <p className={styles.promoText}>Start your health journey</p>
-            <p className={styles.promoText}>with a <strong>FREE 1-month</strong></p>
-            <p className={styles.promoText}>access to Nutrigo</p>
-          </div>
-          <button className={styles.claimBtn}>Claim Now!</button>
-        </div>
       </div>
 
       {/* Right Sidebar */}
