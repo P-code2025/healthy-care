@@ -1,6 +1,9 @@
 // CLOVA Studio API Service for Food Recognition
 // Using HCX-005 Vision Model
 
+import type { FoodEntry } from "../lib/types";
+import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from "./foodDiaryApi";
+
 const CLOVA_API_KEY = 'nv-4d279739705c404bb355aaefef76c60cvHMd';
 const CLOVA_API_URL = 'https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005';
 
@@ -8,6 +11,19 @@ const CLOVA_API_URL = 'https://clovastudio.stream.ntruss.com/v3/chat-completions
 const DEMO_MODE = true; // CLOVA API có vấn đề với format, tạm dùng mock data
 const USE_PROXY = true;  // Must be true when calling from browser
 const PROXY_URL = 'http://localhost:3001'; // Backend proxy server
+
+const getMealTypeForDate = (date: Date): FoodEntry["mealType"] => {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 11) return "Breakfast";
+  if (hour >= 11 && hour < 15) return "Lunch";
+  if (hour >= 18 && hour < 22) return "Dinner";
+  return "Snack";
+};
+
+const formatLocalTime = (date: Date) =>
+  date
+    .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+    .replace(".", ":");
 
 export interface FoodRecognitionResult {
   foodName: string;
@@ -276,39 +292,39 @@ export const saveFoodLog = async (
   imageUrl?: string
 ): Promise<void> => {
   try {
-    // TODO: Implement actual API call to save food log
-    const foodLog = {
-      date: new Date().toISOString(),
-      food_name: nutrition.foodName,
-      calories: nutrition.calories,
-      protein: nutrition.protein,
-      carbs: nutrition.carbs,
-      fats: nutrition.fats,
-      portion_size: nutrition.portionSize,
-      image_url: imageUrl,
-      confidence: nutrition.confidence,
-      created_at: new Date().toISOString(),
+    const now = new Date();
+    const entry: FoodEntryInput = {
+      date: now.toISOString().split("T")[0],
+      time: formatLocalTime(now),
+      mealType: getMealTypeForDate(now),
+      foodName: nutrition.foodName || "Recognized meal",
+      amount: nutrition.portionSize || "100g",
+      calories: Math.round(nutrition.calories),
+      protein: Math.round(nutrition.protein),
+      carbs: Math.round(nutrition.carbs),
+      fat: Math.round(nutrition.fats),
+      sugar: 0,
+      status: "Satisfied",
+      thoughts: imageUrl ? `Captured via AI (${imageUrl})` : "",
     };
 
-    console.log('Saving food log:', foodLog);
-    
-    // For now, just store in localStorage
-    const logs = JSON.parse(localStorage.getItem('foodLogs') || '[]');
-    logs.push(foodLog);
-    localStorage.setItem('foodLogs', JSON.stringify(logs));
+    await foodDiaryApi.create(entry);
   } catch (error) {
     console.error('Error saving food log:', error);
-    throw new Error('Không thể lưu thông tin món ăn');
+    throw new Error('Unable to save meal information');
   }
 };
 
 /**
  * Get food logs history
  */
-export const getFoodLogsHistory = (): any[] => {
+export const getFoodLogsHistory = async (): Promise<FoodEntry[]> => {
   try {
-    return JSON.parse(localStorage.getItem('foodLogs') || '[]');
-  } catch {
+    const logs = await foodDiaryApi.list();
+    return logs.map(mapFoodLogToEntry);
+  } catch (error) {
+    console.error('Failed to fetch food logs history', error);
     return [];
   }
 };
+

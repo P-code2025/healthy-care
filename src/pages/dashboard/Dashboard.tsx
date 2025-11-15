@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { api } from "../../services/api";
-import type { FoodLog } from "../../services/api";
+import type { FoodEntry } from "../../lib/types";
+import { foodDiaryApi, mapFoodLogToEntry } from "../../services/foodDiaryApi";
 
 import StatsCard from "./StatsCard";
 import CaloriesCard from "./CaloriesCard";
@@ -14,10 +14,23 @@ import CalendarWidget from "./CalendarWidget";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard() {
-  const [foodLog, setFoodLog] = useState<FoodLog[]>([]);
+  const [foodLog, setFoodLog] = useState<FoodEntry[]>([]);
 
   useEffect(() => {
-    api.getFoodLog().then(setFoodLog).catch(console.error);
+    let active = true;
+    foodDiaryApi
+      .list()
+      .then((entries) => {
+        if (!active) return;
+        setFoodLog(entries.map(mapFoodLogToEntry));
+      })
+      .catch((error) => {
+        console.error("Failed to load food diary for dashboard", error);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const totalCalories = foodLog.reduce((sum, f) => sum + f.calories, 0);
