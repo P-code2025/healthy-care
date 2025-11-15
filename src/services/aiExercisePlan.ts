@@ -344,11 +344,11 @@ export async function generateAIExercisePlan(
 
   const hasAnthropometrics = user.weight && user.height;
   const bmi = hasAnthropometrics
-    ? (user.weight / ((user.height / 100) ** 2)).toFixed(1)
+    ? ((user.weight ?? 0) / (((user.height ?? 0) / 100) ** 2)).toFixed(1)
     : "not enough data";
   const bmr = user.gender === "Nam"
-    ? 88.362 + 13.397 * user.weight + 4.799 * user.height - 5.677 * user.age
-    : 447.593 + 9.247 * user.weight + 3.098 * user.height - 4.33 * user.age;
+    ? 88.362 + 13.397 * (user.weight ?? 0) + 4.799 * (user.height ?? 0) - 5.677 * (user.age ?? 0)
+    : 447.593 + 9.247 * (user.weight ?? 0) + 3.098 * (user.height ?? 0) - 4.33 * (user.age ?? 0);
   const tdee = Math.round((Number.isFinite(bmr) ? bmr : 2000) * 1.55);
   const caloriePercent = tdee > 0 ? Math.round((dailyIntake / tdee) * 100) : 0;
   const goalText = user.goal === "lose" ? "fat loss" : "maintenance";
