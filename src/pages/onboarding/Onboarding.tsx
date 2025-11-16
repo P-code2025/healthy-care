@@ -56,6 +56,7 @@ export default function Onboarding() {
         // Save to backend API
         const goalWeightValue = Number(newData.goalWeight) || 0;
         await api.updateCurrentUser({
+          name: newData.name || undefined,
           age: parseInt(newData.age) || undefined,
           gender: newData.gender || undefined,
           height_cm: parseFloat(newData.height) || undefined,

@@ -42,39 +42,31 @@ export async function analyzeFood(
   overrideAmount?: string
 ): Promise<{ analysis: AnalysisResult; error?: string }> {
   try {
-    const result = await http.request<{ data?: RecognizeFoodResponse }>('/api/recognize-food', {
+    const res = await http.request('/api/recognize-food', {
       method: 'POST',
-      json: {
-        base64Image: imageData,
-        overrideName,
-        overrideAmount,
-      },
+      json: { base64Image: imageData, overrideName, overrideAmount },
     });
 
-    const payload = (result?.data ?? result) as RecognizeFoodResponse;
-    const amount = overrideAmount || payload.portionSize || '100g';
+    const data = res.data;
+    const amount = overrideAmount || data.amount || '100g';
 
     const analysis: AnalysisResult = {
-      foodName: (overrideName || payload.foodName || EMPTY_ANALYSIS.foodName).trim(),
+      foodName: (overrideName || data.foodName || 'Unknown').trim(),
       amount,
-      calories: Math.round(payload.calories || 0),
-      protein: Math.round(payload.protein || 0),
-      carbs: Math.round(payload.carbs || 0),
-      fat: Math.round(payload.fats || 0),
-      sugar: 0,
+      calories: data.calories || 0,
+      protein: data.protein || 0,
+      carbs: data.carbs || 0,
+      fat: data.fat || 0,
+      sugar: data.sugar || 0,
+      base100g: data.base100g,
+      baseAmount: data.base100g ? 100 : undefined,
     };
-
-    const { baseAmount, values } = computeBase100g(analysis);
-    analysis.baseAmount = baseAmount;
-    analysis.base100g = values;
 
     return { analysis };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Không thể phân tích món ăn';
     return {
       analysis: { ...EMPTY_ANALYSIS },
-      error: message,
+      error: error instanceof Error ? error.message : 'Analysis failed',
     };
   }
 }

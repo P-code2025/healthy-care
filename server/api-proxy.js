@@ -77,6 +77,7 @@ const mapUser = (user) => ({
   user_id: user.id,
   email: user.email,
   password_hash: user.passwordHash,
+  name: user.name,
   age: user.age,
   gender: user.gender,
   height_cm: user.heightCm,
@@ -288,7 +289,7 @@ app.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password, age, gender, height, weight, goal, activityLevel } =
+    const { email, password, name, age, gender, height, weight, goal, activityLevel } =
       req.body;
     try {
       const existing = await prisma.user.findUnique({ where: { email } });
@@ -300,6 +301,7 @@ app.post(
         data: {
           email,
           passwordHash,
+          name,
           age: age ? Number(age) : null,
           gender: gender || null,
           heightCm: height ? Number(height) : null,
@@ -377,11 +379,12 @@ app.get("/api/users/me", requireAuth, async (req, res) => {
 
 app.put("/api/users/me", requireAuth, async (req, res) => {
   const userId = req.user.id;
-  const { age, gender, heightCm, weightKg, goal, activityLevel, exercisePreferences } = req.body;
+  const { name, age, gender, heightCm, weightKg, goal, activityLevel, exercisePreferences } = req.body;
   try {
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
+        name,
         age: age !== undefined ? Number(age) : undefined,
         gender,
         heightCm: heightCm !== undefined ? Number(heightCm) : undefined,
@@ -920,18 +923,15 @@ app.get("/api/statistics/weekly", async (req, res) => {
 // ========== CLOVA AI FOOD RECOGNITION ==========
 app.post("/api/recognize-food", requireAuth, async (req, res) => {
   try {
-    const { base64Image } = req.body;
-
+    const { base64Image, overrideName, overrideAmount } = req.body;
     if (!base64Image) {
-      return res.status(400).json({
-        error: "Missing base64Image in request body",
-      });
+      return res.status(400).json({ error: "Missing base64Image" });
     }
 
-    console.log("📸 Receiving food image for AI analysis...");
-    console.log(
-      `ℹ️  Image size: ${(base64Image.length / 1024).toFixed(2)} KB`
-    );
+    let userPrompt = "Analyze this food image and return the nutritional information in JSON format.";
+    if (overrideName || overrideAmount) {
+      userPrompt = `The food is "${overrideName || 'unknown'}" with serving size "${overrideAmount || '100g'}". Estimate nutrition per 100g and scale to the serving size.`;
+    }
 
     const response = await fetch(CLOVA_API_URL, {
       method: "POST",
@@ -948,18 +948,26 @@ app.post("/api/recognize-food", requireAuth, async (req, res) => {
             content: [
               {
                 type: "text",
-                text: `You are a professional nutritionist AI assistant. Analyze food images and provide detailed nutritional information.
+                text: `You are a professional food nutrition AI. Return ONLY a valid JSON with this structure:
 
-IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdown, no explanations):
 {
-  "food_name": "tên món ăn bằng tiếng Việt",
-  "calories": số calories (kcal) cho 100g,
-  "protein": số protein (grams) cho 100g,
-  "carbs": số carbs (grams) cho 100g,
-  "fats": số fats (grams) cho 100g,
-  "portion_size": "100g",
-  "confidence": độ tin cậy từ 0.0 đến 1.0
-}`,
+  "food_name": "name in English (e.g. 'Korean Fried Rice Cakes with Sauce')",
+  "calories": total calories for the serving,
+  "protein": total protein in grams,
+  "carbs": total carbs in grams,
+  "fats": total fat in grams,
+  "sugar": total sugar in grams (0 if unknown),
+  "portion_size": "e.g. 300g, 1 bowl, 2 pieces",
+  "per_100g": {
+    "calories": calories per 100g,
+    "protein": protein per 100g,
+    "carbs": carbs per 100g,
+    "fats": fat per 100g,
+    "sugar": sugar per 100g
+  }
+}
+
+Use English names. Be accurate. Do NOT add extra text.`,
               },
             ],
           },
@@ -968,67 +976,58 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
             content: [
               {
                 type: "text",
-                text: "Hãy phân tích món ăn trong ảnh này và trả về thông tin dinh dưỡng theo format JSON đã cho.",
+                text: userPrompt,
               },
               {
                 type: "image_url",
-                dataUri: {
-                  data: base64Image,
-                },
+                dataUri: { data: base64Image },
               },
             ],
           },
         ],
+        temperature: 0.2,
         topP: 0.8,
-        topK: 0,
-        maxTokens: 500,
-        temperature: 0.3,
-        repetitionPenalty: 1.1,
-        stop: [],
+        maxTokens: 400,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("❌ CLOVA API Error:", response.status, errorData);
-
       return res.status(response.status).json({
         error: errorData.message || `API Error: ${response.statusText}`,
-        status: response.status,
       });
     }
 
     const data = await response.json();
-    console.log("✅ CLOVA API Response received");
-
     const content = data.result?.message?.content || "";
+
     let nutritionData;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      let jsonString = jsonMatch ? jsonMatch[0] : content;
-      
-      // Clean up invalid JSON values like "24 grams" -> 24
+      if (!jsonMatch) throw new Error("No JSON found");
+
+      let jsonString = jsonMatch[0];
+
+      // Clean up any unit suffixes
       jsonString = jsonString
-        .replace(/"protein":\s*"?(\d+\.?\d*)\s*grams?"?/gi, '"protein": $1')
-        .replace(/"carbs":\s*"?(\d+\.?\d*)\s*grams?"?/gi, '"carbs": $1')
-        .replace(/"fats":\s*"?(\d+\.?\d*)\s*grams?"?/gi, '"fats": $1')
-        .replace(/"calories":\s*"?(\d+\.?\d*)\s*kcal?"?/gi, '"calories": $1');
-      
+  .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?"?/gi, '"$1": $2')
+  .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?\s*"/gi, '"$1": $2')
+  .replace(/,\s*}/g, '}')  
+  .replace(/,\s*]/g, ']');
+
       nutritionData = JSON.parse(jsonString);
     } catch (parseError) {
-      console.error("❌ Failed to parse AI response:", content);
+      console.error("Failed to parse AI response:", content);
       return res.status(500).json({
-        error: "AI không thể phân tích món ăn",
+        error: "AI could not analyze the food",
         raw_content: content,
       });
     }
 
-    console.log("🍱 Food recognized:", nutritionData.food_name);
-
     res.json({
       success: true,
       data: {
-        foodName: nutritionData.food_name || "Món ăn chưa xác định",
+        foodName: nutritionData.food_name || "Unknown Food",
         calories: parseFloat(nutritionData.calories) || 0,
         protein: parseFloat(nutritionData.protein) || 0,
         carbs: parseFloat(nutritionData.carbs) || 0,
@@ -1036,16 +1035,12 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure (no markdow
         portionSize: nutritionData.portion_size || "100g",
         confidence: parseFloat(nutritionData.confidence) || 0.5,
       },
-      usage: data.result?.usage,
     });
   } catch (error) {
-    console.error("❌ Server error:", error);
-    res.status(500).json({
-      error: error.message || "Internal server error",
-    });
+    console.error("Server error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // ========== AI FEEDBACK & CONTEXT ==========
 app.post(

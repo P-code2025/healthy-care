@@ -113,6 +113,32 @@ export default function FoodDiaryNew() {
   const { start: periodStart, end: periodEnd } = useMemo(() => {
     return getDateRange(selectedPeriod);
   }, [selectedPeriod]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const handleReanalyze = async () => {
+  if (!selectedImage || !analysisResult.foodName) return;
+
+  setIsAnalyzing(true);
+  try {
+    const result = await analyzeFood(
+      selectedImage,
+      analysisResult.foodName,
+      analysisResult.amount
+    );
+
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      setAnalysisResult(result.analysis);
+      setLastAnalyzedImage(selectedImage);
+      toast.success('Re-analyzed successfully!');
+    }
+  } catch (err) {
+    toast.error('Failed to re-analyze');
+  } finally {
+    setIsAnalyzing(false);
+  }
+};
 
   const loadEntries = useCallback(async () => {
     try {
@@ -580,6 +606,16 @@ export default function FoodDiaryNew() {
                 <input name="foodName" type="text" value={analysisResult.foodName} onChange={e => setAnalysisResult(prev => ({ ...prev, foodName: e.target.value }))}
                   placeholder="Meal name" required />
               </label>
+
+              <button
+                type="button"
+                className={styles.reanalyzeBtn}
+                onClick={handleReanalyze}
+                disabled={isAnalyzing || !selectedImage || !analysisResult.foodName}
+                style={{ height: '40px', padding: '0 12px', fontSize: '14px' }}
+              >
+                {isAnalyzing ? 'Analyzing...' : '↻ Analyze again'}
+              </button>
 
               <label>
                 Serving size

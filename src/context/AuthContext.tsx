@@ -67,8 +67,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       skipAuth: true,
     });
     const profile = mapAuthResponse(data);
-    // Clear old user data from localStorage
-    localStorage.removeItem('userProfile');
     setUser(profile);
   };
 
@@ -79,8 +77,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       skipAuth: true,
     });
     const profile = mapAuthResponse(data);
-    // Clear old user data from localStorage
-    localStorage.removeItem('userProfile');
     setUser(profile);
   };
 
@@ -88,12 +84,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await http.request("/api/auth/logout", { method: "POST" });
     } catch {
-      // ignore errors on logout
     } finally {
       http.clearTokens();
-      // Clear all user data from localStorage
-      localStorage.removeItem('userProfile');
-      localStorage.clear();
       setUser(null);
     }
   };

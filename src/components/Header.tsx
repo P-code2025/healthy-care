@@ -1,17 +1,11 @@
 // src/components/Header.tsx
 import { useEffect, useState } from "react";
 import styles from "./Header.module.css";
+import { useAuth } from "../context/AuthContext";
 
 export default function Header() {
-  const [userName, setUserName] = useState("User");
-
-  useEffect(() => {
-    const profile = localStorage.getItem("userProfile");
-    if (profile) {
-      const data = JSON.parse(profile);
-      setUserName(data.name || "User");
-    }
-  }, []);
+  const { user } = useAuth();
+  const userName = user?.name || "User"; 
 
   return (
     <header className={styles.header}>
