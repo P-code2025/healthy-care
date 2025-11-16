@@ -928,10 +928,15 @@ app.post("/api/recognize-food", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Missing base64Image" });
     }
 
-    let userPrompt = "Analyze this food image and return the nutritional information in JSON format.";
-    if (overrideName || overrideAmount) {
-      userPrompt = `The food is "${overrideName || 'unknown'}" with serving size "${overrideAmount || '100g'}". Estimate nutrition per 100g and scale to the serving size.`;
-    }
+    const userDescription = overrideName ? `${overrideName} (serving: ${overrideAmount || '100g'})` : 'Unknown meal';
+
+    const userPrompt = `
+Analyze the food in the image.
+User description: "${userDescription}"
+Parse ALL food items and amounts mentioned.
+Estimate nutrition for each item separately.
+Return total + detailed breakdown in JSON.
+    `.trim();
 
     const response = await fetch(CLOVA_API_URL, {
       method: "POST",
@@ -945,56 +950,66 @@ app.post("/api/recognize-food", requireAuth, async (req, res) => {
         messages: [
           {
             role: "system",
-            content: [
-              {
-                type: "text",
-                text: `You are a professional food nutrition AI. Return ONLY a valid JSON with this structure:
+            content: [{
+              type: "text",
+              text: `You are a professional food nutrition AI.
 
+User may describe: "Main dish + topping (amount)"
+Examples:
+- "Cơm tấm + nước mắm 15ml"
+- "Phở + trứng luộc"
+- "Bánh mì pate 20g"
+
+Tasks:
+1. Identify main food from image
+2. Parse add-ons + amounts from text
+3. Estimate nutrition per item
+4. Return JSON with total + breakdown
+
+Structure:
 {
-  "food_name": "name in English (e.g. 'Korean Fried Rice Cakes with Sauce')",
-  "calories": total calories for the serving,
-  "protein": total protein in grams,
-  "carbs": total carbs in grams,
-  "fats": total fat in grams,
-  "sugar": total sugar in grams (0 if unknown),
-  "portion_size": "e.g. 300g, 1 bowl, 2 pieces",
-  "per_100g": {
-    "calories": calories per 100g,
-    "protein": protein per 100g,
-    "carbs": carbs per 100g,
-    "fats": fat per 100g,
-    "sugar": sugar per 100g
-  }
+  "food_name": "Full name with add-ons",
+  "portion_size": "Total serving",
+  "calories": total,
+  "protein": total g,
+  "carbs": total g,
+  "fats": total g,
+  "sugar": total g,
+  "per_100g": { ... },
+  "breakdown": [
+    {
+      "name": "Item name",
+      "amount": "250g / 15ml / 1 piece",
+      "calories": 600,
+      "protein": 15,
+      "carbs": 80,
+      "fats": 20,
+      "sugar": 2
+    }
+  ]
 }
 
-Use English names. Be accurate. Do NOT add extra text.`,
-              },
-            ],
+Use English field names. NO extra text. Valid JSON only.`
+            }]
           },
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: userPrompt,
-              },
-              {
-                type: "image_url",
-                dataUri: { data: base64Image },
-              },
-            ],
-          },
+              { type: "text", text: userPrompt },
+              { type: "image_url", dataUri: { data: base64Image } }
+            ]
+          }
         ],
-        temperature: 0.2,
+        temperature: 0.3,
         topP: 0.8,
-        maxTokens: 400,
+        maxTokens: 500
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return res.status(response.status).json({
-        error: errorData.message || `API Error: ${response.statusText}`,
+        error: errorData.message || `API Error: ${response.statusText}`
       });
     }
 
@@ -1006,42 +1021,54 @@ Use English names. Be accurate. Do NOT add extra text.`,
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found");
 
-      let jsonString = jsonMatch[0];
-
-      // Clean up any unit suffixes
-      jsonString = jsonString
-  .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?"?/gi, '"$1": $2')
-  .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?\s*"/gi, '"$1": $2')
-  .replace(/,\s*}/g, '}')  
-  .replace(/,\s*]/g, ']');
+      let jsonString = jsonMatch[0]
+        .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?"?/gi, '"$1": $2')
+        .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']');
 
       nutritionData = JSON.parse(jsonString);
     } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
-      return res.status(500).json({
-        error: "AI could not analyze the food",
-        raw_content: content,
-      });
+      console.error("Parse error:", content);
+      return res.status(500).json({ error: "AI response invalid", raw: content });
+    }
+
+    // TỰ ĐỘNG CỘNG TỔNG nếu có breakdown
+    if (nutritionData.breakdown && Array.isArray(nutritionData.breakdown)) {
+      const totals = nutritionData.breakdown.reduce((acc, item) => ({
+        calories: acc.calories + (parseFloat(item.calories) || 0),
+        protein: acc.protein + (parseFloat(item.protein) || 0),
+        carbs: acc.carbs + (parseFloat(item.carbs) || 0),
+        fats: acc.fats + (parseFloat(item.fats) || 0),
+        sugar: acc.sugar + (parseFloat(item.sugar) || 0),
+      }), { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 });
+
+      nutritionData.calories = Math.round(totals.calories);
+      nutritionData.protein = Math.round(totals.protein);
+      nutritionData.carbs = Math.round(totals.carbs);
+      nutritionData.fats = Math.round(totals.fats);
+      nutritionData.sugar = Math.round(totals.sugar);
     }
 
     res.json({
       success: true,
       data: {
-        foodName: nutritionData.food_name || "Unknown Food",
-        calories: parseFloat(nutritionData.calories) || 0,
-        protein: parseFloat(nutritionData.protein) || 0,
-        carbs: parseFloat(nutritionData.carbs) || 0,
-        fats: parseFloat(nutritionData.fats) || 0,
-        portionSize: nutritionData.portion_size || "100g",
-        confidence: parseFloat(nutritionData.confidence) || 0.5,
-      },
+        foodName: nutritionData.food_name || "Meal with add-ons",
+        amount: nutritionData.portion_size || overrideAmount || "100g",
+        calories: nutritionData.calories || 0,
+        protein: nutritionData.protein || 0,
+        carbs: nutritionData.carbs || 0,
+        fat: nutritionData.fats || 0,
+        sugar: nutritionData.sugar || 0,
+        base100g: nutritionData.per_100g || null,
+        breakdown: nutritionData.breakdown || []
+      }
     });
+
   } catch (error) {
     console.error("Server error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 // ========== AI FEEDBACK & CONTEXT ==========
 app.post(
   "/api/ai-feedback",
