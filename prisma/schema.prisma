@@ -34,6 +34,11 @@ model User {
   gender               String?
   heightCm             Float?
   weightKg             Float?
+  neckCm               Float?
+  waistCm              Float?
+  hipCm                Float?
+  bicepsCm             Float?
+  thighCm              Float?
   goal                 String?
   activityLevel        String?
   exercisePreferences  Json?
@@ -43,6 +48,7 @@ model User {
   aiSuggestions        AiSuggestion[]
   aiFeedback           AiFeedback[]
   aiExercisePlanCaches AiExercisePlanCache[]
+  aiMealPlanCaches AiMealPlanCache[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -149,4 +155,16 @@ model AiExercisePlanCache {
 
   @@unique([userId, cacheKey])
   @@index([userId, expiresAt])
+}
+
+model AiMealPlanCache {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cacheKey  String
+  plan      Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([userId, cacheKey])
 }

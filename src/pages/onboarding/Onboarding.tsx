@@ -61,6 +61,11 @@ export default function Onboarding() {
           gender: newData.gender || undefined,
           height_cm: parseFloat(newData.height) || undefined,
           weight_kg: parseFloat(newData.weight) || undefined,
+          neck_cm: parseFloat(newData.neck) || undefined,
+          waist_cm: parseFloat(newData.waist) || undefined,
+          hip_cm: parseFloat(newData.hip) || undefined,
+          biceps_cm: parseFloat(newData.biceps) || undefined,
+          thigh_cm: parseFloat(newData.thigh) || undefined,
           goal: formatGoalWeight(goalWeightValue),
         });
         // Refresh user profile in auth context

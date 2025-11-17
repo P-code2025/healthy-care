@@ -6,18 +6,23 @@ export interface User {
   user_id: number;
   email: string;
   password_hash: string;
-  name: string;
-  age: number;
-  gender: string;
-  height_cm: number;
-  weight_kg: number;
-  goal: string;
-  activity_level: string;
+  name: string | null;           // thêm null
+  age: number | null;
+  gender: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  neck_cm: number | null;        // THÊM
+  waist_cm: number | null;       // THÊM
+  hip_cm: number | null;         // THÊM
+  biceps_cm: number | null;      // THÊM
+  thigh_cm: number | null;       // THÊM
+  goal: string | null;
+  activity_level: string | null;
   exercise_preferences: {
     yoga: boolean;
     gym: boolean;
     [key: string]: boolean;
-  };
+  } | null;
 }
 
 export interface FoodLog {
@@ -68,8 +73,17 @@ export interface DailyStatistics {
 type UserUpdatePayload = Partial<
   Omit<User, "user_id" | "email" | "password_hash">
 > & {
+  name?: string;
+  age?: number;
+  gender?: string;
+  goal?: string;  
   heightCm?: number;
   weightKg?: number;
+  neckCm?: number;
+  waistCm?: number;
+  hipCm?: number;
+  bicepsCm?: number;
+  thighCm?: number;
   activityLevel?: string;
   exercisePreferences?: User["exercise_preferences"];
 };
@@ -86,6 +100,33 @@ const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {
   assign("age");
   assign("gender");
   assign("goal");
+
+  assign("neckCm");
+  assign("waistCm");
+  assign("hipCm");
+  assign("bicepsCm");
+  assign("thighCm");
+  assign("name");
+  assign("weightKg");
+  assign("heightCm");
+  assign("activityLevel", "activity_level");
+  assign("exercisePreferences", "exercise_preferences");
+
+  if (Object.prototype.hasOwnProperty.call(data, "name")) {
+    payload.name = data.name;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, "age")) {
+    payload.age = data.age;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, "gender")) {
+    payload.gender = data.gender;
+  }
+  if (Object.prototype.hasOwnProperty.call(data, "goal")) {
+    payload.goal = data.goal;
+  }
+
 
   if (
     Object.prototype.hasOwnProperty.call(data, "heightCm") ||
@@ -108,6 +149,62 @@ const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {
         ? data.weightKg
         : data.weight_kg;
   }
+
+  if (
+    Object.prototype.hasOwnProperty.call(data, "neckCm") ||
+    Object.prototype.hasOwnProperty.call(data, "neck_cm")
+  ) {
+    payload.neckCm =
+      Object.prototype.hasOwnProperty.call(data, "neckCm") &&
+      data.neckCm !== undefined
+        ? data.neckCm
+        : data.neck_cm;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(data, "waistCm") ||
+    Object.prototype.hasOwnProperty.call(data, "waist_cm")
+  ) {
+    payload.waistCm =
+      Object.prototype.hasOwnProperty.call(data, "waistCm") &&
+      data.waistCm !== undefined
+        ? data.waistCm
+        : data.waist_cm;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(data, "hipCm") ||
+    Object.prototype.hasOwnProperty.call(data, "hip_cm")
+  ) {
+    payload.hipCm =
+      Object.prototype.hasOwnProperty.call(data, "hipCm") &&
+      data.hipCm !== undefined
+        ? data.hipCm
+        : data.hip_cm;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(data, "bicepsCm") ||
+    Object.prototype.hasOwnProperty.call(data, "biceps_cm")
+  ) {
+    payload.bicepsCm =
+      Object.prototype.hasOwnProperty.call(data, "bicepsCm") &&
+      data.bicepsCm !== undefined
+        ? data.bicepsCm
+        : data.biceps_cm;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(data, "thighCm") ||
+    Object.prototype.hasOwnProperty.call(data, "thigh_cm")
+  ) {
+    payload.thighCm =
+      Object.prototype.hasOwnProperty.call(data, "thighCm") &&
+      data.thighCm !== undefined
+        ? data.thighCm
+        : data.thigh_cm;
+  }
+
 
   if (
     Object.prototype.hasOwnProperty.call(data, "activityLevel") ||
