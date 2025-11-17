@@ -9,7 +9,6 @@ export interface AIExercisePlan {
   advice: string;
 }
 
-
 export async function generateAIExercisePlanFromAPI(
   dailyIntake: number,
   userQuery?: string
@@ -17,24 +16,24 @@ export async function generateAIExercisePlanFromAPI(
   try {
     const result = await http.post<AIExercisePlan>('/api/ai/exercise-plan', {
       dailyIntake,
-      userQuery,
+      userQuery: userQuery || "Generate today's workout plan",
     });
     return result || createFallbackPlan();
   } catch (err) {
-    console.error('Failed to generate AI exercise plan from server', err);
+    console.error('Failed to generate AI exercise plan', err);
     return createFallbackPlan();
   }
 }
 
 function createFallbackPlan(): AIExercisePlan {
   return {
-    summary: "Gợi ý mặc định: giữ nhẹ nhàng và tập trung vào vận động",
+    summary: "Default suggestion: Stay active with light movement",
     intensity: "light",
     exercises: [
-      { name: "Morning Yoga Flow", duration: "20 phút", reason: "Giãn cơ và khởi động ngày mới." },
-      { name: "Đi bộ nhanh", duration: "30 phút", reason: "Cardio nhẹ nhàng để cân bằng năng lượng." },
+      { name: "Morning Yoga Flow", duration: "20 minutes", reason: "Gentle wake-up and mobility." },
+      { name: "Brisk Walking", duration: "30 minutes", reason: "Light cardio to boost energy." },
     ],
     totalBurnEstimate: "250 kcal",
-    advice: "Uống đủ nước và khởi động 5 phút trước khi tập.",
+    advice: "Stay hydrated and warm up for 5 minutes before starting.",
   };
 }

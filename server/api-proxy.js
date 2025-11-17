@@ -1140,33 +1140,35 @@ app.post("/api/ai/exercise-plan", requireAuth, async (req, res) => {
     ];
 
     // Prompt cực rõ ràng + bắt buộc trả JSON
-    const prompt = `Bạn là huấn luyện viên chuyên nghiệp. Tạo kế hoạch tập hôm nay.
+    const prompt = `You are a professional fitness coach. Create a safe and personalized workout plan for today.
 
-Thông tin:
-- Giới tính: ${gender}, Tuổi: ${age}
-- Cân nặng: ${weight}kg, Chiều cao: ${height}cm (BMI ${bmi})
-- Mục tiêu: ${userProfile.goal === "lose_weight" ? "giảm cân" : "duy trì/tăng cơ"}
-- TDEE: ${tdee} kcal | Đã nạp: ${dailyIntake} kcal (${caloriePercent}% TDEE)
-- Yêu cầu: ${userQuery}
+USER PROFILE
+Gender: ${gender}
+Age: ${age}
+Weight: ${weight}kg | Height: ${height}cm | BMI: ${bmi}
+Goal: ${userProfile.goal === "lose_weight" ? "Fat loss" : "Maintenance / Muscle gain"}
+TDEE: ${tdee} kcal
+Calories consumed today: ${dailyIntake} kcal (${caloriePercent}% of TDEE)
+User request: "${userQuery || "Generate today's workout plan"}"
 
-Hướng dẫn:
-- <30% TDEE → nhẹ (yoga, đi bộ)
-- 30-70% → vừa phải
-- >70% → mạnh hoặc recovery
-- Chỉ chọn 1-3 bài từ danh sách dưới đây
-- Tổng đốt ước tính: 250-600 kcal
+GUIDELINES
+- <30% TDEE → light (yoga, walking)
+- 30-70% → moderate
+- >70% → intense or active recovery
+- Select 1–3 workouts from the list below only
+- Total estimated burn: 250–600 kcal
 
-DANH SÁCH BÀI TẬP (chọn đúng tên):
+AVAILABLE WORKOUTS (must match exactly):
 ${AVAILABLE_PLANS.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 
-TRẢ VỀ CHỈ JSON, KHÔNG THÊM CHỮ NÀO KHÁC:
+RETURN ONLY VALID JSON. NO EXTRA TEXT:
 {
-  "summary": "Tóm tắt ngắn",
+  "summary": "Short summary",
   "intensity": "light|moderate|intense",
   "totalBurnEstimate": "400-500 kcal",
-  "advice": "Lời khuyên ngắn",
+  "advice": "Short advice",
   "exercises": [
-    {"name": "Tên bài tập chính xác trong danh sách", "duration": "20 phút", "reason": "Lý do"}
+    { "name": "Exact workout name from list", "duration": "20 min", "reason": "Why this fits" }
   ]
 }`;
 

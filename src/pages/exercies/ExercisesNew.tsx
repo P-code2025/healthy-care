@@ -78,35 +78,34 @@ export default function ExercisesNew() {
   }, [user]);
 
   // Load today's food entries
-useEffect(() => {
-  const getTodayVN = (): string => {
-    return new Date().toLocaleDateString('sv', { timeZone: 'Asia/Ho_Chi_Minh' });
-  };
+  useEffect(() => {
+    const getTodayVN = (): string => {
+      return new Date().toLocaleDateString('sv', { timeZone: 'Asia/Ho_Chi_Minh' });
+    };
 
-  const today = getTodayVN();
+    const today = getTodayVN();
 
-  const loadEntries = async () => {
-    try {
-      const logs = await foodDiaryApi.list({ start: today, end: today });
-      setFoodEntries(logs.map(mapFoodLogToEntry));
-      console.log("Loaded food entries for", today, logs.length);
-    } catch (err) {
-      console.error('Failed to load food diary for exercises', err);
-    }
-  };
+    const loadEntries = async () => {
+      try {
+        const logs = await foodDiaryApi.list({ start: today, end: today });
+        setFoodEntries(logs.map(mapFoodLogToEntry));
+        console.log("Loaded food entries for", today, logs.length);
+      } catch (err) {
+        console.error('Failed to load food diary for exercises', err);
+      }
+    };
 
-  loadEntries();
+    loadEntries();
 
-  // Reload mỗi khi chuyển sang ngày mới (hiếm), hoặc mỗi 30s
-  const interval = setInterval(() => {
-    if (getTodayVN() !== today) {
+    const interval = setInterval(() => {
+      if (getTodayVN() !== today) {
+        loadEntries();
+      }
       loadEntries();
-    }
-    loadEntries(); // cứ 30s reload 1 lần cho chắc
-  }, 30_000);
+    }, 30_000);
 
-  return () => clearInterval(interval);
-}, []); // vẫn để [] vì không phụ thuộc state nào
+    return () => clearInterval(interval);
+  }, []); // vẫn để [] vì không phụ thuộc state nào
 
   useEffect(() => {
     const total = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
@@ -138,26 +137,26 @@ useEffect(() => {
     };
   }, [userProfile, dailyCalories]);
 
-useEffect(() => {
-  if (activeTab !== 'Personalized' || !analysis || !userProfile) return;
+  useEffect(() => {
+    if (activeTab !== 'Personalized' || !analysis || !userProfile) return;
 
-  const fetchAI = async () => {
-    setIsLoadingAI(true);
-    try {
-      const result = await generateAIExercisePlanFromAPI(
-        dailyCalories,
-        "Tạo kế hoạch tập luyện hôm nay"
-      );
-      setAiPlan(result);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoadingAI(false);
-    }
-  };
+    const fetchAI = async () => {
+      setIsLoadingAI(true);
+      try {
+        const result = await generateAIExercisePlanFromAPI(
+          dailyCalories,
+          "Generate today's workout plan based on my food intake and profile."
+        );
+        setAiPlan(result);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoadingAI(false);
+      }
+    };
 
-  fetchAI();
-}, [activeTab, analysis, userProfile, dailyCalories]);
+    fetchAI();
+  }, [activeTab, analysis, userProfile, dailyCalories]);
 
   // Filter plans
   const filteredPlans = useMemo(() => {
@@ -176,7 +175,6 @@ useEffect(() => {
           });
         });
 
-        // → ƯU TIÊN: Nếu có ≥1 bài khớp → hiển thị tất cả
         filtered = matchedPlans.length > 0 ? matchedPlans : [plans[0]];
       } else {
         filtered = plans.slice(0, 1);
@@ -238,7 +236,7 @@ useEffect(() => {
         <Search className="w-5 h-5 text-gray-500" />
         <input
           type="text"
-          placeholder="Tìm giáo án, mục tiêu..."
+          placeholder="Search workouts..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -250,19 +248,19 @@ useEffect(() => {
           {/* Header */}
           <div className={styles.aiHeader}>
             <div className={styles.aiAvatar}>AI</div>
-            <h3 className={styles.aiTitle}>Huấn luyện viên cá nhân</h3>
-          </div> 
+            <h3 className={styles.aiTitle}>Personal AI Trainer</h3>
+          </div>
 
           {/* Stats */}
           <div className={styles.aiStats}>
-            <div className={styles.aiStat}><strong>{dailyCalories}</strong> kcal nạp</div>
+            <div className={styles.aiStat}><strong>{dailyCalories}</strong> kcal consumed</div>
             <div className={styles.aiStat}><strong>{analysis.tdee}</strong> kcal TDEE</div>
             <div className={styles.aiStat}>
               <strong>{analysis.bmi}</strong> BMI
               <span className={styles.bmiStatus} style={{
                 color: Number(analysis.bmi) > 25 ? '#dc2626' : '#10b981'
               }}>
-                {Number(analysis.bmi) > 25 ? 'Cần giảm cân' : 'Duy trì tốt'}
+                {Number(analysis.bmi) > 25 ? 'Need to lose weight' : 'Maintaining well'}
               </span>
             </div>
           </div>
@@ -270,7 +268,7 @@ useEffect(() => {
           {/* Progress */}
           <div className={styles.aiProgress}>
             <div className={styles.aiProgressLabel}>
-              Đốt <strong>{analysis.recommendedBurn} kcal</strong> để cân bằng
+              Burn <strong>{analysis.recommendedBurn} kcal</strong> to balance
             </div>
             <div className={styles.aiProgressBar}>
               <div className={styles.aiProgressFill} style={{ width: `${analysis.deficitPct}%` }} />
@@ -281,14 +279,14 @@ useEffect(() => {
           {isLoadingAI && (
             <div className="flex items-center gap-2 text-emerald-600 mt-3">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>AI đang tạo kế hoạch cá nhân hóa...</span>
+              <span>AI is generating a personalized plan...</span>
             </div>
           )}
 
           {!isLoadingAI && aiPlan.exercises.length === 0 && (
             <div className={styles.aiSuggestionCard}>
-              <p>AI đang chuẩn bị kế hoạch phù hợp cho bạn...</p>
-              <p className="text-sm text-gray-500">Bạn có thể chọn giáo án bên dưới trong lúc chờ.</p>
+              <p>AI is preparing a personalized plan for you...</p>
+              <p className="text-sm text-gray-500">You can choose a plan below while you wait.</p>
             </div>
           )}
 
@@ -298,7 +296,7 @@ useEffect(() => {
               <div className={styles.aiSuggestionInfo}>
                 <p className="font-medium text-emerald-700">{aiPlan.summary}</p>
                 <p className="text-sm mt-1">
-                  <strong>Cường độ:</strong> {aiPlan.intensity} • <strong>Đốt ước tính:</strong> {aiPlan.totalBurnEstimate}
+                  <strong>Intensity:</strong> {aiPlan.intensity} • <strong>Estimated Burn:</strong> {aiPlan.totalBurnEstimate}
                 </p>
                 <div className="mt-2 space-y-1">
                   {aiPlan.exercises.map((ex, i) => (
@@ -323,7 +321,7 @@ useEffect(() => {
                 }}
                 className={styles.aiStartBtn}
               >
-                Bắt đầu ngay
+                Start Now
               </button>
             </div>
           )}
@@ -332,8 +330,8 @@ useEffect(() => {
 
       {analysis && dailyCalories < 0.3 * analysis.tdee && (
         <div className="bg-orange-100 text-orange-700 p-2 rounded mt-2 text-sm">
-          ⚠️ Bạn mới nạp <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> TDEE.
-          Nên ăn thêm trước khi tập để tránh mệt mỏi.
+          ⚠️ You have only consumed <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> of your TDEE.
+          You should eat more before exercising to avoid fatigue.
         </div>
       )}
 
@@ -346,14 +344,14 @@ useEffect(() => {
               <div className={styles.playOverlay}><Play className="w-8 h-8 text-white" /></div>
               {plan.progress !== undefined && (
                 <div className={styles.progressBadge}>
-                  {plan.progress}/{plan.exercises.length} hoàn thành
+                  {plan.progress}/{plan.exercises.length} completed
                 </div>
               )}
             </div>
             <div className={styles.cardBody}>
               <h3 className={styles.cardTitle}>{plan.title}</h3>
               <div className={styles.cardMeta}>
-                <span className={styles.metaItem}><Clock className="w-4 h-4" /> {plan.duration} phút</span>
+                <span className={styles.metaItem}><Clock className="w-4 h-4" /> {plan.duration} minutes</span>
                 <span className={styles.metaItem}><Flame className="w-4 h-4" /> {plan.calories} kcal</span>
                 <span className={`${styles.difficulty} ${getDifficultyColor(plan.difficulty)}`}>
                   {plan.difficulty}
@@ -364,7 +362,7 @@ useEffect(() => {
                   <Heart className={`w-5 h-5 ${plan.isSaved ? 'fill-red-500' : ''}`} />
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); setSelectedPlan(plan); }} className={styles.startBtnSmall}>
-                  Bắt đầu
+                  Start
                 </button>
               </div>
             </div>
@@ -391,7 +389,7 @@ useEffect(() => {
                 <span>{selectedPlan.calories} kcal</span>
                 <span className={getDifficultyColor(selectedPlan.difficulty)}>{selectedPlan.difficulty}</span>
               </div>
-              <h3 className={styles.sectionTitle}>Danh sách bài tập</h3>
+              <h3 className={styles.sectionTitle}>Exercise List</h3>
               <div className={styles.exerciseList}>
                 {selectedPlan.exercises.map((ex, i) => (
                   <div key={i} className={styles.exerciseItem}>
@@ -406,7 +404,7 @@ useEffect(() => {
                   </div>
                 ))}
               </div>
-              <button className={styles.startWorkoutBtn}>Bắt đầu buổi tập</button>
+              <button className={styles.startWorkoutBtn}>Start Workout</button>
             </div>
           </div>
         </div>
