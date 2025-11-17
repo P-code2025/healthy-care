@@ -450,6 +450,7 @@ export default function FoodDiaryNew() {
       toast.success('Meal saved!');
       setShowModal(false);
       resetForm();
+      loadEntries();
     } catch (err) {
       console.error('Failed to create food log', err);
       const message =
