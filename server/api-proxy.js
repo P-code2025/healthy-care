@@ -404,18 +404,34 @@ app.put("/api/users/me", requireAuth, async (req, res) => {
 app.get("/api/food-log", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   const { start, end } = req.query;
+
+  // Hàm chuyển YYYY-MM-DD → đúng 00:00:00 UTC của ngày đó
+  const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  };
+
   try {
     const where = { userId };
+
     if (start || end) {
       where.eatenAt = {};
-      if (start) where.eatenAt.gte = new Date(start);
-      if (end) where.eatenAt.lte = new Date(end);
+      if (start) where.eatenAt.gte = parseDate(start);
+      if (end) {
+        const endDate = parseDate(end);
+        if (endDate) {
+          endDate.setUTCDate(endDate.getUTCDate() + 1);
+          where.eatenAt.lt = endDate;
+        }
+      }
     }
 
     const logs = await prisma.foodLog.findMany({
       where,
       orderBy: { eatenAt: "desc" },
     });
+
     res.json(logs.map(mapFoodLog));
   } catch (error) {
     handlePrismaError(res, error, "Failed to fetch food logs");
@@ -1069,6 +1085,225 @@ Use English field names. NO extra text. Valid JSON only.`
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// ========== AI EXERCISE PLAN (giống analyze-food) ==========
+app.post("/api/ai/exercise-plan", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { dailyIntake = 0, userQuery = "Tạo kế hoạch tập luyện hôm nay" } = req.body;
+
+    if (!Number.isFinite(dailyIntake)) {
+      return res.status(400).json({ error: "dailyIntake is required" });
+    }
+
+    // Lấy thông tin user
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { age: true, gender: true, heightCm: true, weightKg: true, goal: true },
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ error: "User profile not found" });
+    }
+
+    const weight = userProfile.weightKg || 70;
+    const height = userProfile.heightCm || 170;
+    const age = userProfile.age || 30;
+    const gender = userProfile.gender?.toLowerCase() === "female" ? "Nữ" : "Nam";
+    const bmi = Number((weight / ((height / 100) ** 2)).toFixed(1));
+    const bmr = gender === "Nam"
+      ? 88.362 + 13.397 * weight + 4.799 * height - 5.677 * age
+      : 447.593 + 9.247 * weight + 3.098 * height - 4.33 * age;
+    const tdee = Math.round(bmr * 1.55);
+    const caloriePercent = tdee > 0 ? Math.round((dailyIntake / tdee) * 100) : 50;
+
+    // Cache key đơn giản
+    const cacheKey = `aiPlan_${new Date().toDateString()}_${dailyIntake}_${userId}`;
+    const cached = await prisma.aiExercisePlanCache.findUnique({
+      where: { userId_cacheKey: { userId, cacheKey } },
+    });
+
+    if (cached && cached.expiresAt > new Date()) {
+      console.log("AI Plan Cache HIT");
+      return res.json(cached.plan);
+    }
+
+    // Danh sách bài tập có sẵn (phải khớp chính xác với frontend)
+    const AVAILABLE_PLANS = [
+      "20 Min HIIT Fat Loss - No Repeat Workout",
+      "Full Body Strength - Week 1",
+      "Morning Yoga Flow",
+      "HIIT Fat Burn",
+      "Upper Body Power",
+      "Core & Abs Crusher",
+    ];
+
+    // Prompt cực rõ ràng + bắt buộc trả JSON
+    const prompt = `Bạn là huấn luyện viên chuyên nghiệp. Tạo kế hoạch tập hôm nay.
+
+Thông tin:
+- Giới tính: ${gender}, Tuổi: ${age}
+- Cân nặng: ${weight}kg, Chiều cao: ${height}cm (BMI ${bmi})
+- Mục tiêu: ${userProfile.goal === "lose_weight" ? "giảm cân" : "duy trì/tăng cơ"}
+- TDEE: ${tdee} kcal | Đã nạp: ${dailyIntake} kcal (${caloriePercent}% TDEE)
+- Yêu cầu: ${userQuery}
+
+Hướng dẫn:
+- <30% TDEE → nhẹ (yoga, đi bộ)
+- 30-70% → vừa phải
+- >70% → mạnh hoặc recovery
+- Chỉ chọn 1-3 bài từ danh sách dưới đây
+- Tổng đốt ước tính: 250-600 kcal
+
+DANH SÁCH BÀI TẬP (chọn đúng tên):
+${AVAILABLE_PLANS.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+
+TRẢ VỀ CHỈ JSON, KHÔNG THÊM CHỮ NÀO KHÁC:
+{
+  "summary": "Tóm tắt ngắn",
+  "intensity": "light|moderate|intense",
+  "totalBurnEstimate": "400-500 kcal",
+  "advice": "Lời khuyên ngắn",
+  "exercises": [
+    {"name": "Tên bài tập chính xác trong danh sách", "duration": "20 phút", "reason": "Lý do"}
+  ]
+}`;
+
+    // Gọi CLOVA bằng fetch thuần (không cần ClovaXClient)
+    const clovaResponse = await fetch(CLOVA_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${CLOVA_API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "Chỉ trả về JSON hợp lệ. Không thêm bất kỳ giải thích nào." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.4,
+        topP: 0.9,
+        maxTokens: 800,
+      }),
+    });
+
+    if (!clovaResponse.ok) {
+      throw new Error(`CLOVA error: ${clovaResponse.status}`);
+    }
+
+    const data = await clovaResponse.json();
+    const raw = data.result?.message?.content || "";
+
+    // Parse JSON an toàn
+    let plan = {
+      summary: "Kế hoạch tập luyện hôm nay",
+      intensity: "moderate",
+      totalBurnEstimate: "400 kcal",
+      advice: "Tập đều đặn và ăn đủ protein!",
+      exercises: [
+        { name: "Morning Yoga Flow", duration: "20 phút", reason: "Khởi động nhẹ nhàng" }
+      ]
+    };
+
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.exercises?.length > 0) {
+          plan = {
+            summary: parsed.summary || plan.summary,
+            intensity: ["light", "moderate", "intense"].includes(parsed.intensity) ? parsed.intensity : plan.intensity,
+            totalBurnEstimate: parsed.totalBurnEstimate || plan.totalBurnEstimate,
+            advice: parsed.advice || plan.advice,
+            exercises: parsed.exercises
+              .filter(ex => AVAILABLE_PLANS.some(p => p.toLowerCase().includes(ex.name?.toLowerCase?.() || "")))
+              .slice(0, 3)
+              .map(ex => ({
+                name: AVAILABLE_PLANS.find(p => p.toLowerCase().includes(ex.name?.toLowerCase?.() || "")) || ex.name,
+                duration: ex.duration || "20 phút",
+                reason: ex.reason || "Phù hợp với bạn"
+              })) || plan.exercises
+          };
+        }
+      } catch (e) {
+        console.log("Parse JSON thất bại, dùng fallback");
+      }
+    }
+
+    // Cache lại 24h
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await prisma.aiExercisePlanCache.upsert({
+      where: { userId_cacheKey: { userId, cacheKey } },
+      update: { plan, expiresAt },
+      create: { userId, cacheKey, plan, expiresAt },
+    });
+
+    res.json(plan);
+
+  } catch (error) {
+    console.error("AI Exercise Plan Error:", error.message);
+
+    // Fallback an toàn – frontend sẽ nhận được và hiển thị đẹp
+    res.json({
+      summary: "Kế hoạch tập luyện hôm nay (dự phòng)",
+      intensity: "moderate",
+      totalBurnEstimate: "350-450 kcal",
+      advice: "Nên tập nhẹ nếu chưa ăn đủ năng lượng. Uống đủ nước nhé!",
+      exercises: [
+        { name: "Morning Yoga Flow", duration: "20 phút", reason: "Khởi động cơ thể nhẹ nhàng" },
+        { name: "20 Min HIIT Fat Loss - No Repeat Workout", duration: "20 phút", reason: "Đốt mỡ hiệu quả" }
+      ]
+    });
+  }
+});
+
+
+app.get("/api/ai/exercise-plan-cache", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { key } = req.query;
+  if (!key) return res.status(400).json({ error: "key required" });
+
+  try {
+    const cached = await prisma.aiExercisePlanCache.findUnique({
+      where: { userId_cacheKey: { userId, cacheKey: key } },
+    });
+
+    if (cached && cached.expiresAt > new Date()) {
+      res.json(cached.plan);
+    } else {
+      if (cached) await prisma.aiExercisePlanCache.delete({ where: { id: cached.id } });
+      res.status(204).send(); // No content → frontend sẽ gọi AI
+    }
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to get AI plan cache");
+  }
+});
+
+// POST cache
+app.post("/api/ai/exercise-plan-cache", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { key, plan } = req.body;
+
+  if (!key || !plan) return res.status(400).json({ error: "key and plan required" });
+
+  try {
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h (hoặc 1 ngày tự nhiên)
+
+    const result = await prisma.aiExercisePlanCache.upsert({
+      where: { userId_cacheKey: { userId, cacheKey: key } },
+      update: { plan, expiresAt },
+      create: { userId, cacheKey: key, plan, expiresAt },
+    });
+
+    res.json(result.plan);
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to save AI plan cache");
+  }
+});
+
+
 // ========== AI FEEDBACK & CONTEXT ==========
 app.post(
   "/api/ai-feedback",

@@ -42,6 +42,7 @@ model User {
   workoutLogs          WorkoutLog[]
   aiSuggestions        AiSuggestion[]
   aiFeedback           AiFeedback[]
+  aiExercisePlanCaches AiExercisePlanCache[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -134,4 +135,18 @@ model AiFeedback {
   createdAt   DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+
+model AiExercisePlanCache {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cacheKey    String   
+  plan        Json     
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@unique([userId, cacheKey])
+  @@index([userId, expiresAt])
 }

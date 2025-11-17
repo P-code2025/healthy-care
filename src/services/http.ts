@@ -151,6 +151,30 @@ export const http = {
     return response.text() as Promise<T>;
   },
 
+  get<T = any>(path: string, options?: RequestOptions) {
+    return this.request<T>(path, { ...options, method: "GET" });
+  },
+
+  post<T = any>(path: string, body?: any, options?: RequestOptions) {
+    return this.request<T>(path, {
+      ...options,
+      method: "POST",
+      json: body,
+    });
+  },
+
+  put<T = any>(path: string, body?: any, options?: RequestOptions) {
+    return this.request<T>(path, {
+      ...options,
+      method: "PUT",
+      json: body,
+    });
+  },
+
+  delete<T = any>(path: string, options?: RequestOptions) {
+    return this.request<T>(path, { ...options, method: "DELETE" });
+  },
+
   setTokens: updateTokens,
   clearTokens,
   getAccessToken: () => accessToken,

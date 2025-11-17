@@ -425,7 +425,7 @@ export default function FoodDiaryNew() {
       (form.elements.namedItem('thoughts') as HTMLTextAreaElement)?.value || '';
 
     const now = new Date();
-    const time = now.toISOString().slice(11, 16);
+    const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
     const payload: FoodEntryInput = {
       date: selectedDate,
