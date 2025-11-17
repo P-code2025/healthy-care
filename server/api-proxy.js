@@ -1378,10 +1378,10 @@ OUTPUT ONLY THIS EXACT JSON (no extra fields, integers only):
     {
       "day": "Monday",
       "date": "17 Nov",
-      "breakfast": {"name": "Grilled chicken oatmeal", "calories": 500, "protein": 45, "image": "/images/meal/chicken_oatmeal.jpg"},
-      "lunch": {"name": "Salmon brown rice bowl", "calories": 650, "protein": 48, "image": "/images/meal/salmon_rice.jpg"},
-      "snack": {"name": "Boiled eggs with vegetables", "calories": 200, "protein": 18, "image": "/images/meal/boiled_eggs.jpg"},
-      "dinner": {"name": "Lean beef stir-fry", "calories": 600, "protein": 50, "image": "/images/meal/beef_stirfry.jpg"}
+      "breakfast": {"name": "Grilled chicken oatmeal", "calories": 500, "protein": 45,"carbs":55,"fat":15,"sugar":6, "image": "/images/meal/chicken_oatmeal.jpg"},
+      "lunch": {"name": "Salmon brown rice bowl", "calories": 650, "protein": 48,"carbs":70,"fat":22,"sugar":4, "image": "/images/meal/salmon_rice.jpg"},
+      "snack": {"name": "Boiled eggs with vegetables", "calories": 200, "protein": 18,"carbs":10,"fat":12,"sugar":2, "image": "/images/meal/boiled_eggs.jpg"},
+      "dinner": {"name": "Lean beef stir-fry", "calories": 600, "protein": 50,"carbs":65,"fat":20,"sugar":5, "image": "/images/meal/beef_stirfry.jpg"}
     }
     // exactly 7 days, Monday to Sunday
   ]
