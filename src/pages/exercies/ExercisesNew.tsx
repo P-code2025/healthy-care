@@ -1,5 +1,4 @@
-// src/pages/ExercisesNew.tsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import {
   Play,
   Heart,
@@ -8,46 +7,58 @@ import {
   Search,
   X,
   Loader2,
-} from 'lucide-react';
-import styles from './ExercisesNew.module.css';
-import YouTubePlayer from '../../components/YouTubePlayer';
-import { SAMPLE_WORKOUT_PLANS, type WorkoutPlan } from './workoutPlans';
-import { generateAIExercisePlanFromAPI, type AIExercisePlan } from '../../services/aiExercisePlan';
-import type { FoodEntry } from '../../lib/types';
-import { foodDiaryApi, mapFoodLogToEntry } from '../../services/foodDiaryApi';
-import { useAuth } from '../../context/AuthContext';
-import { determineGoalIntent, getGoalWeightFromUser } from '../../utils/profile';
+  Dumbbell, // [MỚI] Icon cho phần chi tiết bài tập
+} from "lucide-react";
+import styles from "./ExercisesNew.module.css";
+import YouTubePlayer from "../../components/YouTubePlayer";
+import { SAMPLE_WORKOUT_PLANS, type WorkoutPlan } from "./workoutPlans";
+import {
+  generateAIExercisePlanFromAPI,
+  type AIExercisePlan,
+} from "../../services/aiExercisePlan";
+import type { FoodEntry } from "../../lib/types";
+import { foodDiaryApi, mapFoodLogToEntry } from "../../services/foodDiaryApi";
+import { useAuth } from "../../context/AuthContext";
+import {
+  determineGoalIntent,
+  getGoalWeightFromUser,
+} from "../../utils/profile";
 
-const TABS = ['All', 'Personalized', 'Saved', 'History'] as const;
-type TabType = typeof TABS[number];
+const TABS = ["All", "Personalized", "Saved", "History"] as const;
+type TabType = (typeof TABS)[number];
 
 interface ExerciseUserProfile {
   age: number;
-  gender: 'Nam' | 'Nữ' | string;
+  gender: "Nam" | "Nữ" | string;
   weight: number;
   height: number;
   goalWeight: number;
-  goal: 'lose' | 'maintain' | 'gain';
+  goal: "lose" | "maintain" | "gain";
   workoutPreference?: string[];
 }
 
 export default function ExercisesNew() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('Personalized');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>("Personalized");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
-  const [savedPlans, setSavedPlans] = useState<Set<string>>(new Set(['2', '5']));
+  const [savedPlans, setSavedPlans] = useState<Set<string>>(
+    new Set(["pro_fatloss_01"])
+  );
+
+  // Sử dụng dữ liệu giáo án từ workoutPlans.ts
   const [plans, setPlans] = useState<WorkoutPlan[]>(SAMPLE_WORKOUT_PLANS);
-  const [userProfile, setUserProfile] = useState<ExerciseUserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<ExerciseUserProfile | null>(
+    null
+  );
   const [dailyCalories, setDailyCalories] = useState(0);
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
 
   // AI State
   const [aiPlan, setAiPlan] = useState<AIExercisePlan>(() => {
-    // Tạo fallback ngay khi khởi tạo
     return {
       summary: "AI is preparing a personalized plan for you...",
-      intensity: 'moderate',
+      intensity: "moderate",
       exercises: [],
       totalBurnEstimate: "0 kcal",
       advice: "Please hold on for a moment.",
@@ -59,11 +70,11 @@ export default function ExercisesNew() {
   useEffect(() => {
     if (!user) return;
     const normalizedGender =
-      user.gender?.toLowerCase() === 'male'
-        ? 'Nam'
-        : user.gender?.toLowerCase() === 'female'
-          ? 'Nữ'
-          : user.gender || 'Nam';
+      user.gender?.toLowerCase() === "male"
+        ? "Nam"
+        : user.gender?.toLowerCase() === "female"
+        ? "Nữ"
+        : user.gender || "Nam";
     const weight = user.weight_kg || 0;
     const goalWeight = getGoalWeightFromUser(user);
     setUserProfile({
@@ -80,7 +91,9 @@ export default function ExercisesNew() {
   // Load today's food entries
   useEffect(() => {
     const getTodayVN = (): string => {
-      return new Date().toLocaleDateString('sv', { timeZone: 'Asia/Ho_Chi_Minh' });
+      return new Date().toLocaleDateString("sv", {
+        timeZone: "Asia/Ho_Chi_Minh",
+      });
     };
 
     const today = getTodayVN();
@@ -89,9 +102,8 @@ export default function ExercisesNew() {
       try {
         const logs = await foodDiaryApi.list({ start: today, end: today });
         setFoodEntries(logs.map(mapFoodLogToEntry));
-        console.log("Loaded food entries for", today, logs.length);
       } catch (err) {
-        console.error('Failed to load food diary for exercises', err);
+        console.error("Failed to load food diary for exercises", err);
       }
     };
 
@@ -105,7 +117,7 @@ export default function ExercisesNew() {
     }, 30_000);
 
     return () => clearInterval(interval);
-  }, []); // vẫn để [] vì không phụ thuộc state nào
+  }, []);
 
   useEffect(() => {
     const total = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
@@ -119,15 +131,19 @@ export default function ExercisesNew() {
     const { weight, height, age, gender, goalWeight } = userProfile;
     if (!weight || !height || !age || !gender) return null;
 
-    const bmi = weight / ((height / 100) ** 2);
-    const bmr = gender === 'Nam'
-      ? 88.362 + 13.397 * weight + 4.799 * height - 5.677 * age
-      : 447.593 + 9.247 * weight + 3.098 * height - 4.33 * age;
+    const bmi = weight / (height / 100) ** 2;
+    const bmr =
+      gender === "Nam"
+        ? 88.362 + 13.397 * weight + 4.799 * height - 5.677 * age
+        : 447.593 + 9.247 * weight + 3.098 * height - 4.33 * age;
 
     const tdee = Math.round(bmr * 1.55);
     const targetDeficit = goalWeight < weight ? 500 : 0;
     const recommendedBurn = Math.max(0, dailyCalories - tdee + targetDeficit);
-    const deficitPct = Math.min(100, Math.round((recommendedBurn / tdee) * 100));
+    const deficitPct = Math.min(
+      100,
+      Math.round((recommendedBurn / tdee) * 100)
+    );
 
     return {
       bmi: bmi.toFixed(1),
@@ -138,7 +154,7 @@ export default function ExercisesNew() {
   }, [userProfile, dailyCalories]);
 
   useEffect(() => {
-    if (activeTab !== 'Personalized' || !analysis || !userProfile) return;
+    if (activeTab !== "Personalized" || !analysis || !userProfile) return;
 
     const fetchAI = async () => {
       setIsLoadingAI(true);
@@ -162,13 +178,12 @@ export default function ExercisesNew() {
   const filteredPlans = useMemo(() => {
     let filtered = plans;
 
-    if (activeTab === 'Saved') {
-      filtered = filtered.filter(p => savedPlans.has(p.id));
-    }
-    else if (activeTab === 'Personalized') {
+    if (activeTab === "Saved") {
+      filtered = filtered.filter((p) => savedPlans.has(p.id));
+    } else if (activeTab === "Personalized") {
       if (aiPlan && aiPlan.exercises.length > 0) {
-        const matchedPlans = plans.filter(p => {
-          return aiPlan.exercises.some(ex => {
+        const matchedPlans = plans.filter((p) => {
+          return aiPlan.exercises.some((ex) => {
             const exName = ex.name.toLowerCase();
             const planTitle = p.title.toLowerCase();
             return planTitle.includes(exName) || exName.includes(planTitle);
@@ -177,15 +192,15 @@ export default function ExercisesNew() {
 
         filtered = matchedPlans.length > 0 ? matchedPlans : [plans[0]];
       } else {
-        filtered = plans.slice(0, 1);
+        filtered = plans;
       }
     }
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.title.toLowerCase().includes(q) ||
-        p.goal.toLowerCase().includes(q)
+      filtered = filtered.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) || p.goal.toLowerCase().includes(q)
       );
     }
 
@@ -193,21 +208,27 @@ export default function ExercisesNew() {
   }, [plans, activeTab, searchQuery, savedPlans, aiPlan]);
 
   const toggleSave = (id: string) => {
-    setSavedPlans(prev => {
+    setSavedPlans((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) newSet.delete(id);
       else newSet.add(id);
       return newSet;
     });
-    setPlans(prev => prev.map(p => p.id === id ? { ...p, isSaved: !p.isSaved } : p));
+    setPlans((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, isSaved: !p.isSaved } : p))
+    );
   };
 
   const getDifficultyColor = (diff: string) => {
     switch (diff) {
-      case 'Beginner': return 'bg-green-100 text-green-700';
-      case 'Intermediate': return 'bg-yellow-100 text-yellow-700';
-      case 'Advanced': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case "Beginner":
+        return "bg-green-100 text-green-700";
+      case "Intermediate":
+        return "bg-yellow-100 text-yellow-700";
+      case "Advanced":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
     }
   };
 
@@ -220,10 +241,12 @@ export default function ExercisesNew() {
 
       {/* Tabs */}
       <div className={styles.tabs}>
-        {TABS.map(tab => (
+        {TABS.map((tab) => (
           <button
             key={tab}
-            className={`${styles.tab} ${activeTab === tab ? styles.activeTab : ''}`}
+            className={`${styles.tab} ${
+              activeTab === tab ? styles.activeTab : ""
+            }`}
             onClick={() => setActiveTab(tab)}
           >
             {tab}
@@ -243,7 +266,7 @@ export default function ExercisesNew() {
       </div>
 
       {/* ==================== AI PERSONALIZED BANNER ==================== */}
-      {activeTab === 'Personalized' && analysis && (
+      {activeTab === "Personalized" && analysis && (
         <div className={styles.aiBanner}>
           {/* Header */}
           <div className={styles.aiHeader}>
@@ -253,14 +276,23 @@ export default function ExercisesNew() {
 
           {/* Stats */}
           <div className={styles.aiStats}>
-            <div className={styles.aiStat}><strong>{dailyCalories}</strong> kcal consumed</div>
-            <div className={styles.aiStat}><strong>{analysis.tdee}</strong> kcal TDEE</div>
+            <div className={styles.aiStat}>
+              <strong>{dailyCalories}</strong> kcal consumed
+            </div>
+            <div className={styles.aiStat}>
+              <strong>{analysis.tdee}</strong> kcal TDEE
+            </div>
             <div className={styles.aiStat}>
               <strong>{analysis.bmi}</strong> BMI
-              <span className={styles.bmiStatus} style={{
-                color: Number(analysis.bmi) > 25 ? '#dc2626' : '#10b981'
-              }}>
-                {Number(analysis.bmi) > 25 ? 'Need to lose weight' : 'Maintaining well'}
+              <span
+                className={styles.bmiStatus}
+                style={{
+                  color: Number(analysis.bmi) > 25 ? "#dc2626" : "#10b981",
+                }}
+              >
+                {Number(analysis.bmi) > 25
+                  ? "Need to lose weight"
+                  : "Maintaining well"}
               </span>
             </div>
           </div>
@@ -271,7 +303,10 @@ export default function ExercisesNew() {
               Burn <strong>{analysis.recommendedBurn} kcal</strong> to balance
             </div>
             <div className={styles.aiProgressBar}>
-              <div className={styles.aiProgressFill} style={{ width: `${analysis.deficitPct}%` }} />
+              <div
+                className={styles.aiProgressFill}
+                style={{ width: `${analysis.deficitPct}%` }}
+              />
             </div>
           </div>
 
@@ -283,38 +318,37 @@ export default function ExercisesNew() {
             </div>
           )}
 
-          {!isLoadingAI && aiPlan.exercises.length === 0 && (
-            <div className={styles.aiSuggestionCard}>
-              <p>AI is preparing a personalized plan for you...</p>
-              <p className="text-sm text-gray-500">You can choose a plan below while you wait.</p>
-            </div>
-          )}
-
-          {/* AI PLAN - HIỆN SAU KHI CÓ KẾT QUẢ */}
-          {!isLoadingAI && (
+          {/* AI PLAN */}
+          {!isLoadingAI && aiPlan && aiPlan.exercises.length > 0 && (
             <div className={styles.aiSuggestionCard}>
               <div className={styles.aiSuggestionInfo}>
                 <p className="font-medium text-emerald-700">{aiPlan.summary}</p>
                 <p className="text-sm mt-1">
-                  <strong>Intensity:</strong> {aiPlan.intensity} • <strong>Estimated Burn:</strong> {aiPlan.totalBurnEstimate}
+                  <strong>Intensity:</strong> {aiPlan.intensity} •{" "}
+                  <strong>Estimated Burn:</strong> {aiPlan.totalBurnEstimate}
                 </p>
                 <div className="mt-2 space-y-1">
                   {aiPlan.exercises.map((ex, i) => (
                     <div key={i} className="text-sm">
                       <strong>{ex.name}</strong> – {ex.duration}
                       <br />
-                      <span className="text-xs text-gray-500">→ {ex.reason}</span>
+                      <span className="text-xs text-gray-500">
+                        → {ex.reason}
+                      </span>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs italic text-emerald-600 mt-2">{aiPlan.advice}</p>
+                <p className="text-xs italic text-emerald-600 mt-2">
+                  {aiPlan.advice}
+                </p>
               </div>
               <button
                 onClick={() => {
-                  const matched = plans.find(p =>
-                    aiPlan.exercises.some(ex =>
-                      p.title.toLowerCase().includes(ex.name.toLowerCase()) ||
-                      ex.name.toLowerCase().includes(p.title.toLowerCase())
+                  const matched = plans.find((p) =>
+                    aiPlan.exercises.some(
+                      (ex) =>
+                        p.title.toLowerCase().includes(ex.name.toLowerCase()) ||
+                        ex.name.toLowerCase().includes(p.title.toLowerCase())
                     )
                   );
                   setSelectedPlan(matched || plans[0]);
@@ -328,20 +362,23 @@ export default function ExercisesNew() {
         </div>
       )}
 
-      {analysis && dailyCalories < 0.3 * analysis.tdee && (
-        <div className="bg-orange-100 text-orange-700 p-2 rounded mt-2 text-sm">
-          ⚠️ You have only consumed <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> of your TDEE.
-          You should eat more before exercising to avoid fatigue.
-        </div>
-      )}
-
       {/* ==================== PLAN GRID ==================== */}
       <div className={styles.grid}>
-        {filteredPlans.map(plan => (
-          <div key={plan.id} className={styles.card} onClick={() => setSelectedPlan(plan)}>
+        {filteredPlans.map((plan) => (
+          <div
+            key={plan.id}
+            className={styles.card}
+            onClick={() => setSelectedPlan(plan)}
+          >
             <div className={styles.thumbnailWrapper}>
-              <img src={plan.thumbnail} alt={plan.title} className={styles.thumbnail} />
-              <div className={styles.playOverlay}><Play className="w-8 h-8 text-white" /></div>
+              <img
+                src={plan.thumbnail}
+                alt={plan.title}
+                className={styles.thumbnail}
+              />
+              <div className={styles.playOverlay}>
+                <Play className="w-8 h-8 text-white" />
+              </div>
               {plan.progress !== undefined && (
                 <div className={styles.progressBadge}>
                   {plan.progress}/{plan.exercises.length} completed
@@ -351,17 +388,72 @@ export default function ExercisesNew() {
             <div className={styles.cardBody}>
               <h3 className={styles.cardTitle}>{plan.title}</h3>
               <div className={styles.cardMeta}>
-                <span className={styles.metaItem}><Clock className="w-4 h-4" /> {plan.duration} minutes</span>
-                <span className={styles.metaItem}><Flame className="w-4 h-4" /> {plan.calories} kcal</span>
-                <span className={`${styles.difficulty} ${getDifficultyColor(plan.difficulty)}`}>
+                <span className={styles.metaItem}>
+                  <Clock className="w-4 h-4" /> {plan.duration} min
+                </span>
+                <span className={styles.metaItem}>
+                  <Flame className="w-4 h-4" /> {plan.calories} kcal
+                </span>
+                <span
+                  className={`${styles.difficulty} ${getDifficultyColor(
+                    plan.difficulty
+                  )}`}
+                  style={{
+                    backgroundColor:
+                      plan.difficulty === "Beginner"
+                        ? "#dcfce7"
+                        : plan.difficulty === "Intermediate"
+                        ? "#fef9c3"
+                        : "#fee2e2",
+                    color:
+                      plan.difficulty === "Beginner"
+                        ? "#166534"
+                        : plan.difficulty === "Intermediate"
+                        ? "#854d0e"
+                        : "#991b1b",
+                  }}
+                >
                   {plan.difficulty}
                 </span>
               </div>
+
+              {/* [MỚI] Hiển thị Tags trên Card */}
+              {plan.tags && (
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {plan.tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               <div className={styles.cardActions}>
-                <button onClick={(e) => { e.stopPropagation(); toggleSave(plan.id); }} className={`${styles.saveBtn} ${plan.isSaved ? styles.saved : ''}`}>
-                  <Heart className={`w-5 h-5 ${plan.isSaved ? 'fill-red-500' : ''}`} />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSave(plan.id);
+                  }}
+                  className={`${styles.saveBtn} ${
+                    savedPlans.has(plan.id) ? styles.saved : ""
+                  }`}
+                >
+                  <Heart
+                    className={`w-5 h-5 ${
+                      savedPlans.has(plan.id) ? "fill-red-500" : ""
+                    }`}
+                  />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); setSelectedPlan(plan); }} className={styles.startBtnSmall}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPlan(plan);
+                  }}
+                  className={styles.startBtnSmall}
+                >
                   Start
                 </button>
               </div>
@@ -372,39 +464,253 @@ export default function ExercisesNew() {
 
       {/* ==================== PLAN DETAIL MODAL ==================== */}
       {selectedPlan && (
-        <div className={styles.modalOverlay} onClick={() => setSelectedPlan(null)}>
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <button className={styles.workoutCloseBtn} onClick={() => setSelectedPlan(null)}>
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setSelectedPlan(null)}
+        >
+          <div
+            className={styles.modal}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "800px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+          >
+            <button
+              className={styles.workoutCloseBtn}
+              onClick={() => setSelectedPlan(null)}
+            >
               <X className="w-6 h-6" />
             </button>
+
+            {/* Video Player */}
             {selectedPlan.videoUrl && (
               <div className={styles.videoWrapper}>
-                <YouTubePlayer videoId={selectedPlan.videoUrl.split('v=')[1]} autoplay={false} muted={true} />
+                <YouTubePlayer
+                  videoId={
+                    selectedPlan.videoUrl.includes("v=")
+                      ? selectedPlan.videoUrl.split("v=")[1]
+                      : ""
+                  }
+                  autoplay={false}
+                  muted={true}
+                />
               </div>
             )}
+
             <div className={styles.modalContent}>
-              <h2 className={styles.modalTitle}>{selectedPlan.title}</h2>
-              <div className={styles.modalMeta}>
-                <span>{selectedPlan.duration} phút</span>
-                <span>{selectedPlan.calories} kcal</span>
-                <span className={getDifficultyColor(selectedPlan.difficulty)}>{selectedPlan.difficulty}</span>
+              {/* Title & Meta */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "start",
+                }}
+              >
+                <h2
+                  className={styles.modalTitle}
+                  style={{ fontSize: "24px", marginBottom: "8px" }}
+                >
+                  {selectedPlan.title}
+                </h2>
               </div>
-              <h3 className={styles.sectionTitle}>Exercise List</h3>
+
+              <div
+                className={styles.modalMeta}
+                style={{ marginBottom: "16px" }}
+              >
+                <span>⏱️ {selectedPlan.duration} phút</span>
+                <span>🔥 {selectedPlan.calories} kcal</span>
+                <span
+                  className={getDifficultyColor(selectedPlan.difficulty)}
+                  style={{
+                    padding: "2px 10px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    backgroundColor: "#f3f4f6",
+                    color: "#374151",
+                  }}
+                >
+                  {selectedPlan.difficulty}
+                </span>
+              </div>
+
+              <p
+                style={{
+                  marginBottom: "24px",
+                  color: "#374151",
+                  lineHeight: "1.6",
+                }}
+              >
+                {selectedPlan.description}
+              </p>
+
+              <h3
+                className={styles.sectionTitle}
+                style={{
+                  borderBottom: "2px solid #E5E7EB",
+                  paddingBottom: "8px",
+                  marginBottom: "16px",
+                }}
+              >
+                Chi tiết buổi tập (Coach Breakdown)
+              </h3>
+
+              {/* === [MỚI] DANH SÁCH BÀI TẬP CHI TIẾT === */}
               <div className={styles.exerciseList}>
                 {selectedPlan.exercises.map((ex, i) => (
-                  <div key={i} className={styles.exerciseItem}>
+                  <div
+                    key={i}
+                    className={styles.exerciseItem}
+                    style={{
+                      alignItems: "flex-start",
+                      marginBottom: "12px",
+                      backgroundColor: "#fff",
+                      border: "1px solid #E5E7EB",
+                      padding: "16px",
+                      borderRadius: "12px",
+                    }}
+                  >
+                    {/* Số thứ tự */}
                     <div className={styles.exerciseHeader}>
-                      <span className={styles.exerciseIndex}>{i + 1}</span>
-                      <span className={styles.exerciseName}>{ex.name}</span>
+                      <span
+                        className={styles.exerciseIndex}
+                        style={{
+                          background: "#10B981",
+                          color: "white",
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {i + 1}
+                      </span>
                     </div>
-                    <div className={styles.exerciseDetails}>
-                      <span>{ex.sets} sets × {ex.reps}</span>
-                      <span>Rest: {ex.rest}</span>
+
+                    {/* Nội dung chi tiết */}
+                    <div style={{ flex: 1, marginLeft: "16px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                        }}
+                      >
+                        <span
+                          className={styles.exerciseName}
+                          style={{
+                            fontSize: "16px",
+                            fontWeight: "600",
+                            color: "#111827",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          {ex.name}
+                        </span>
+
+                        {/* Thông số Sets/Reps */}
+                        <div style={{ textAlign: "right", minWidth: "100px" }}>
+                          <div
+                            style={{
+                              fontWeight: "700",
+                              color: "#10B981",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "flex-end",
+                              gap: "4px",
+                            }}
+                          >
+                            <Dumbbell className="w-4 h-4" />
+                            {ex.sets} sets × {ex.reps}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#6B7280" }}>
+                            Nghỉ: {ex.rest}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* --- [MỚI] THÔNG SỐ CHUYÊN NGHIỆP: TEMPO & RPE --- */}
+                      {(ex.tempo || ex.rpe) && (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "12px",
+                            fontSize: "12px",
+                            fontFamily: "monospace",
+                            color: "#4B5563",
+                            marginTop: "8px",
+                            background: "#F3F4F6",
+                            padding: "6px 10px",
+                            borderRadius: "6px",
+                            width: "fit-content",
+                            border: "1px solid #E5E7EB",
+                          }}
+                        >
+                          {ex.tempo && (
+                            <span title="Nhịp độ: Xuống - Giữ - Lên - Nghỉ">
+                              ⏱ Tempo:{" "}
+                              <strong style={{ color: "#000" }}>
+                                {ex.tempo}
+                              </strong>
+                            </span>
+                          )}
+                          {ex.rpe && (
+                            <span title="Mức độ gắng sức (1-10)">
+                              🔥 RPE:{" "}
+                              <strong style={{ color: "#DC2626" }}>
+                                {ex.rpe}
+                              </strong>
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* --- [MỚI] COACH TIPS --- */}
+                      {ex.tips && (
+                        <div
+                          style={{
+                            marginTop: "10px",
+                            padding: "10px 12px",
+                            backgroundColor: "#ECFDF5", // Xanh mint nhạt
+                            borderLeft: "4px solid #10B981", // Viền xanh lá đậm
+                            borderRadius: "0 4px 4px 0",
+                            fontSize: "13px",
+                            color: "#064E3B",
+                            fontStyle: "italic",
+                            lineHeight: "1.5",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontWeight: "700",
+                              marginRight: "6px",
+                              fontStyle: "normal",
+                            }}
+                          >
+                            💡 Coach Tip:
+                          </span>
+                          {ex.tips}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-              <button className={styles.startWorkoutBtn}>Start Workout</button>
+
+              <button className={styles.startWorkoutBtn}>
+                Bắt đầu buổi tập
+              </button>
             </div>
           </div>
         </div>
