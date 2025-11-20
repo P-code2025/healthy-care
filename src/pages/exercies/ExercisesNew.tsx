@@ -46,10 +46,10 @@ export default function ExercisesNew() {
 
   // AI State
   const [aiPlan, setAiPlan] = useState<AIExercisePlan>(() => {
-    // Tạo fallback ngay khi khởi tạo
+    // Create fallback on initialization
     return {
       summary: "AI is preparing a personalized plan for you...",
-      intensity: 'medium',
+      intensity: 'moderate',
       exercises: [],
       totalBurnEstimate: "0 kcal",
       advice: "Please hold on for a moment.",
@@ -123,19 +123,19 @@ export default function ExercisesNew() {
     };
   }, [userProfile, dailyCalories]);
 
-  // GỌI CLOVA AI + CACHE 1 NGÀY
-  // GỌI CLOVA AI + CACHE THEO NGÀY + CALO + PROFILE
+  // CALL CLOVA AI + DAILY CACHE
+  // CALL CLOVA AI + CACHE BY DAY + CALORIES + PROFILE
   useEffect(() => {
-    if (activeTab !== 'Cá nhân hóa' || !analysis || !userProfile) return;
+    if (activeTab !== 'Personalized' || !analysis || !userProfile) return;
 
-    // TẠO CACHE KEY ĐÚNG NHƯ aiExercisePlan.ts
+    // CREATE CACHE KEY MATCHING aiExercisePlan.ts
     const profileKey = `${userProfile.age}_${userProfile.gender}_${userProfile.weight}_${userProfile.height}_${userProfile.goalWeight}`;
     const cacheKey = `aiPlan_daily_${new Date().toDateString()}_${dailyCalories}_${profileKey.substring(0, 50)}`;
 
     const cached = localStorage.getItem(cacheKey);
 
     if (cached) {
-      console.log("DÙNG CACHE AI DAILY:", cacheKey);
+      console.log("USING DAILY AI CACHE:", cacheKey);
       setAiPlan(JSON.parse(cached));
       return;
     }
@@ -155,16 +155,15 @@ export default function ExercisesNew() {
           goalWeight: userProfile.goalWeight,
           goal: userProfile.goalWeight < userProfile.weight ? 'lose' : 'maintain',
           foodEntries,
-          activityLevel: 'moderate',
           workoutPreference: userProfile.workoutPreference || []
         },
         availablePlanNames,
-        "Tạo kế hoạch tập luyện hôm nay",
-        'daily' // ← QUAN TRỌNG
+        "Generate today's workout plan",
+        'daily' // ← IMPORTANT
       );
 
       setAiPlan(result);
-      localStorage.setItem(cacheKey, JSON.stringify(result)); // ← LƯU ĐÚNG KEY
+      localStorage.setItem(cacheKey, JSON.stringify(result)); // ← SAVE WITH CORRECT KEY
 
       setIsLoadingAI(false);
     };
@@ -176,10 +175,10 @@ export default function ExercisesNew() {
   const filteredPlans = useMemo(() => {
     let filtered = plans;
 
-    if (activeTab === 'Đã lưu') {
+    if (activeTab === 'Saved') {
       filtered = filtered.filter(p => savedPlans.has(p.id));
     }
-    else if (activeTab === 'Cá nhân hóa') {
+    else if (activeTab === 'Personalized') {
       if (aiPlan && aiPlan.exercises.length > 0) {
         const matchedPlans = plans.filter(p => {
           return aiPlan.exercises.some(ex => {
@@ -189,7 +188,7 @@ export default function ExercisesNew() {
           });
         });
 
-        // → ƯU TIÊN: Nếu có ≥1 bài khớp → hiển thị tất cả
+        // → PRIORITY: If ≥1 workout matches → display all
         filtered = matchedPlans.length > 0 ? matchedPlans : [plans[0]];
       } else {
         filtered = plans.slice(0, 1);
@@ -294,7 +293,7 @@ export default function ExercisesNew() {
       </div>
 
       {/* ==================== AI PERSONALIZED BANNER ==================== */}
-      {activeTab === 'Cá nhân hóa' && analysis && (
+      {activeTab === 'Personalized' && analysis && (
         <div className={styles.aiBanner}>
           {/* Header */}
           <div className={styles.aiHeader}>
@@ -330,17 +329,17 @@ export default function ExercisesNew() {
           {isLoadingAI && (
             <div className="flex items-center gap-2 text-emerald-600 mt-3">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>AI đang tạo kế hoạch cá nhân hóa...</span>
+              <span>AI is generating a personalized plan...</span>
             </div>
           )}
 
-          {/* AI PLAN - HIỆN SAU KHI CÓ KẾT QUẢ */}
+          {/* AI PLAN - SHOW AFTER RESULTS */}
           {!isLoadingAI && (
             <div className={styles.aiSuggestionCard}>
               <div className={styles.aiSuggestionInfo}>
                 <p className="font-medium text-emerald-700">{aiPlan.summary}</p>
                 <p className="text-sm mt-1">
-                  <strong>Cường độ:</strong> {aiPlan.intensity} • <strong>Đốt ước tính:</strong> {aiPlan.totalBurnEstimate}
+                  <strong>Intensity:</strong> {aiPlan.intensity} • <strong>Estimated Burn:</strong> {aiPlan.totalBurnEstimate}
                 </p>
                 <div className="mt-2 space-y-1">
                   {aiPlan.exercises.map((ex, i) => (
@@ -365,7 +364,7 @@ export default function ExercisesNew() {
                 }}
                 className={styles.aiStartBtn}
               >
-                Bắt đầu ngay
+                Start Now
               </button>
             </div>
           )}
@@ -374,8 +373,8 @@ export default function ExercisesNew() {
 
       {analysis && dailyCalories < 0.3 * analysis.tdee && (
         <div className="bg-orange-100 text-orange-700 p-2 rounded mt-2 text-sm">
-          ⚠️ Bạn mới nạp <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> TDEE.
-          Nên ăn thêm trước khi tập để tránh mệt mỏi.
+          ⚠️ You have only consumed <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> of your TDEE.
+          You should eat more before exercising to avoid fatigue.
         </div>
       )}
 
@@ -388,14 +387,14 @@ export default function ExercisesNew() {
               <div className={styles.playOverlay}><Play className="w-8 h-8 text-white" /></div>
               {plan.progress !== undefined && (
                 <div className={styles.progressBadge}>
-                  {plan.progress}/{plan.exercises.length} hoàn thành
+                  {plan.progress}/{plan.exercises.length} completed
                 </div>
               )}
             </div>
             <div className={styles.cardBody}>
               <h3 className={styles.cardTitle}>{plan.title}</h3>
               <div className={styles.cardMeta}>
-                <span className={styles.metaItem}><Clock className="w-4 h-4" /> {plan.duration} phút</span>
+                <span className={styles.metaItem}><Clock className="w-4 h-4" /> {plan.duration} minutes</span>
                 <span className={styles.metaItem}><Flame className="w-4 h-4" /> {plan.calories} kcal</span>
                 <span className={`${styles.difficulty} ${getDifficultyColor(plan.difficulty)}`}>
                   {plan.difficulty}
@@ -406,7 +405,7 @@ export default function ExercisesNew() {
                   <Heart className={`w-5 h-5 ${plan.isSaved ? 'fill-red-500' : ''}`} />
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); setSelectedPlan(plan); }} className={styles.startBtnSmall}>
-                  Bắt đầu
+                  Start
                 </button>
               </div>
             </div>
@@ -429,11 +428,11 @@ export default function ExercisesNew() {
             <div className={styles.modalContent}>
               <h2 className={styles.modalTitle}>{selectedPlan.title}</h2>
               <div className={styles.modalMeta}>
-                <span>{selectedPlan.duration} phút</span>
+                <span>{selectedPlan.duration} minutes</span>
                 <span>{selectedPlan.calories} kcal</span>
                 <span className={getDifficultyColor(selectedPlan.difficulty)}>{selectedPlan.difficulty}</span>
               </div>
-              <h3 className={styles.sectionTitle}>Danh sách bài tập</h3>
+              <h3 className={styles.sectionTitle}>Exercise List</h3>
               <div className={styles.exerciseList}>
                 {selectedPlan.exercises.map((ex, i) => (
                   <div key={i} className={styles.exerciseItem}>

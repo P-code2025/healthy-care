@@ -13,7 +13,7 @@ import {
 } from "../../services/foodDiaryApi";
 import { analyzeFood } from "../../services/analyzeFood";
 import {
-  generateAIExercisePlan,
+  generateAIExercisePlanFromAPI,
   type AIExercisePlan,
 } from "../../services/aiExercisePlan";
 import { messages as i18nMessages } from "../../i18n/messages";
@@ -224,12 +224,9 @@ export default function Messages() {
           "Core & Abs Crusher",
         ];
 
-        const plan = await generateAIExercisePlan(
+        const plan = await generateAIExercisePlanFromAPI(
           getTodayCalories(),
-          userProfile,
-          planNames,
-          query,
-          "query"
+          "Create a personalized workout plan"
         );
 
         const planTitle = i18nMessages.aiChat.workoutPlanTitle.replace(
@@ -238,7 +235,7 @@ export default function Messages() {
         );
         const exerciseList = plan.exercises
           .map(
-            (exercise) =>
+            (exercise: { name: any; duration: any; reason: any; }) =>
               `â€¢ **${exercise.name}** - ${exercise.duration}\n _${exercise.reason}_`
           )
           .join("\n\n");
