@@ -4,6 +4,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useCallback,
   type ReactNode,
 } from "react";
 import { api } from "../services/api";
@@ -36,31 +37,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const unsubscribe = http.onUnauthorized(() => {
-      setUser(null);
+      if (isMounted) setUser(null);
     });
 
     const bootstrap = async () => {
       if (!http.getAccessToken()) {
-        setLoading(false);
+        if (isMounted) setLoading(false);
         return;
       }
       try {
         const profile = await api.getCurrentUser();
-        setUser(profile);
+        if (isMounted) setUser(profile);
       } catch (error) {
         http.clearTokens();
-        setUser(null);
+        if (isMounted) setUser(null);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     bootstrap();
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     const data = await http.request("/api/auth/login", {
       method: "POST",
       json: { email, password },
@@ -68,9 +73,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     const profile = mapAuthResponse(data);
     setUser(profile);
-  };
+  }, []);
 
-  const register = async (payload: Record<string, any>) => {
+  const register = useCallback(async (payload: Record<string, any>) => {
     const data = await http.request("/api/auth/register", {
       method: "POST",
       json: payload,
@@ -78,9 +83,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     const profile = mapAuthResponse(data);
     setUser(profile);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await http.request("/api/auth/logout", { method: "POST" });
     } catch {
@@ -88,9 +93,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       http.clearTokens();
       setUser(null);
     }
-  };
+  }, []);
 
-  const refreshUser = async (): Promise<User | null> => {
+  const refreshUser = useCallback(async (): Promise<User | null> => {
     try {
       const profile = await api.getCurrentUser();
       setUser(profile);
@@ -99,7 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to refresh user:", error);
       return null;
     }
-  };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -112,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout,
       refreshUser,
     }),
-    [user, loading]
+    [user, loading, login, register, logout, refreshUser]
   );
 
   return (

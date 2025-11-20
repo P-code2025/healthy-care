@@ -1,9 +1,13 @@
 /* eslint-disable no-console */
 const { PrismaClient, CalendarCategory, CalendarModule, SuggestionType } = require("@prisma/client");
+const bcrypt = require("bcrypt");
 const path = require("node:path");
 const fs = require("node:fs");
 
 const prisma = new PrismaClient();
+
+// Password for all test users (will be hashed)
+const TEST_PASSWORD = "password123";
 
 const calendarSeeds = [
   {
@@ -44,10 +48,15 @@ async function seed() {
 
   console.log("Resetting database…");
   await prisma.aiSuggestion.deleteMany();
+  await prisma.aiFeedback.deleteMany();
   await prisma.workoutLog.deleteMany();
   await prisma.foodLog.deleteMany();
   await prisma.calendarEvent.deleteMany();
   await prisma.user.deleteMany();
+
+  // Hash password once for all users
+  console.log(`Hashing password for test users (password: ${TEST_PASSWORD})...`);
+  const passwordHash = await bcrypt.hash(TEST_PASSWORD, 10);
 
   console.log("Inserting users…");
   const userIdMap = new Map();
@@ -55,7 +64,8 @@ async function seed() {
     const created = await prisma.user.create({
       data: {
         email: user.email,
-        passwordHash: user.password_hash,
+        passwordHash, // Use real hashed password
+        name: user.email.split('@')[0], // Extract name from email
         age: user.age,
         gender: user.gender,
         heightCm: user.height_cm,
@@ -66,6 +76,7 @@ async function seed() {
       },
     });
     userIdMap.set(user.user_id, created.id);
+    console.log(`  ✓ Created user: ${created.email} (password: ${TEST_PASSWORD})`);
   }
 
   console.log("Inserting food logs…");
@@ -89,6 +100,8 @@ async function seed() {
           log.sugar !== undefined ? Number(log.sugar) : null,
         status: log.status || null,
         thoughts: log.thoughts || null,
+        imageUrl: log.image_url || null,
+        imageAttribution: log.image_attribution || null,
       },
     });
   }

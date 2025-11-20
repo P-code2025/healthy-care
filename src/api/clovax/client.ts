@@ -45,14 +45,16 @@ export class ClovaXClient {
     const requestId = uuidv4();
     const url = `/api/clova/v3/chat-completions/${this.appId}`;
 
-    console.log("URL:", url);
-    console.log("Headers:", {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
-      'X-NCP-CLOVASTUDIO-REQUEST-ID': requestId
-    });
-    console.log("Body length:", JSON.stringify(request).length);
-    console.log("Body (first 500 chars):", JSON.stringify(request).slice(0, 500));
+    if (import.meta.env.DEV) {
+      console.log("URL:", url);
+      console.log("Headers:", {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`,
+        'X-NCP-CLOVASTUDIO-REQUEST-ID': requestId
+      });
+      console.log("Body length:", JSON.stringify(request).length);
+      console.log("Body (first 500 chars):", JSON.stringify(request).slice(0, 500));
+    }
 
     const response = await fetch(url, {
       method: 'POST',

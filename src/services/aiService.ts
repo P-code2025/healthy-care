@@ -4,13 +4,25 @@
 import type { FoodEntry } from "../lib/types";
 import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from "./foodDiaryApi";
 
-const CLOVA_API_KEY = 'nv-4d279739705c404bb355aaefef76c60cvHMd';
+// Load API key from environment variable
+const CLOVA_API_KEY = import.meta.env.VITE_CLOVA_API_KEY;
 const CLOVA_API_URL = 'https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005';
 
+// Validate API key is configured
+if (!CLOVA_API_KEY && !import.meta.env.DEV) {
+  console.warn('⚠️ CLOVA_API_KEY is not configured. AI food recognition will use demo mode.');
+}
+
 // Configuration
-const DEMO_MODE = true; // CLOVA API có vấn đề với format, tạm dùng mock data
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'; // Use env variable to control demo mode
 const USE_PROXY = true;  // Must be true when calling from browser
-const PROXY_URL = 'http://localhost:3001'; // Backend proxy server
+const PROXY_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'; // Backend proxy server
+
+// Constants
+const MAX_IMAGE_SIZE_MB = 5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const AI_SIMULATION_MIN_DELAY = 1500;
+const AI_SIMULATION_MAX_DELAY = 2500;
 
 const getMealTypeForDate = (date: Date): FoodEntry["mealType"] => {
   const hour = date.getHours();
@@ -81,21 +93,24 @@ export const recognizeFoodFromImage = async (
       throw new Error('File phải là ảnh (JPG, PNG, etc.)');
     }
 
-    // Max 5MB
-    if (imageFile.size > 5 * 1024 * 1024) {
-      throw new Error('Kích thước ảnh không được vượt quá 5MB');
+    // Validate file size
+    if (imageFile.size > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error(`Kích thước ảnh không được vượt quá ${MAX_IMAGE_SIZE_MB}MB`);
     }
 
     // DEMO MODE: Return mock data for testing
     if (DEMO_MODE) {
-      console.log('🤖 [DEMO MODE] Simulating AI food recognition...');
-      
+      if (import.meta.env.DEV) {
+        console.log('🤖 [DEMO MODE] Simulating AI food recognition...');
+      }
+
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
-      
+      const delay = AI_SIMULATION_MIN_DELAY + Math.random() * (AI_SIMULATION_MAX_DELAY - AI_SIMULATION_MIN_DELAY);
+      await new Promise(resolve => setTimeout(resolve, delay));
+
       // Random food from mock database
       const randomFood = MOCK_FOODS[Math.floor(Math.random() * MOCK_FOODS.length)];
-      
+
       return {
         ...randomFood,
         portionSize: '100g',
@@ -107,8 +122,10 @@ export const recognizeFoodFromImage = async (
 
     // Use proxy server to avoid CORS issues
     if (USE_PROXY) {
-      console.log('🔄 Calling backend proxy for AI recognition...');
-      
+      if (import.meta.env.DEV) {
+        console.log('🔄 Calling backend proxy for AI recognition...');
+      }
+
       const response = await fetch(`${PROXY_URL}/api/recognize-food`, {
         method: 'POST',
         headers: {
@@ -125,8 +142,10 @@ export const recognizeFoodFromImage = async (
       }
 
       const result = await response.json();
-      console.log('✅ Food recognized:', result.data.foodName);
-      
+      if (import.meta.env.DEV) {
+        console.log('✅ Food recognized:', result.data.foodName);
+      }
+
       return result.data;
     }
 
@@ -198,10 +217,10 @@ Example:
     }
 
     const data = await response.json();
-    
+
     // Parse AI response
     const content = data.result?.message?.content || '';
-    
+
     // Try to extract JSON from response
     let nutritionData;
     try {
@@ -229,7 +248,7 @@ Example:
     };
   } catch (error: any) {
     console.error('Food recognition error:', error);
-    
+
     if (error.status) {
       // API error
       const apiError = error as APIError;
@@ -242,7 +261,7 @@ Example:
       }
       throw new Error(apiError.message);
     }
-    
+
     // Other errors
     throw error;
   }
@@ -256,7 +275,7 @@ export const calculateNutrition = (
   grams: number
 ): FoodRecognitionResult => {
   const multiplier = grams / 100; // Base is per 100g
-  
+
   return {
     ...baseNutrition,
     calories: Math.round(baseNutrition.calories * multiplier),
@@ -272,7 +291,7 @@ export const calculateNutrition = (
  */
 export const formatNutritionInfo = (nutrition: FoodRecognitionResult): string => {
   const confidencePercent = Math.round(nutrition.confidence * 100);
-  
+
   return `🍽️ **${nutrition.foodName}**
 
 📊 Thông tin dinh dưỡng (${nutrition.portionSize}):
@@ -305,7 +324,9 @@ export const saveFoodLog = async (
       fat: Math.round(nutrition.fats),
       sugar: 0,
       status: "Satisfied",
-      thoughts: imageUrl ? `Captured via AI (${imageUrl})` : "",
+      thoughts: imageUrl ? "Captured via AI vision" : "",
+      imageUrl: imageUrl || undefined,
+      imageAttribution: imageUrl ? "AI capture" : undefined,
     };
 
     await foodDiaryApi.create(entry);

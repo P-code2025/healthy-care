@@ -15,6 +15,8 @@ export interface FoodLogDto {
   amount?: string | null;
   status?: FoodEntry["status"] | null;
   thoughts?: string | null;
+  image_url?: string | null;
+  image_attribution?: string | null;
 }
 
 export interface FoodLogPayload {
@@ -29,13 +31,20 @@ export interface FoodLogPayload {
   sugar?: number;
   status?: FoodEntry["status"];
   thoughts?: string;
+  imageUrl?: string;
+  imageAttribution?: string;
 }
 
 export type FoodEntryInput = Omit<FoodEntry, "id">;
 
 const toIsoDateTime = (entry: FoodEntryInput) => {
   if (entry.date && entry.time) {
-    return new Date(`${entry.date}T${entry.time}`).toISOString();
+    // Parse date and time components explicitly to avoid timezone issues
+    const [year, month, day] = entry.date.split('-').map(Number);
+    const [hour, minute] = entry.time.split(':').map(Number);
+    // Create date in local timezone
+    const localDate = new Date(year, month - 1, day, hour, minute);
+    return localDate.toISOString();
   }
   return new Date().toISOString();
 };
@@ -51,12 +60,14 @@ export const mapFoodLogToEntry = (log: FoodLogDto): FoodEntry => ({
   foodName: log.food_name,
   amount: log.amount || "",
   calories: log.calories,
-  protein: Math.round(log.protein_g),
-  carbs: Math.round(log.carbs_g),
-  fat: Math.round(log.fat_g),
-  sugar: Math.round(log.sugar || 0),
+  protein: parseFloat(log.protein_g.toFixed(1)),
+  carbs: parseFloat(log.carbs_g.toFixed(1)),
+  fat: parseFloat(log.fat_g.toFixed(1)),
+  sugar: parseFloat((log.sugar || 0).toFixed(1)),
   status: (log.status as FoodEntry["status"]) || "Satisfied",
   thoughts: log.thoughts || "",
+  imageUrl: log.image_url || undefined,
+  imageAttribution: log.image_attribution || undefined,
 });
 
 export const foodDiaryApi = {
@@ -80,6 +91,8 @@ export const foodDiaryApi = {
       sugar: entry.sugar,
       status: entry.status,
       thoughts: entry.thoughts,
+      imageUrl: entry.imageUrl,
+      imageAttribution: entry.imageAttribution,
     };
     return http.request<FoodLogDto>("/api/food-log", {
       method: "POST",

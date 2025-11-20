@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import styles from './GroceryListNew.module.css';
+import type { GroceryItem as GeneratedGroceryItem } from '../../services/groceryListGenerator';
 
 interface GroceryItem {
   id: string;
@@ -143,29 +145,62 @@ export default function GroceryListNew() {
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Newest');
+  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>(GROCERY_ITEMS);
+
+  // Check for generated grocery list from Meal Plan
+  useEffect(() => {
+    const generatedList = localStorage.getItem('generatedGroceryList');
+    const source = localStorage.getItem('groceryListSource');
+
+    if (generatedList && source === 'meal-plan') {
+      try {
+        const items: GeneratedGroceryItem[] = JSON.parse(generatedList);
+
+        // Merge with existing items (avoid duplicates by name)
+        const existingNames = new Set(GROCERY_ITEMS.map(item => item.name.toLowerCase()));
+        const newItems: GroceryItem[] = items
+          .filter(item => !existingNames.has(item.name.toLowerCase()))
+          .map((item, index) => ({
+            ...item,
+            id: `gen-${Date.now()}-${index}`
+          }));
+
+        if (newItems.length > 0) {
+          setGroceryItems([...newItems, ...GROCERY_ITEMS]);
+          toast.success(`✅ Added ${newItems.length} new items from your meal plan!`);
+        }
+      } catch (error) {
+        console.error('Failed to load generated grocery list:', error);
+      } finally {
+        // Clear the flags
+        localStorage.removeItem('generatedGroceryList');
+        localStorage.removeItem('groceryListSource');
+      }
+    }
+  }, []);
 
   // Calculate totals
-  const totalItems = GROCERY_ITEMS.length;
-  const totalSpent = GROCERY_ITEMS.reduce((sum, item) => sum + item.cost, 0);
-  const totalCalories = GROCERY_ITEMS.reduce((sum, item) => sum + item.calories, 0);
+  const totalItems = groceryItems.length;
+  const totalSpent = groceryItems.reduce((sum, item) => sum + item.cost, 0);
+  const totalCalories = groceryItems.reduce((sum, item) => sum + item.calories, 0);
 
   // Calculate category stats
   const categoryStats = CATEGORIES.slice(1).map(category => {
-    const items = GROCERY_ITEMS.filter(item => item.category === category);
+    const items = groceryItems.filter(item => item.category === category);
     const count = items.length;
-    const percentage = Math.round((count / totalItems) * 100);
+    const percentage = totalItems > 0 ? Math.round((count / totalItems) * 100) : 0;
     return { category, count, percentage };
   });
 
   // Expense breakdown for chart
   const expenseData = categoryStats.map(stat => ({
     category: stat.category,
-    amount: GROCERY_ITEMS
+    amount: groceryItems
       .filter(item => item.category === stat.category)
       .reduce((sum, item) => sum + item.cost, 0)
   }));
 
-  const filteredItems = GROCERY_ITEMS.filter(item => {
+  const filteredItems = groceryItems.filter(item => {
     const matchesCategory = selectedCategory === 'All Categories' || item.category === selectedCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -237,7 +272,7 @@ export default function GroceryListNew() {
               const height = Math.random() * 80 + 20;
               return (
                 <div key={month} className={styles.barWrapper}>
-                  <div 
+                  <div
                     className={styles.bar}
                     style={{ height: `${height}%` }}
                   >
@@ -262,10 +297,10 @@ export default function GroceryListNew() {
           </div>
           <div className={styles.donutChart}>
             <svg viewBox="0 0 200 200" className={styles.donutSvg}>
-              <circle cx="100" cy="100" r="70" fill="none" stroke="#FFE5B4" strokeWidth="40"/>
-              <circle cx="100" cy="100" r="70" fill="none" stroke="#FFB84D" strokeWidth="40" strokeDasharray="100 340" strokeDashoffset="0"/>
-              <circle cx="100" cy="100" r="70" fill="none" stroke="#D4F4DD" strokeWidth="40" strokeDasharray="80 360" strokeDashoffset="-100"/>
-              <circle cx="100" cy="100" r="70" fill="none" stroke="#E0F2FE" strokeWidth="40" strokeDasharray="60 380" strokeDashoffset="-180"/>
+              <circle cx="100" cy="100" r="70" fill="none" stroke="#FFE5B4" strokeWidth="40" />
+              <circle cx="100" cy="100" r="70" fill="none" stroke="#FFB84D" strokeWidth="40" strokeDasharray="100 340" strokeDashoffset="0" />
+              <circle cx="100" cy="100" r="70" fill="none" stroke="#D4F4DD" strokeWidth="40" strokeDasharray="80 360" strokeDashoffset="-100" />
+              <circle cx="100" cy="100" r="70" fill="none" stroke="#E0F2FE" strokeWidth="40" strokeDasharray="60 380" strokeDashoffset="-180" />
               <text x="100" y="95" textAnchor="middle" fontSize="32" fontWeight="700" fill="#1a1a1a">$157</text>
               <text x="100" y="115" textAnchor="middle" fontSize="12" fill="#6B7280">Total</text>
             </svg>
@@ -318,7 +353,7 @@ export default function GroceryListNew() {
           <div className={styles.listControls}>
             <div className={styles.searchBox}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM18 18l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM18 18l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
               <input
                 type="text"
@@ -329,7 +364,7 @@ export default function GroceryListNew() {
             </div>
             <button className={styles.filterBtn}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
               Filter
             </button>
@@ -350,7 +385,7 @@ export default function GroceryListNew() {
               {category}
             </button>
           ))}
-          <select 
+          <select
             className={styles.sortSelect}
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
@@ -388,7 +423,7 @@ export default function GroceryListNew() {
                     </div>
                   </td>
                   <td>
-                    <span 
+                    <span
                       className={styles.categoryBadge}
                       style={{ backgroundColor: getCategoryBadgeColor(item.category) }}
                     >

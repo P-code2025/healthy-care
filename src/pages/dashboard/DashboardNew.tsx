@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import styles from './DashboardNew.module.css';
 import { api } from '../../services/api';
 import type { DailyStatistics } from '../../services/api';
+import ProgressChart from './ProgressChart';
+import GoalTracker from './GoalTracker';
+import StreakBadge from './StreakBadge';
+import TrendIndicator from './TrendIndicator';
 
 interface MealItem {
   id: string;
@@ -31,6 +35,16 @@ interface Activity {
   user: string;
   type: 'achievement' | 'update' | 'meal';
 }
+
+const MOCK_WEEKLY_DATA = [
+  { date: 'Mon', calories: 2100, steps: 8000, workoutMinutes: 45 },
+  { date: 'Tue', calories: 1950, steps: 10500, workoutMinutes: 60 },
+  { date: 'Wed', calories: 2200, steps: 7500, workoutMinutes: 30 },
+  { date: 'Thu', calories: 1800, steps: 9000, workoutMinutes: 50 },
+  { date: 'Fri', calories: 2400, steps: 6000, workoutMinutes: 20 },
+  { date: 'Sat', calories: 2000, steps: 12000, workoutMinutes: 90 },
+  { date: 'Sun', calories: 1900, steps: 4000, workoutMinutes: 0 },
+];
 
 const TODAYS_MEALS: MealItem[] = [
   {
@@ -178,7 +192,9 @@ export default function DashboardNew() {
           api.getDailyStatistics(dateStr),
           api.getCurrentUser()
         ]);
-        console.log('📊 Dashboard data:', { stats, profile });
+        if (import.meta.env.DEV) {
+          console.log('📊 Dashboard data:', { stats, profile });
+        }
         setDailyStats(stats);
         setUserProfile(profile);
       } catch (error) {
@@ -196,7 +212,7 @@ export default function DashboardNew() {
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
+
     const days = [];
     for (let i = 0; i < firstDay; i++) {
       days.push(null);
@@ -210,9 +226,50 @@ export default function DashboardNew() {
   const days = getDaysInMonth();
   const today = currentDate.getDate();
 
+  const goals = [
+    {
+      id: '1',
+      label: 'Calories',
+      current: dailyStats?.total_calories || 0,
+      target: 2000,
+      unit: 'kcal',
+      icon: '🔥',
+      color: '#FFB84D',
+      bgColor: '#FFF5E5'
+    },
+    {
+      id: '2',
+      label: 'Steps',
+      current: 8050, // Mock data for now
+      target: 10000,
+      unit: 'steps',
+      icon: '👟',
+      color: '#A7E9AF',
+      bgColor: '#E8F5E9'
+    },
+    {
+      id: '3',
+      label: 'Exercise',
+      current: dailyStats?.exercise_duration || 0,
+      target: 60,
+      unit: 'min',
+      icon: '⏱️',
+      color: '#BAE6FD',
+      bgColor: '#E3F2FD'
+    }
+  ];
+
   return (
     <div className={styles.container}>
       <div className={styles.mainContent}>
+
+        <div className={styles.headerRow}>
+          <div>
+            <h1 className={styles.pageTitle}>Dashboard</h1>
+            <p className={styles.pageSubtitle}>Welcome back, {userProfile?.name || 'User'}!</p>
+          </div>
+          <StreakBadge streak={5} />
+        </div>
 
         {/* Stats Overview */}
         <div className={styles.statsGrid}>
@@ -225,6 +282,7 @@ export default function DashboardNew() {
               <div className={styles.statValue}>
                 {loading ? '...' : userProfile?.weight_kg ? `${userProfile.weight_kg} kg` : 'N/A'}
               </div>
+              <TrendIndicator current={userProfile?.weight_kg} previous={userProfile?.weight_kg + 1.5} inverse />
             </div>
             <div className={styles.miniChart}>
               {[40, 60, 30, 80, 50, 70, 60].map((height, i) => (
@@ -242,6 +300,7 @@ export default function DashboardNew() {
               <div className={styles.statValue}>
                 {loading ? '...' : dailyStats ? `${dailyStats.workouts_count} workouts` : '0 workouts'}
               </div>
+              <TrendIndicator current={dailyStats?.workouts_count || 0} previous={2} />
             </div>
             <div className={styles.miniChart}>
               {[50, 70, 40, 90, 60, 80, 70].map((height, i) => (
@@ -259,6 +318,7 @@ export default function DashboardNew() {
               <div className={styles.statValue}>
                 {loading ? '...' : dailyStats ? `${dailyStats.exercise_duration} min` : '0 min'}
               </div>
+              <TrendIndicator current={dailyStats?.exercise_duration || 0} previous={45} />
             </div>
             <div className={styles.miniChart}>
               {[60, 50, 70, 80, 60, 90, 75].map((height, i) => (
@@ -278,9 +338,9 @@ export default function DashboardNew() {
               </div>
             </div>
             <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{ 
-                width: dailyStats ? `${Math.min((dailyStats.meals_count / 4) * 100, 100)}%` : '0%', 
-                background: '#FFB84D' 
+              <div className={styles.progressFill} style={{
+                width: dailyStats ? `${Math.min((dailyStats.meals_count / 4) * 100, 100)}%` : '0%',
+                background: '#FFB84D'
               }}></div>
             </div>
             <div className={styles.progressLabel}>{dailyStats?.meals_count || 0} / 4 meals</div>
@@ -289,113 +349,11 @@ export default function DashboardNew() {
 
         {/* Charts Row */}
         <div className={styles.chartsRow}>
-          {/* Weight Data */}
-          <div className={styles.chartCard}>
-            <div className={styles.cardHeader}>
-              <h3>Weight Data</h3>
-              <button className={styles.menuBtn}>⋯</button>
-            </div>
-            <div className={styles.donutChartContainer}>
-              <svg viewBox="0 0 200 200" className={styles.donutChart}>
-                <circle cx="100" cy="100" r="70" fill="none" stroke="#FFE5B4" strokeWidth="28"/>
-                <circle cx="100" cy="100" r="70" fill="none" stroke="#FFB84D" strokeWidth="28" 
-                  strokeDasharray="308 440" strokeDashoffset="0" transform="rotate(-90 100 100)"/>
-                <text x="100" y="95" textAnchor="middle" fontSize="36" fontWeight="700" fill="#1a1a1a">
-                  {loading ? '...' : userProfile?.weight_kg || 'N/A'}
-                </text>
-                <text x="100" y="115" textAnchor="middle" fontSize="14" fill="#6B7280">kg</text>
-              </svg>
-              <div className={styles.donutLegend}>
-                <div className={styles.legendItem}>
-                  <span className={styles.legendDot} style={{ background: '#FFB84D' }}></span>
-                  <span>Progress</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <span className={styles.legendDot} style={{ background: '#FFE5B4' }}></span>
-                  <span>85 kg left</span>
-                </div>
-              </div>
-            </div>
-            <p className={styles.chartNote}>
-              Progress is progress, no matter how slow. Keep going, you're getting closer to your goal every day.
-            </p>
+          <div className={styles.chartSection}>
+            <ProgressChart data={MOCK_WEEKLY_DATA} />
           </div>
-
-          {/* Calories Intake */}
-          <div className={styles.chartCard}>
-            <div className={styles.cardHeader}>
-              <h3>Calories Intake</h3>
-              <button className={styles.menuBtn}>⋯</button>
-            </div>
-            <div className={styles.caloriesChart}>
-              <div className={styles.caloriesDonut}>
-                <svg viewBox="0 0 200 200">
-                  <circle cx="100" cy="100" r="80" fill="none" stroke="#F3F4F6" strokeWidth="24"/>
-                  <circle cx="100" cy="100" r="80" fill="none" stroke="#FFB84D" strokeWidth="24"
-                    strokeDasharray="377 503" strokeDashoffset="0" transform="rotate(-90 100 100)"/>
-                  <text x="100" y="95" textAnchor="middle" fontSize="32" fontWeight="700" fill="#1a1a1a">
-                    {loading ? '...' : dailyStats?.total_calories || 0}
-                  </text>
-                  <text x="100" y="115" textAnchor="middle" fontSize="14" fill="#6B7280">kcal</text>
-                </svg>
-              </div>
-              <div className={styles.caloriesBreakdown}>
-                <div className={styles.breakdownItem}>
-                  <div className={styles.breakdownLabel}>
-                    <span className={styles.breakdownDot} style={{ background: '#FFB84D' }}></span>
-                    <span>Carbohydrates</span>
-                  </div>
-                  <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ 
-                      width: dailyStats ? `${Math.min((dailyStats.total_carbs / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100, 100)}%` : '0%', 
-                      background: '#FFB84D' 
-                    }}></div>
-                  </div>
-                  <span className={styles.breakdownValue}>{dailyStats?.total_carbs.toFixed(1) || 0}g</span>
-                  <span className={styles.breakdownPercent}>
-                    {dailyStats && (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat) > 0
-                      ? `${Math.round((dailyStats.total_carbs / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100)}%`
-                      : '0%'}
-                  </span>
-                </div>
-                <div className={styles.breakdownItem}>
-                  <div className={styles.breakdownLabel}>
-                    <span className={styles.breakdownDot} style={{ background: '#A7E9AF' }}></span>
-                    <span>Proteins</span>
-                  </div>
-                  <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ 
-                      width: dailyStats ? `${Math.min((dailyStats.total_protein / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100, 100)}%` : '0%', 
-                      background: '#A7E9AF' 
-                    }}></div>
-                  </div>
-                  <span className={styles.breakdownValue}>{dailyStats?.total_protein.toFixed(1) || 0}g</span>
-                  <span className={styles.breakdownPercent}>
-                    {dailyStats && (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat) > 0
-                      ? `${Math.round((dailyStats.total_protein / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100)}%`
-                      : '0%'}
-                  </span>
-                </div>
-                <div className={styles.breakdownItem}>
-                  <div className={styles.breakdownLabel}>
-                    <span className={styles.breakdownDot} style={{ background: '#FFD89B' }}></span>
-                    <span>Fats</span>
-                  </div>
-                  <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ 
-                      width: dailyStats ? `${Math.min((dailyStats.total_fat / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100, 100)}%` : '0%', 
-                      background: '#FFD89B' 
-                    }}></div>
-                  </div>
-                  <span className={styles.breakdownValue}>{dailyStats?.total_fat.toFixed(1) || 0}g</span>
-                  <span className={styles.breakdownPercent}>
-                    {dailyStats && (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat) > 0
-                      ? `${Math.round((dailyStats.total_fat / (dailyStats.total_carbs + dailyStats.total_protein + dailyStats.total_fat)) * 100)}%`
-                      : '0%'}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className={styles.goalsSection}>
+            <GoalTracker goals={goals} />
           </div>
         </div>
 
@@ -508,8 +466,8 @@ export default function DashboardNew() {
             </div>
             <div className={styles.calendarDays}>
               {days.map((day, i) => (
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   className={`${styles.calendarDay} ${day === today ? styles.today : ''} ${day === 5 ? styles.selected : ''}`}
                 >
                   {day || ''}
@@ -531,8 +489,8 @@ export default function DashboardNew() {
                 <div className={styles.mealInfo}>
                   <span className={styles.mealBadge} style={{
                     background: meal.status === 'Breakfast' ? '#D4F4DD' :
-                              meal.status === 'Lunch' ? '#FFE5B4' :
-                              meal.status === 'Snack' ? '#FFD4A3' : '#BAE6FD'
+                      meal.status === 'Lunch' ? '#FFE5B4' :
+                        meal.status === 'Snack' ? '#FFD4A3' : '#BAE6FD'
                   }}>
                     {meal.status}
                   </span>
@@ -559,10 +517,10 @@ export default function DashboardNew() {
               <div key={activity.id} className={styles.activityItem}>
                 <div className={styles.activityIcon} style={{
                   background: activity.type === 'achievement' ? '#D4F4DD' :
-                            activity.type === 'meal' ? '#FFE5B4' : '#E0F2FE'
+                    activity.type === 'meal' ? '#FFE5B4' : '#E0F2FE'
                 }}>
                   {activity.type === 'achievement' ? '✓' :
-                   activity.type === 'meal' ? '🍽️' : '👤'}
+                    activity.type === 'meal' ? '🍽️' : '👤'}
                 </div>
                 <div className={styles.activityContent}>
                   <div className={styles.activityTime}>{activity.time}</div>

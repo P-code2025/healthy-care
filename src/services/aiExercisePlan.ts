@@ -63,9 +63,9 @@ const CONTEXT_CACHE_TTL = 1000 * 60 * 5;
 
 let aiContextCache:
   | {
-      data: AiContextPayload | null;
-      expiresAt: number;
-    }
+    data: AiContextPayload | null;
+    expiresAt: number;
+  }
   | null = null;
 
 const INTENSITY_ALIASES: Record<string, AIExercisePlan["intensity"]> = {
@@ -91,8 +91,8 @@ const normalizeIntensity = (value: unknown): AIExercisePlan["intensity"] => {
     (key.includes("light")
       ? "light"
       : key.includes("intense") || key.includes("hard")
-      ? "intense"
-      : "moderate")
+        ? "intense"
+        : "moderate")
   );
 };
 
@@ -129,8 +129,7 @@ const describeRecentMealContext = (
     .slice(0, 3)
     .map(
       (meal) =>
-        `${meal.mealType}: ${meal.foodName || "Meal"} (${
-          meal.calories ?? "unknown"
+        `${meal.mealType}: ${meal.foodName || "Meal"} (${meal.calories ?? "unknown"
         } kcal)`
     )
     .join(" | ");
@@ -146,9 +145,8 @@ const summarizeFeedback = (
   const avg =
     entries.reduce((sum, entry) => sum + (entry.rating ?? 0), 0) / count;
   const latestComment = entries.find((entry) => entry.comment)?.comment;
-  return `${avg.toFixed(1)}/5 avg from last ${count} ratings${
-    latestComment ? `; latest note: "${latestComment}"` : ""
-  }`;
+  return `${avg.toFixed(1)}/5 avg from last ${count} ratings${latestComment ? `; latest note: "${latestComment}"` : ""
+    }`;
 };
 
 const matchPlanName = (name: string, availablePlans: string[]) => {
@@ -191,15 +189,15 @@ function normalizeAIPlan(
 
   const exercises = Array.isArray(data.exercises)
     ? data.exercises
-        .filter((ex) => Boolean(ex?.name))
-        .map((ex) => ({
-          name: matchPlanName(String(ex.name), availablePlans),
-          duration: String(ex.duration || "20 minutes").trim(),
-          reason: String(
-            ex.reason || "Supports balance between strength and mobility."
-          ).trim(),
-        }))
-        .slice(0, 3)
+      .filter((ex) => Boolean(ex?.name))
+      .map((ex) => ({
+        name: matchPlanName(String(ex.name), availablePlans),
+        duration: String(ex.duration || "20 minutes").trim(),
+        reason: String(
+          ex.reason || "Supports balance between strength and mobility."
+        ).trim(),
+      }))
+      .slice(0, 3)
     : [];
 
   return {
@@ -225,10 +223,10 @@ const enforcePlanConstraints = (
   const exercises =
     plan.exercises.length > 0
       ? plan.exercises.map((ex) => ({
-          name: matchPlanName(ex.name, availablePlans),
-          duration: sanitizeDuration(ex.duration),
-          reason: sanitizeReason(ex.reason),
-        }))
+        name: matchPlanName(ex.name, availablePlans),
+        duration: sanitizeDuration(ex.duration),
+        reason: sanitizeReason(ex.reason),
+      }))
       : createFallbackPlan().exercises;
 
   let intensity = plan.intensity;
@@ -393,7 +391,9 @@ Preference insights: ${formatPreferenceMap(aiContext.user?.exercisePreferences)}
     const cacheKey = `aiPlan_daily_${new Date().toDateString()}_${dailyIntake}_${profileKey.substring(0, 50)}`;
     cached = localStorage.getItem(cacheKey);
     if (cached) {
-      console.log("AI exercise cache hit:", cacheKey);
+      if (import.meta.env.DEV) {
+        console.log("AI exercise cache hit:", cacheKey);
+      }
       return JSON.parse(cached);
     }
   }
@@ -454,7 +454,9 @@ ${availablePlans.map((plan, index) => `${index + 1}. ${plan}`).join("\n")}
 
     const response = await client.createChatCompletion(request);
     const rawText = extractText(response.result.message.content);
-    console.log("AI exercise response:", rawText);
+    if (import.meta.env.DEV) {
+      console.log("AI exercise response:", rawText);
+    }
 
     const cleaned = rawText.replace(/```json|```/g, "").trim();
     const fixedJSON = autoFixJSON(cleaned);

@@ -165,7 +165,8 @@ const isSameMonth = (eventDate: string, current: Date) => {
 };
 
 export default function Calendar() {
-  const initialMonth = new Date(2028, 8, 1);
+  const today = new Date();
+  const initialMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const [currentDate, setCurrentDate] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(formatDateKey(initialMonth));
   const [selectedCategory, setSelectedCategory] = useState<Record<EventCategory, boolean>>({
@@ -403,9 +404,8 @@ export default function Calendar() {
       days.push(
         <div
           key={day}
-          className={`${styles.calendarDay} ${isToday ? styles.today : ""} ${
-            dateKey === selectedDate ? styles.selectedDay : ""
-          }`}
+          className={`${styles.calendarDay} ${isToday ? styles.today : ""} ${dateKey === selectedDate ? styles.selectedDay : ""
+            }`}
           onClick={() => setSelectedDate(dateKey)}
         >
           <span className={styles.dayNumber}>{day}</span>

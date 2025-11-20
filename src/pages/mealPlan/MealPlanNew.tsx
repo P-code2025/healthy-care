@@ -1,5 +1,8 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import { loadAIMealPlan, clearAIMealPlan } from "../../services/aiMealPlanGenerator";
+import { generateGroceryListFromMealPlan, getGroceryListSummary } from "../../services/groceryListGenerator";
+import { useNavigate } from "react-router-dom";
 
 import styles from "./MealPlanNew.module.css";
 import { messages as i18nMessages } from "../../i18n/messages";
@@ -257,9 +260,20 @@ const WEEKLY_MEALS: DayMeals[] = [
 ];
 
 export default function MealPlanNew() {
+  const navigate = useNavigate();
   const [selectedWeek, setSelectedWeek] = useState("Week 2");
   const currentMonth = "September 2028";
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAIGenerated, setIsAIGenerated] = useState(false);
+
+  // Check for AI meal plan on mount
+  useEffect(() => {
+    const aiPlan = loadAIMealPlan();
+    if (aiPlan) {
+      setIsAIGenerated(true);
+      toast.info('Displaying AI-generated meal plan', { autoClose: 2000 });
+    }
+  }, []);
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredMeals = useMemo(() => {
@@ -299,8 +313,74 @@ export default function MealPlanNew() {
   const handleComingSoon = () =>
     toast.info(i18nMessages.mealPlan.notImplemented);
 
+  const handleGenerateGroceryList = () => {
+    try {
+      const groceryItems = generateGroceryListFromMealPlan(filteredMeals);
+      const summary = getGroceryListSummary(groceryItems);
+      localStorage.setItem('generatedGroceryList', JSON.stringify(groceryItems));
+      localStorage.setItem('groceryListSource', 'meal-plan');
+      toast.success(
+        `🎉 Generated ${summary.totalItems} items! Total: $${summary.totalCost.toFixed(2)}`,
+        { autoClose: 3000 }
+      );
+      setTimeout(() => navigate('/grocery-list'), 1500);
+    } catch (error) {
+      console.error('Failed to generate grocery list:', error);
+      toast.error('Failed to generate grocery list');
+    }
+  };
+
   return (
     <div className={styles.container}>
+      {/* AI Generated Banner */}
+      {isAIGenerated && (
+        <div style={{
+          background: 'linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%)',
+          color: 'white',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          marginBottom: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 4px 12px rgba(167, 139, 250, 0.3)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '24px' }}>🤖</span>
+            <div>
+              <strong style={{ fontSize: '16px', marginBottom: '4px', display: 'block' }}>
+                AI-Generated Meal Plan
+              </strong>
+              <p style={{ fontSize: '14px', margin: 0, opacity: 0.9 }}>
+                Based on your recent eating habits
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              clearAIMealPlan();
+              setIsAIGenerated(false);
+              toast.success('Switched to default meal plan');
+            }}
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+          >
+            ✕ Use Default Plan
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
@@ -315,7 +395,7 @@ export default function MealPlanNew() {
         <div className={styles.headerRight}>
           <div className={styles.searchBox}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM18 18l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM18 18l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
             <input
               type="text"
@@ -326,12 +406,19 @@ export default function MealPlanNew() {
           </div>
           <button className={styles.filterBtn} onClick={handleComingSoon}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
             {i18nMessages.mealPlan.filterLabel}
           </button>
           <button className={styles.addButton} onClick={handleComingSoon}>
             <span>+</span> {i18nMessages.mealPlan.addMenuCta}
+          </button>
+          <button
+            className={styles.generateGroceryBtn}
+            onClick={handleGenerateGroceryList}
+            title="Auto-generate grocery list from meal plan"
+          >
+            <span>🛒</span> Generate Grocery List
           </button>
         </div>
       </div>

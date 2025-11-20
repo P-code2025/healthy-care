@@ -129,6 +129,31 @@
   font-size: 18px;
 }
 
+/* Generate Grocery List Button */
+.generateGroceryBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #FFB84D 0%, #FF9F2E 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.generateGroceryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 184, 77, 0.4);
+}
+
+.generateGroceryBtn span {
+  font-size: 16px;
+}
+
 /* Week Selector */
 .weekSelector {
   margin-bottom: 20px;
@@ -357,41 +382,43 @@
 
 /* Responsive */
 @media (max-width: 1400px) {
+
   .mealHeaders,
   .dayRow {
     grid-template-columns: 120px repeat(4, 1fr);
   }
-  
+
   .mealName {
     font-size: 12px;
   }
 }
 
 @media (max-width: 1200px) {
+
   .mealHeaders,
   .dayRow {
     grid-template-columns: 1fr;
   }
-  
+
   .dayInfo {
     flex-direction: row;
     justify-content: space-between;
   }
-  
+
   .mealHeader {
     display: none;
   }
-  
+
   .header {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
-  
+
   .headerRight {
     flex-wrap: wrap;
   }
-  
+
   .searchBox {
     width: 100%;
   }
@@ -401,13 +428,13 @@
   .container {
     padding: 16px;
   }
-  
+
   .promoBanner {
     flex-direction: column;
     gap: 16px;
     text-align: center;
   }
-  
+
   .promoContent {
     flex-direction: column;
   }

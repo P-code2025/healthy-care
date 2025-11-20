@@ -66,46 +66,6 @@ const buildHeaders = (options: RequestOptions) => {
   return headers;
 };
 
-const send = async (path: string, options: RequestOptions = {}) => {
-  const headers = buildHeaders(options);
-  const body =
-    options.json !== undefined ? JSON.stringify(options.json) : options.body;
-
-  let response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-    body,
-    credentials: "include",
-  });
-
-  if (response.status === 401 && !options.skipAuth) {
-    const refreshed = await refreshTokens();
-    if (refreshed) {
-      const retryHeaders = buildHeaders(options);
-      response = await fetch(`${API_URL}${path}`, {
-        ...options,
-        headers: retryHeaders,
-        body,
-        credentials: "include",
-      });
-    } else {
-      throw new Error("Unauthorized");
-    }
-  }
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || response.statusText);
-  }
-
-  if (response.status === 204) return undefined;
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    return response.json();
-  }
-  return response.text();
-};
-
 export const http = {
   request: async <T = any>(
     path: string,

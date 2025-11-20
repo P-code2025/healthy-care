@@ -159,4 +159,6 @@ export interface FoodEntry {
   sugar: number;
   status: 'Energized' | 'Quite Satisfied' | 'Satisfied' | 'Guilty' | 'Uncomfortable';
   thoughts?: string;
+  imageUrl?: string;
+  imageAttribution?: string;
 }

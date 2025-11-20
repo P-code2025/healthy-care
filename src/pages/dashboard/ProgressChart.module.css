@@ -1,0 +1,79 @@
+.chartContainer {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify_content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.controls {
+    display: flex;
+    gap: 0.5rem;
+    background: #f3f4f6;
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.controlBtn {
+    border: none;
+    background: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.controlBtn:hover {
+    color: #1a1a1a;
+}
+
+.activeControl {
+    background: white;
+    color: #1a1a1a;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.chartWrapper {
+    flex: 1;
+    min-height: 300px;
+    width: 100%;
+}
+
+.tooltip {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #f3f4f6;
+}
+
+.tooltipLabel {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.tooltipValue {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}

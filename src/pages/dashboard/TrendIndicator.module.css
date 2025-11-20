@@ -1,0 +1,29 @@
+.container {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.up {
+    background: #Dcfce7;
+    color: #166534;
+}
+
+.down {
+    background: #Fee2e2;
+    color: #991b1b;
+}
+
+.neutral {
+    background: #F3f4f6;
+    color: #4b5563;
+}
+
+.icon {
+    font-size: 1rem;
+    line-height: 1;
+}

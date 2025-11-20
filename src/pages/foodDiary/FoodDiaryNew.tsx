@@ -7,6 +7,8 @@ import { compressImage } from '../../utils/imageUtils';
 import { detectBarcodeWithQuagga } from '../../utils/barcodeUtils';
 import { FaWalking, FaRunning, FaDumbbell, FaSwimmer, FaBicycle } from 'react-icons/fa';
 import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from '../../services/foodDiaryApi';
+import { generateMealPlanFromHistory, saveAIMealPlan } from '../../services/aiMealPlanGenerator';
+import { useNavigate } from 'react-router-dom';
 
 
 
@@ -75,6 +77,7 @@ const getMealPrompt = (mealType: string, date: string) => {
 };
 
 export default function FoodDiaryNew() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('This Week');
   const [showModal, setShowModal] = useState(false);
@@ -116,29 +119,29 @@ export default function FoodDiaryNew() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleReanalyze = async () => {
-  if (!selectedImage || !analysisResult.foodName) return;
+    if (!selectedImage || !analysisResult.foodName) return;
 
-  setIsAnalyzing(true);
-  try {
-    const result = await analyzeFood(
-      selectedImage,
-      analysisResult.foodName,
-      analysisResult.amount
-    );
+    setIsAnalyzing(true);
+    try {
+      const result = await analyzeFood(
+        selectedImage,
+        analysisResult.foodName,
+        analysisResult.amount
+      );
 
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      setAnalysisResult(result.analysis);
-      setLastAnalyzedImage(selectedImage);
-      toast.success('Re-analyzed successfully!');
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        setAnalysisResult(result.analysis);
+        setLastAnalyzedImage(selectedImage);
+        toast.success('Re-analyzed successfully!');
+      }
+    } catch (err) {
+      toast.error('Failed to re-analyze');
+    } finally {
+      setIsAnalyzing(false);
     }
-  } catch (err) {
-    toast.error('Failed to re-analyze');
-  } finally {
-    setIsAnalyzing(false);
-  }
-};
+  };
 
   const loadEntries = useCallback(async () => {
     try {
@@ -484,12 +487,55 @@ export default function FoodDiaryNew() {
     }
   };
 
+  const handleGenerateMealPlan = async () => {
+    if (foodEntries.length < 7) {
+      toast.warning('Add at least 7 meals to generate a meal plan');
+      return;
+    }
+
+    const toastId = toast.info('🤖 Analyzing your eating habits...', { autoClose: false });
+
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const recentEntries = foodEntries.filter(entry =>
+        new Date(entry.date) >= thirtyDaysAgo
+      );
+
+      const plan = await generateMealPlanFromHistory(recentEntries, 'maintain');
+      saveAIMealPlan(plan);
+
+      toast.update(toastId, {
+        render: '✨ Your meal plan is ready!',
+        type: 'success',
+        autoClose: 2000
+      });
+
+      setTimeout(() => navigate('/meal-plan'), 500);
+    } catch (error) {
+      toast.update(toastId, {
+        render: 'Failed to generate plan',
+        type: 'error',
+        autoClose: 3000
+      });
+    }
+  };
+
+
 
   return (
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
         <h1 className={styles.pageTitle}>Food Diary</h1>
+        <button
+          className={styles.generateMealPlanBtn}
+          onClick={handleGenerateMealPlan}
+          disabled={foodEntries.length < 7}
+          title={foodEntries.length < 7 ? 'Add at least 7 meals' : 'Generate meal plan from your history'}
+        >
+          ✨ Generate Meal Plan
+        </button>
       </div>
 
       {/* KPI Cards */}

@@ -35,19 +35,6 @@ const CLOVA_API_URL =
   process.env.CLOVA_API_URL ||
   "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005";
 
-if (!CLOVA_API_KEY) {
-  console.error("❌ ERROR: CLOVA_API_KEY not found in .env file!");
-  process.exit(1);
-}
-
-// Middleware
-const allowedOrigins =
-  process.env.CORS_ORIGINS?.split(",") || ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"];
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  })
 );
 app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
@@ -665,7 +652,7 @@ app.post(
 app.get("/api/calendar-events", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   const { start, end, category, linkedModule } = req.query;
-  
+
   const where = { userId };
   if (start || end) {
     where.eventDate = {};
@@ -763,7 +750,7 @@ app.delete("/api/calendar-events/:id", requireAuth, async (req, res) => {
 app.get("/api/statistics/daily", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   const { date } = req.query;
-  
+
   try {
     if (!date) {
       return res.status(400).json({ error: "Date parameter is required (format: YYYY-MM-DD)" });
@@ -866,7 +853,7 @@ app.get("/api/statistics/weekly", async (req, res) => {
 
     // Group by date
     const dailyData = {};
-    
+
     foodLogs.forEach(log => {
       const dateKey = log.eatenAt.toISOString().split('T')[0];
       if (!dailyData[dateKey]) {
@@ -910,7 +897,7 @@ app.get("/api/statistics/weekly", async (req, res) => {
     });
 
     // Convert to array and sort by date
-    const weeklyStats = Object.values(dailyData).sort((a, b) => 
+    const weeklyStats = Object.values(dailyData).sort((a, b) =>
       new Date(a.date) - new Date(b.date)
     );
 
@@ -1010,10 +997,10 @@ Use English names. Be accurate. Do NOT add extra text.`,
 
       // Clean up any unit suffixes
       jsonString = jsonString
-  .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?"?/gi, '"$1": $2')
-  .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?\s*"/gi, '"$1": $2')
-  .replace(/,\s*}/g, '}')  
-  .replace(/,\s*]/g, ']');
+        .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?"?/gi, '"$1": $2')
+        .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?\s*"/gi, '"$1": $2')
+        .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']');
 
       nutritionData = JSON.parse(jsonString);
     } catch (parseError) {
