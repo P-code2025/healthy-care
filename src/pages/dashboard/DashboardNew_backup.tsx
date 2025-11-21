@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import styles from './DashboardNew.module.css';
 
 interface MealItem {
@@ -106,7 +106,7 @@ const RECOMMENDED_EXERCISES: Exercise[] = [
   {
     id: '1',
     name: 'Brisk Walking',
-    icon: '🚶',
+    icon: '≡ƒÜ╢',
     calories: 200,
     duration: '30min',
     status: 'Beginner'
@@ -114,7 +114,7 @@ const RECOMMENDED_EXERCISES: Exercise[] = [
   {
     id: '2',
     name: 'Bodyweight Squats',
-    icon: '🏋️',
+    icon: '≡ƒÅï∩╕Å',
     calories: 150,
     duration: '20 min',
     status: 'Intermediate'
@@ -122,7 +122,7 @@ const RECOMMENDED_EXERCISES: Exercise[] = [
   {
     id: '3',
     name: 'Dumbbell Squat',
-    icon: '💪',
+    icon: '≡ƒÆ¬',
     calories: 180,
     duration: '25 min',
     status: 'Advanced'
@@ -192,7 +192,7 @@ export default function DashboardNew() {
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
-              ⚖️
+              ΓÜû∩╕Å
             </div>
             <div className={styles.statContent}>
               <div className={styles.statLabel}>Weight</div>
@@ -207,7 +207,7 @@ export default function DashboardNew() {
 
           <div className={styles.statCard}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFE5B4 0%, #FFD89B 100%)' }}>
-              👣
+              ≡ƒæú
             </div>
             <div className={styles.statContent}>
               <div className={styles.statLabel}>Steps</div>
@@ -222,7 +222,7 @@ export default function DashboardNew() {
 
           <div className={styles.statCard}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)' }}>
-              😴
+              ≡ƒÿ┤
             </div>
             <div className={styles.statContent}>
               <div className={styles.statLabel}>Sleep</div>
@@ -237,7 +237,7 @@ export default function DashboardNew() {
 
           <div className={styles.statCard}>
             <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFD4A3 0%, #FFB84D 100%)' }}>
-              💧
+              ≡ƒÆº
             </div>
             <div className={styles.statContent}>
               <div className={styles.statLabel}>Water Intake</div>
@@ -256,7 +256,7 @@ export default function DashboardNew() {
           <div className={styles.chartCard}>
             <div className={styles.cardHeader}>
               <h3>Weight Data</h3>
-              <button className={styles.menuBtn}>⋯</button>
+              <button className={styles.menuBtn}>Γï»</button>
             </div>
             <div className={styles.donutChartContainer}>
               <svg viewBox="0 0 200 200" className={styles.donutChart}>
@@ -286,7 +286,7 @@ export default function DashboardNew() {
           <div className={styles.chartCard}>
             <div className={styles.cardHeader}>
               <h3>Calories Intake</h3>
-              <button className={styles.menuBtn}>⋯</button>
+              <button className={styles.menuBtn}>Γï»</button>
             </div>
             <div className={styles.caloriesChart}>
               <div className={styles.caloriesDonut}>
@@ -341,28 +341,28 @@ export default function DashboardNew() {
         <div className={styles.workoutSection}>
           <div className={styles.sectionHeader}>
             <h3>Workout Progress</h3>
-            <button className={styles.viewAllBtn}>This Week ›</button>
+            <button className={styles.viewAllBtn}>This Week ΓÇ║</button>
           </div>
           <div className={styles.workoutGrid}>
             <div className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
-              <div className={styles.workoutIcon}>🏃</div>
+              <div className={styles.workoutIcon}>≡ƒÅâ</div>
               <div className={styles.workoutInfo}>
                 <div className={styles.workoutName}>Running 5 km</div>
-                <div className={styles.workoutStats}>75% Unit • Cardio</div>
+                <div className={styles.workoutStats}>75% Unit ΓÇó Cardio</div>
               </div>
             </div>
             <div className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #FFE5B4 0%, #FFD89B 100%)' }}>
-              <div className={styles.workoutIcon}>🚴</div>
+              <div className={styles.workoutIcon}>≡ƒÜ┤</div>
               <div className={styles.workoutInfo}>
                 <div className={styles.workoutName}>Squatting 10kg</div>
-                <div className={styles.workoutStats}>60% Unit • Strength</div>
+                <div className={styles.workoutStats}>60% Unit ΓÇó Strength</div>
               </div>
             </div>
             <div className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #FFD4A3 0%, #FFB84D 100%)' }}>
-              <div className={styles.workoutIcon}>🤸</div>
+              <div className={styles.workoutIcon}>≡ƒñ╕</div>
               <div className={styles.workoutInfo}>
                 <div className={styles.workoutName}>Stretching 10 hads</div>
-                <div className={styles.workoutStats}>50% Unit • Flexibility</div>
+                <div className={styles.workoutStats}>50% Unit ΓÇó Flexibility</div>
               </div>
             </div>
           </div>
@@ -372,7 +372,7 @@ export default function DashboardNew() {
         <div className={styles.recommendedSection}>
           <div className={styles.sectionHeader}>
             <h3>Recommended Menu</h3>
-            <button className={styles.viewAllBtn}>See All ›</button>
+            <button className={styles.viewAllBtn}>See All ΓÇ║</button>
           </div>
           <div className={styles.menuGrid}>
             {RECOMMENDED_MENU.map(meal => (
@@ -387,7 +387,7 @@ export default function DashboardNew() {
                 </div>
                 <div className={styles.menuContent}>
                   <div className={styles.menuCalories}>
-                    <span className={styles.caloriesIcon}>🔥</span>
+                    <span className={styles.caloriesIcon}>≡ƒöÑ</span>
                     {meal.calories} kcal
                   </div>
                   <h4 className={styles.menuTitle}>{meal.name}</h4>
@@ -404,7 +404,7 @@ export default function DashboardNew() {
         <div className={styles.recommendedSection}>
           <div className={styles.sectionHeader}>
             <h3>Recommended Exercises</h3>
-            <button className={styles.viewAllBtn}>See All ›</button>
+            <button className={styles.viewAllBtn}>See All ΓÇ║</button>
           </div>
           <div className={styles.exercisesGrid}>
             {RECOMMENDED_EXERCISES.map(exercise => (
@@ -413,8 +413,8 @@ export default function DashboardNew() {
                 <div className={styles.exerciseContent}>
                   <h4 className={styles.exerciseName}>{exercise.name}</h4>
                   <div className={styles.exerciseStats}>
-                    <span>🔥 {exercise.calories} kcal</span>
-                    <span>⏱️ {exercise.duration}</span>
+                    <span>≡ƒöÑ {exercise.calories} kcal</span>
+                    <span>ΓÅ▒∩╕Å {exercise.duration}</span>
                   </div>
                   <span className={`${styles.exerciseBadge} ${styles[exercise.status.toLowerCase()]}`}>
                     {exercise.status}
@@ -434,8 +434,8 @@ export default function DashboardNew() {
           <div className={styles.calendarHeader}>
             <h3>{currentMonth}</h3>
             <div className={styles.calendarNav}>
-              <button>‹</button>
-              <button>›</button>
+              <button>ΓÇ╣</button>
+              <button>ΓÇ║</button>
             </div>
           </div>
           <div className={styles.calendarGrid}>
@@ -474,13 +474,13 @@ export default function DashboardNew() {
                   }}>
                     {meal.status}
                   </span>
-                  <span className={styles.mealCalories}>🔥 {meal.calories} kcal</span>
+                  <span className={styles.mealCalories}>≡ƒöÑ {meal.calories} kcal</span>
                   <h4 className={styles.mealName}>{meal.name}</h4>
                   <div className={styles.mealMacros}>
-                    {meal.protein}g Protein • {meal.carbs}g Carbs • {meal.fat}g Fat
+                    {meal.protein}g Protein ΓÇó {meal.carbs}g Carbs ΓÇó {meal.fat}g Fat
                   </div>
                 </div>
-                <button className={styles.expandBtn}>›</button>
+                <button className={styles.expandBtn}>ΓÇ║</button>
               </div>
             ))}
           </div>
@@ -490,7 +490,7 @@ export default function DashboardNew() {
         <div className={styles.sidebarSection}>
           <div className={styles.sectionHeader}>
             <h3 className={styles.sidebarTitle}>Recent Activity</h3>
-            <button className={styles.menuBtn}>⋯</button>
+            <button className={styles.menuBtn}>Γï»</button>
           </div>
           <div className={styles.activityList}>
             {RECENT_ACTIVITIES.map(activity => (
@@ -499,8 +499,8 @@ export default function DashboardNew() {
                   background: activity.type === 'achievement' ? '#D4F4DD' :
                             activity.type === 'meal' ? '#FFE5B4' : '#E0F2FE'
                 }}>
-                  {activity.type === 'achievement' ? '✓' :
-                   activity.type === 'meal' ? '🍽️' : '👤'}
+                  {activity.type === 'achievement' ? 'Γ£ô' :
+                   activity.type === 'meal' ? '≡ƒì╜∩╕Å' : '≡ƒæñ'}
                 </div>
                 <div className={styles.activityContent}>
                   <div className={styles.activityTime}>{activity.time}</div>

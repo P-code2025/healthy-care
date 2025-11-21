@@ -48,7 +48,8 @@ model User {
   aiSuggestions        AiSuggestion[]
   aiFeedback           AiFeedback[]
   aiExercisePlanCaches AiExercisePlanCache[]
-  aiMealPlanCaches AiMealPlanCache[]
+  aiMealPlanCaches     AiMealPlanCache[]
+  chatMessages         ChatMessage[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -169,4 +170,18 @@ model AiMealPlanCache {
   createdAt DateTime @default(now())
 
   @@unique([userId, cacheKey])
+}
+
+model ChatMessage {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          String
+  content       String   @db.Text
+  intent        String?
+  nutritionData Json?
+  exercisePlan  Json?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

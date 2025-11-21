@@ -30,6 +30,7 @@ export const messages = {
     inputPlaceholder: "Ask about calories, workouts, etc.",
     sendLabel: "Send",
     analyzingImage: "Analyzing your meal photo...",
+    analysisFailed: "Không thể nhận diện đồ ăn",
     diarySaveSuccess: "Saved to Food Diary!",
     defaultHelper:
       "I can analyze your meals or draft a quick training plan. Snap a picture or ask away!",

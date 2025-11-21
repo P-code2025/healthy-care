@@ -1024,7 +1024,7 @@ Use English names. Be accurate. Do NOT add extra text.`,
         calories: parseFloat(nutritionData.calories) || 0,
         protein: parseFloat(nutritionData.protein) || 0,
         carbs: parseFloat(nutritionData.carbs) || 0,
-        fats: parseFloat(nutritionData.fats) || 0,
+        fat: parseFloat(nutritionData.fats || nutritionData.fat) || 0,
         portionSize: nutritionData.portion_size || "100g",
         confidence: parseFloat(nutritionData.confidence) || 0.5,
       },
@@ -1087,13 +1087,113 @@ app.get("/api/ai/context", requireAuth, async (req, res) => {
     handlePrismaError(res, error, "Failed to build AI context");
   }
 });
+
+// ========== CLOVA API PROXY ==========
+app.post("/api/clova/v3/chat-completions/:appId", async (req, res) => {
+  const { appId } = req.params;
+
+  if (!CLOVA_API_KEY) {
+    return res.status(500).json({
+      error: "CLOVA_API_KEY not configured on server"
+    });
+  }
+
+  try {
+    const requestId = req.headers['x-ncp-clovastudio-request-id'];
+
+    const response = await fetch(
+      `https://clovastudio.stream.ntruss.com/v3/chat-completions/${appId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CLOVA_API_KEY}`,
+          'X-NCP-CLOVASTUDIO-REQUEST-ID': requestId || crypto.randomUUID(),
+        },
+        body: JSON.stringify(req.body),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error("Clova API proxy error:", error);
+    res.status(500).json({
+      error: "Failed to proxy Clova API request",
+      details: error.message
+    });
+  }
+});
+
+// ========== CHAT MESSAGES API ==========
+// GET /api/chat-messages - List user's chat history
+app.get("/api/chat-messages", requireAuth, async (req, res) => {
+  try {
+    const { limit = 50, before } = req.query;
+
+    const where = {
+      userId: req.user.id,
+      ...(before && { createdAt: { lt: new Date(before) } })
+    };
+
+    const messages = await prisma.chatMessage.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(limit),
+    });
+
+    // Return in ascending order (oldest first)
+    res.json({ messages: messages.reverse() });
+  } catch (error) {
+    console.error("Error fetching chat messages:", error);
+    handlePrismaError(res, error, "Failed to fetch chat messages");
+  }
+});
+
+// POST /api/chat-messages - Save a new chat message
+app.post("/api/chat-messages", requireAuth, async (req, res) => {
+  try {
+    const { role, content, intent } = req.body;
+
+    if (!role || !content) {
+      return res.status(400).json({ error: "role and content are required" });
+    }
+
+    if (role !== 'user' && role !== 'assistant') {
+      return res.status(400).json({ error: "role must be 'user' or 'assistant'" });
+    }
+
+
+    const message = await prisma.chatMessage.create({
+      data: {
+        userId: req.user.id,
+        role,
+        content,
+        intent: intent || null,
+        nutritionData: req.body.nutritionData || null,
+        exercisePlan: req.body.exercisePlan || null,
+      },
+    });
+
+    res.json({ message });
+  } catch (error) {
+    console.error("Error saving chat message:", error);
+    handlePrismaError(res, error, "Failed to save chat message");
+  }
+});
+
+// ========== START SERVER ==========
 app.listen(PORT, () => {
-  console.log(`
-🚀 API Proxy Server is running!
-🌐 URL: http://localhost:${PORT}
-❤️ Health check: http://localhost:${PORT}/health
-📅 Calendar API: /api/calendar-events
-🍱 Food recognition: POST /api/recognize-food
-`);
+  console.log("\n🚀 API Proxy Server is running!");
+  console.log(`🌐 URL: http://localhost:${PORT}`);
+  console.log(`❤️ Health check: http://localhost:${PORT}/health`);
+  console.log("📅 Calendar API: /api/calendar-events");
+  console.log("🍱 Food recognition: POST /api/recognize-food");
+  console.log("💬 Chat messages: GET/POST /api/chat-messages");
 });
 

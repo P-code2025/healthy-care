@@ -17,6 +17,7 @@ import {
   type AIExercisePlan,
 } from "../../services/aiExercisePlan";
 import { messages as i18nMessages } from "../../i18n/messages";
+import { chatMessagesApi } from "../../api/chatMessages";
 
 interface ChatMessage {
   id: string;
@@ -24,6 +25,7 @@ interface ChatMessage {
   isUser: boolean;
   timestamp: string;
   isLoading?: boolean;
+  intent?: string;
   nutritionData?: AnalysisResult;
   exercisePlan?: AIExercisePlan;
 }
@@ -66,22 +68,29 @@ export default function Messages() {
   const [diaryEntries, setDiaryEntries] = useState<FoodEntry[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load persisted chat history
+  // Load chat history from database
   useEffect(() => {
-    const saved = localStorage.getItem("aiChatMessages");
-    if (saved) {
+    const loadMessages = async () => {
       try {
-        setChatMessages(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem("aiChatMessages");
+        const dbMessages = await chatMessagesApi.list({ limit: 50 });
+        const formattedMessages = dbMessages.map(msg => ({
+          id: String(msg.id),
+          content: msg.content,
+          isUser: msg.role === 'user',
+          timestamp: new Date(msg.createdAt).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          intent: msg.intent || undefined,
+        }));
+        setChatMessages(formattedMessages);
+      } catch (error) {
+        console.error("Failed to load chat history:", error);
+        toast.error("Could not load chat history");
       }
-    }
+    };
+    loadMessages();
   }, []);
-
-  // Persist chat history
-  useEffect(() => {
-    localStorage.setItem("aiChatMessages", JSON.stringify(chatMessages));
-  }, [chatMessages]);
 
   // Prepare profile defaults from the authenticated user
   useEffect(() => {
@@ -133,6 +142,17 @@ export default function Messages() {
       timestamp: formatTimestamp(),
     };
     setChatMessages((prev) => [...prev, outgoing]);
+
+    // Save user message to database
+    try {
+      await chatMessagesApi.create({
+        role: 'user',
+        content: input,
+      });
+    } catch (error) {
+      console.error('Failed to save user message:', error);
+    }
+
     const pendingQuestion = input;
     setInput("");
     setIsTyping(true);
@@ -148,6 +168,21 @@ export default function Messages() {
         exercisePlan: aiResponse.exercisePlan,
       };
       setChatMessages((prev) => [...prev, reply]);
+
+      // Save AI response to database
+      try {
+        await chatMessagesApi.create({
+          role: 'assistant',
+          content: aiResponse.content,
+          intent: aiResponse.intent,
+          nutritionData: aiResponse.nutritionData,
+          exercisePlan: aiResponse.exercisePlan,
+        });
+      } catch (error) {
+        console.error('Failed to save AI message:', error);
+        toast.warning('Message sent but may not be saved. Check your connection.');
+      }
+
       setIsTyping(false);
     }, 600);
   };
@@ -156,6 +191,7 @@ export default function Messages() {
     query: string
   ): Promise<{
     content: string;
+    intent?: string;
     nutritionData?: AnalysisResult;
     exercisePlan?: AIExercisePlan;
   }> => {
@@ -184,7 +220,7 @@ export default function Messages() {
           ? i18nMessages.aiChat.todayCaloriesAdviceAbove
           : i18nMessages.aiChat.todayCaloriesAdviceBelow;
 
-      return { content: `${summary}\n\n${advice}` };
+      return { content: `${summary}\n\n${advice}`, intent: 'calories_query' };
     }
 
     const workoutKeywords = [
@@ -209,7 +245,7 @@ export default function Messages() {
       if (!userProfile) {
         setShowProfileForm(true);
         toast.info(i18nMessages.errors.incompleteProfile);
-        return { content: i18nMessages.aiChat.missingProfilePrompt };
+        return { content: i18nMessages.aiChat.missingProfilePrompt, intent: 'missing_profile' };
       }
 
       try {
@@ -256,15 +292,15 @@ export default function Messages() {
           .join("\n\n");
         const response = `${planTitle}\n\n${exerciseList}\n\n**${i18nMessages.aiChat.exerciseBurnLabel}**: ${plan.totalBurnEstimate}\n\n_${i18nMessages.aiChat.workoutPlanAdvicePrefix} ${plan.advice}_`;
 
-        return { content: response, exercisePlan: plan };
+        return { content: response, exercisePlan: plan, intent: 'workout_plan' };
       } catch (error) {
         console.error("Workout plan generation failed", error);
         toast.error(i18nMessages.errors.workoutPlan);
-        return { content: i18nMessages.errors.workoutPlan };
+        return { content: i18nMessages.errors.workoutPlan, intent: 'workout_plan_error' };
       }
     }
 
-    return { content: i18nMessages.aiChat.defaultHelper };
+    return { content: i18nMessages.aiChat.defaultHelper, intent: 'general_help' };
   };
 
   const handleImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,7 +320,33 @@ export default function Messages() {
       setChatMessages((prev) => [...prev, loadingMessage]);
 
       try {
-        const { analysis } = await analyzeFood(dataUri);
+        const { analysis, error } = await analyzeFood(dataUri);
+
+        // Validate analysis result before saving
+        const isValidAnalysis =
+          analysis.foodName &&
+          analysis.foodName !== 'Không xác định' &&
+          analysis.foodName !== 'Unknown' &&
+          analysis.calories > 0;
+
+        if (!isValidAnalysis || error) {
+          // Show error message instead of saving invalid data
+          const errorMessage: ChatMessage = {
+            id: Date.now().toString(),
+            content: `❌ **${i18nMessages.aiChat.analysisFailed || 'Không thể nhận diện đồ ăn'}**\n\n${error || 'Hình ảnh không rõ hoặc không phải đồ ăn. Vui lòng thử lại với ảnh rõ hơn.'
+              }\n\n💡 **Gợi ý:**\n- Chụp ảnh rõ nét hơn\n- Đảm bảo đồ ăn ở trung tâm\n- Có đủ ánh sáng`,
+            isUser: false,
+            timestamp: formatTimestamp(),
+          };
+
+          setChatMessages((prev) =>
+            prev.filter((msg) => !msg.isLoading).concat(errorMessage)
+          );
+          toast.error('Không nhận diện được đồ ăn');
+          return;
+        }
+
+        // Valid analysis - proceed with saving
         const now = new Date();
         const hour = now.getHours();
         const mealType =
@@ -326,6 +388,18 @@ export default function Messages() {
           prev.filter((msg) => !msg.isLoading).concat(resultMessage)
         );
         toast.success(i18nMessages.aiChat.diarySaveSuccess);
+
+        // Save image analysis result to database
+        try {
+          await chatMessagesApi.create({
+            role: 'assistant',
+            content: resultMessage.content,
+            nutritionData: analysis,
+            intent: 'image_analysis',
+          });
+        } catch (error) {
+          console.error('Failed to save image analysis:', error);
+        }
       } catch (error) {
         console.error("Image analysis failed", error);
         setChatMessages((prev) =>

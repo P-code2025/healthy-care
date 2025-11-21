@@ -11,7 +11,7 @@
   background: white;
   border-radius: 16px;
   margin: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .header {
@@ -22,8 +22,17 @@
   gap: 12px;
 }
 
-.header h3 { margin: 0; font-size: 18px; font-weight: 600; }
-.header p { margin: 0; font-size: 13px; color: #666; }
+.header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.header p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+}
 
 .messages {
   flex: 1;
@@ -48,11 +57,19 @@
 .message {
   display: flex;
   gap: 12px;
-  max-width: 80%;
+  max-width: 75%;
+  margin-bottom: 16px;
 }
 
-.message.user { align-self: flex-end; flex-direction: row-reverse; }
-.message.ai { align-self: flex-start; }
+.message.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+
+.message.ai {
+  align-self: flex-start;
+}
 
 .avatar {
   width: 40px;
@@ -65,6 +82,10 @@
   justify-content: center;
   font-weight: bold;
   flex-shrink: 0;
+}
+
+.message.user .avatar {
+  background: #0ea5e9;
 }
 
 .bubble {
@@ -93,15 +114,28 @@
   animation: bounce 1.2s infinite;
 }
 
-.loading span:nth-child(2) { animation-delay: 0.2s; }
-.loading span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+.loading span:nth-child(2) {
+  animation-delay: 0.2s;
 }
 
-.nutritionCard, .exerciseCard {
+.loading span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.nutritionCard,
+.exerciseCard {
   margin-top: 12px;
   padding: 12px;
   background: white;
@@ -174,7 +208,8 @@
   border-color: #10b981;
 }
 
-.attach, .send {
+.attach,
+.send {
   padding: 12px;
   background: #f3f4f6;
   border: none;
@@ -190,7 +225,7 @@
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -208,7 +243,8 @@
   gap: 12px;
 }
 
-.form input, .form select {
+.form input,
+.form select {
   padding: 12px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
