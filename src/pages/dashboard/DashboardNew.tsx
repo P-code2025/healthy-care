@@ -6,6 +6,8 @@ import ProgressChart from './ProgressChart';
 import GoalTracker from './GoalTracker';
 import StreakBadge from './StreakBadge';
 import TrendIndicator from './TrendIndicator';
+import { SkeletonStatCard, SkeletonList } from '../../components/Skeleton';
+import { EmptyActivities } from '../../components/EmptyState';
 
 interface MealItem {
   id: string;
@@ -273,78 +275,89 @@ export default function DashboardNew() {
 
         {/* Stats Overview */}
         <div className={styles.statsGrid}>
-          <div className={styles.statCard}>
-            <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
-              ⚖️
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Weight</div>
-              <div className={styles.statValue}>
-                {loading ? '...' : userProfile?.weight_kg ? `${userProfile.weight_kg} kg` : 'N/A'}
+          {loading ? (
+            <>
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+            </>
+          ) : (
+            <>
+              <div className={styles.statCard}>
+                <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
+                  ⚖️
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Weight</div>
+                  <div className={styles.statValue}>
+                    {userProfile?.weight_kg ? `${userProfile.weight_kg} kg` : 'N/A'}
+                  </div>
+                  <TrendIndicator current={userProfile?.weight_kg} previous={userProfile?.weight_kg + 1.5} inverse />
+                </div>
+                <div className={styles.miniChart}>
+                  {[40, 60, 30, 80, 50, 70, 60].map((height, i) => (
+                    <div key={i} className={styles.miniBar} style={{ height: `${height}%` }}></div>
+                  ))}
+                </div>
               </div>
-              <TrendIndicator current={userProfile?.weight_kg} previous={userProfile?.weight_kg + 1.5} inverse />
-            </div>
-            <div className={styles.miniChart}>
-              {[40, 60, 30, 80, 50, 70, 60].map((height, i) => (
-                <div key={i} className={styles.miniBar} style={{ height: `${height}%` }}></div>
-              ))}
-            </div>
-          </div>
 
-          <div className={styles.statCard}>
-            <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFE5B4 0%, #FFD89B 100%)' }}>
-              👣
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Exercise</div>
-              <div className={styles.statValue}>
-                {loading ? '...' : dailyStats ? `${dailyStats.workouts_count} workouts` : '0 workouts'}
+              <div className={styles.statCard}>
+                <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFE5B4 0%, #FFD89B 100%)' }}>
+                  👣
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Exercise</div>
+                  <div className={styles.statValue}>
+                    {dailyStats ? `${dailyStats.workouts_count} workouts` : '0 workouts'}
+                  </div>
+                  <TrendIndicator current={dailyStats?.workouts_count || 0} previous={2} />
+                </div>
+                <div className={styles.miniChart}>
+                  {[50, 70, 40, 90, 60, 80, 70].map((height, i) => (
+                    <div key={i} className={styles.miniBar} style={{ height: `${height}%`, background: '#FFD89B' }}></div>
+                  ))}
+                </div>
               </div>
-              <TrendIndicator current={dailyStats?.workouts_count || 0} previous={2} />
-            </div>
-            <div className={styles.miniChart}>
-              {[50, 70, 40, 90, 60, 80, 70].map((height, i) => (
-                <div key={i} className={styles.miniBar} style={{ height: `${height}%`, background: '#FFD89B' }}></div>
-              ))}
-            </div>
-          </div>
 
-          <div className={styles.statCard}>
-            <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)' }}>
-              ⏱️
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Exercise Time</div>
-              <div className={styles.statValue}>
-                {loading ? '...' : dailyStats ? `${dailyStats.exercise_duration} min` : '0 min'}
+              <div className={styles.statCard}>
+                <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)' }}>
+                  ⏱️
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Exercise Time</div>
+                  <div className={styles.statValue}>
+                    {dailyStats ? `${dailyStats.exercise_duration} min` : '0 min'}
+                  </div>
+                  <TrendIndicator current={dailyStats?.exercise_duration || 0} previous={45} />
+                </div>
+                <div className={styles.miniChart}>
+                  {[60, 50, 70, 80, 60, 90, 75].map((height, i) => (
+                    <div key={i} className={styles.miniBar} style={{ height: `${height}%`, background: '#BAE6FD' }}></div>
+                  ))}
+                </div>
               </div>
-              <TrendIndicator current={dailyStats?.exercise_duration || 0} previous={45} />
-            </div>
-            <div className={styles.miniChart}>
-              {[60, 50, 70, 80, 60, 90, 75].map((height, i) => (
-                <div key={i} className={styles.miniBar} style={{ height: `${height}%`, background: '#BAE6FD' }}></div>
-              ))}
-            </div>
-          </div>
 
-          <div className={styles.statCard}>
-            <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFD4A3 0%, #FFB84D 100%)' }}>
-              🍽️
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Meals Today</div>
-              <div className={styles.statValue}>
-                {loading ? '...' : dailyStats ? `${dailyStats.meals_count} meals` : '0 meals'}
+              <div className={styles.statCard}>
+                <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFD4A3 0%, #FFB84D 100%)' }}>
+                  🍽️
+                </div>
+                <div className={styles.statContent}>
+                  <div className={styles.statLabel}>Meals Today</div>
+                  <div className={styles.statValue}>
+                    {dailyStats ? `${dailyStats.meals_count} meals` : '0 meals'}
+                  </div>
+                </div>
+                <div className={styles.progressBar}>
+                  <div className={styles.progressFill} style={{
+                    width: dailyStats ? `${Math.min((dailyStats.meals_count / 4) * 100, 100)}%` : '0%',
+                    background: '#FFB84D'
+                  }}></div>
+                </div>
+                <div className={styles.progressLabel}>{dailyStats?.meals_count || 0} / 4 meals</div>
               </div>
-            </div>
-            <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{
-                width: dailyStats ? `${Math.min((dailyStats.meals_count / 4) * 100, 100)}%` : '0%',
-                background: '#FFB84D'
-              }}></div>
-            </div>
-            <div className={styles.progressLabel}>{dailyStats?.meals_count || 0} / 4 meals</div>
-          </div>
+            </>
+          )}
         </div>
 
         {/* Charts Row */}

@@ -1,18 +1,24 @@
 // src/components/Layout.tsx
-import React from "react";
-import { Outlet } from "react-router-dom"; // Needed for nested routes
+import React, { useState } from "react";
+import { Outlet } from "react-router-dom";
 import SidebarNew from "./SidebarNew";
 import Header from "./Header";
+import MobileMenu, { HamburgerButton } from "./MobileMenu";
 import styles from "./Layout.module.css";
 
 const Layout: React.FC = () => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div>
       <SidebarNew />
+      <MobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
       <main className={styles.main}>
-        <Header />
+        <Header>
+          <HamburgerButton onClick={() => setMobileMenuOpen(true)} />
+        </Header>
         <div className={styles.content}>
-          <Outlet /> {/* Renders nested routes */}
+          <Outlet />
         </div>
       </main>
     </div>
