@@ -4,6 +4,7 @@ import { Outlet } from "react-router-dom";
 import SidebarNew from "./SidebarNew";
 import Header from "./Header";
 import MobileMenu, { HamburgerButton } from "./MobileMenu";
+import FloatingActionButton from "./FloatingActionButton";
 import styles from "./Layout.module.css";
 
 const Layout: React.FC = () => {
@@ -21,6 +22,7 @@ const Layout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+      <FloatingActionButton />
     </div>
   );
 };
