@@ -13,7 +13,7 @@ import {
 } from "../../services/foodDiaryApi";
 import { analyzeFood } from "../../services/analyzeFood";
 import {
-  generateAIExercisePlanFromAPI,
+  generateAIExercisePlan,
   type AIExercisePlan,
 } from "../../services/aiExercisePlan";
 import { messages as i18nMessages } from "../../i18n/messages";
@@ -187,7 +187,7 @@ export default function Messages() {
       return { content: `${summary}\n\n${advice}` };
     }
 
-        const workoutKeywords = [
+    const workoutKeywords = [
       "workout",
       "exercise",
       "plan",
@@ -224,9 +224,24 @@ export default function Messages() {
           "Core & Abs Crusher",
         ];
 
-        const plan = await generateAIExercisePlanFromAPI(
+        const plan = await generateAIExercisePlan(
           getTodayCalories(),
-          "Create a personalized workout plan"
+          {
+            age: userProfile.age,
+            weight: userProfile.weight,
+            height: userProfile.height,
+            gender: userProfile.gender === "Male" ? "Nam" : "Nữ",
+            goal: userProfile.goal,
+            goalWeight: userProfile.weight,
+            foodEntries: diaryEntries.map(entry => ({
+              foodName: entry.foodName,
+              amount: entry.amount
+            })),
+            workoutPreference: []
+          },
+          planNames,
+          query || "Create a personalized workout plan",
+          "query"
         );
 
         const planTitle = i18nMessages.aiChat.workoutPlanTitle.replace(
@@ -236,7 +251,7 @@ export default function Messages() {
         const exerciseList = plan.exercises
           .map(
             (exercise: { name: any; duration: any; reason: any; }) =>
-              `â€¢ **${exercise.name}** - ${exercise.duration}\n _${exercise.reason}_`
+              `• **${exercise.name}** - ${exercise.duration}\n _${exercise.reason}_`
           )
           .join("\n\n");
         const response = `${planTitle}\n\n${exerciseList}\n\n**${i18nMessages.aiChat.exerciseBurnLabel}**: ${plan.totalBurnEstimate}\n\n_${i18nMessages.aiChat.workoutPlanAdvicePrefix} ${plan.advice}_`;
@@ -276,10 +291,10 @@ export default function Messages() {
           hour >= 5 && hour < 11
             ? "Breakfast"
             : hour >= 11 && hour < 14
-            ? "Lunch"
-            : hour >= 18 && hour < 22
-            ? "Dinner"
-            : "Snack";
+              ? "Lunch"
+              : hour >= 18 && hour < 22
+                ? "Dinner"
+                : "Snack";
 
         const entryPayload: FoodEntryInput = {
           date: now.toISOString().split("T")[0],
@@ -355,9 +370,8 @@ export default function Messages() {
           {chatMessages.map((message) => (
             <div
               key={message.id}
-              className={`${styles.message} ${
-                message.isUser ? styles.user : styles.ai
-              }`}
+              className={`${styles.message} ${message.isUser ? styles.user : styles.ai
+                }`}
             >
               {!message.isUser && <div className={styles.avatar}>{AI_AVATAR}</div>}
               <div className={styles.bubble}>

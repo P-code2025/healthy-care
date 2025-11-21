@@ -85,8 +85,11 @@ export async function generateMealPlanFromHistory(
 
     const analysis = analyzeFoodHistory(foodHistory);
 
+    // Use minimum safe calorie target if no history
+    const baseCalories = analysis.avgCaloriesPerMeal > 0 ? analysis.avgCaloriesPerMeal : 2000;
+
     // Adjust calorie target based on goal
-    let targetCal = analysis.avgCaloriesPerMeal;
+    let targetCal = baseCalories;
     if (userGoal === 'lose') targetCal = Math.round(targetCal * 0.85);
     if (userGoal === 'gain') targetCal = Math.round(targetCal * 1.15);
 
@@ -97,11 +100,12 @@ export async function generateMealPlanFromHistory(
     // Calorie-to-gram conversion constants
     const CALORIES_PER_GRAM = { protein: 4, carbs: 4, fat: 9 };
 
-    days.forEach((day, index) => {
-        // Rotate through favorites to create variety
-        const favIndex = index % Math.max(analysis.favoriteFoods.length, 1);
-        const baseFoodName = analysis.favoriteFoods[favIndex] || 'Healthy meal';
+    // Default meal options when no food history
+    const defaultBreakfasts = ['Healthy Breakfast', 'Balanced Morning Meal', 'Nutritious Start'];
+    const defaultLunches = ['Balanced Lunch', 'Healthy Midday Meal', 'Nutritious Lunch'];
+    const defaultDinners = ['Nutritious Dinner', 'Balanced Evening Meal', 'Healthy Dinner'];
 
+    days.forEach((day, index) => {
         // Calculate calories for each meal type
         const breakfastCal = Math.round(targetCal * 0.3);
         const lunchCal = Math.round(targetCal * 0.35);
@@ -126,19 +130,31 @@ export async function generateMealPlanFromHistory(
         const dinnerMacros = calculateMacros(dinnerCal);
         const snackMacros = calculateMacros(snackCal);
 
+        // Generate meal names safely
+        const hasFavorites = analysis.favoriteFoods.length > 0;
+        const breakfastName = hasFavorites
+            ? `${analysis.favoriteFoods[index % analysis.favoriteFoods.length]} - Breakfast style`
+            : defaultBreakfasts[index % defaultBreakfasts.length];
+        const lunchName = hasFavorites
+            ? analysis.favoriteFoods[(index + 1) % analysis.favoriteFoods.length]
+            : defaultLunches[index % defaultLunches.length];
+        const dinnerName = hasFavorites
+            ? analysis.favoriteFoods[(index + 2) % analysis.favoriteFoods.length]
+            : defaultDinners[index % defaultDinners.length];
+
         plan[day] = {
             breakfast: {
-                name: `${baseFoodName} - Breakfast style`,
+                name: breakfastName,
                 calories: breakfastCal,
                 ...breakfastMacros
             },
             lunch: {
-                name: `${analysis.favoriteFoods[(favIndex + 1) % Math.max(analysis.favoriteFoods.length, 1)] || 'Balanced meal'}`,
+                name: lunchName,
                 calories: lunchCal,
                 ...lunchMacros
             },
             dinner: {
-                name: `${analysis.favoriteFoods[(favIndex + 2) % Math.max(analysis.favoriteFoods.length, 1)] || 'Nutritious dinner'}`,
+                name: dinnerName,
                 calories: dinnerCal,
                 ...dinnerMacros
             },
@@ -155,7 +171,9 @@ export async function generateMealPlanFromHistory(
         basedOnDays: 30,
         analyzedEntries: foodHistory.length,
         plan,
-        summary: `Personalized ${userGoal === 'lose' ? 'weight loss' : userGoal === 'gain' ? 'muscle gain' : 'maintenance'} plan based on your eating habits`
+        summary: foodHistory.length === 0
+            ? `Default ${userGoal === 'lose' ? 'weight loss' : userGoal === 'gain' ? 'muscle gain' : 'maintenance'} plan with standard recommendations`
+            : `Personalized ${userGoal === 'lose' ? 'weight loss' : userGoal === 'gain' ? 'muscle gain' : 'maintenance'} plan based on your eating habits`
     };
 }
 

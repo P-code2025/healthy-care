@@ -76,7 +76,7 @@ type UserUpdatePayload = Partial<
   name?: string;
   age?: number;
   gender?: string;
-  goal?: string;  
+  goal?: string;
   heightCm?: number;
   weightKg?: number;
   neckCm?: number;
@@ -91,35 +91,31 @@ type UserUpdatePayload = Partial<
 const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {
   const payload: Record<string, unknown> = {};
 
-  const assign = (key: keyof UserUpdatePayload, targetKey?: string) => {
-    if (Object.prototype.hasOwnProperty.call(data, key)) {
-      payload[targetKey ?? (key as string)] = data[key];
+  // Helper to handle both camelCase and snake_case variants
+  const assignField = (
+    camelKey: keyof UserUpdatePayload,
+    snakeKey: string
+  ) => {
+    if (
+      Object.prototype.hasOwnProperty.call(data, camelKey) ||
+      Object.prototype.hasOwnProperty.call(data, snakeKey)
+    ) {
+      const value =
+        Object.prototype.hasOwnProperty.call(data, camelKey) &&
+          data[camelKey] !== undefined
+          ? data[camelKey]
+          : (data as any)[snakeKey];
+      payload[camelKey as string] = value;
     }
   };
 
-  assign("age");
-  assign("gender");
-  assign("goal");
-
-  assign("neckCm");
-  assign("waistCm");
-  assign("hipCm");
-  assign("bicepsCm");
-  assign("thighCm");
-  assign("name");
-  assign("weightKg");
-  assign("heightCm");
-  assign("activityLevel", "activity_level");
-  assign("exercisePreferences", "exercise_preferences");
-
+  // Simple fields (no snake_case variants)
   if (Object.prototype.hasOwnProperty.call(data, "name")) {
     payload.name = data.name;
   }
-
   if (Object.prototype.hasOwnProperty.call(data, "age")) {
     payload.age = data.age;
   }
-
   if (Object.prototype.hasOwnProperty.call(data, "gender")) {
     payload.gender = data.gender;
   }
@@ -127,106 +123,16 @@ const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {
     payload.goal = data.goal;
   }
 
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "heightCm") ||
-    Object.prototype.hasOwnProperty.call(data, "height_cm")
-  ) {
-    payload.heightCm =
-      Object.prototype.hasOwnProperty.call(data, "heightCm") &&
-      data.heightCm !== undefined
-        ? data.heightCm
-        : data.height_cm;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "weightKg") ||
-    Object.prototype.hasOwnProperty.call(data, "weight_kg")
-  ) {
-    payload.weightKg =
-      Object.prototype.hasOwnProperty.call(data, "weightKg") &&
-      data.weightKg !== undefined
-        ? data.weightKg
-        : data.weight_kg;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "neckCm") ||
-    Object.prototype.hasOwnProperty.call(data, "neck_cm")
-  ) {
-    payload.neckCm =
-      Object.prototype.hasOwnProperty.call(data, "neckCm") &&
-      data.neckCm !== undefined
-        ? data.neckCm
-        : data.neck_cm;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "waistCm") ||
-    Object.prototype.hasOwnProperty.call(data, "waist_cm")
-  ) {
-    payload.waistCm =
-      Object.prototype.hasOwnProperty.call(data, "waistCm") &&
-      data.waistCm !== undefined
-        ? data.waistCm
-        : data.waist_cm;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "hipCm") ||
-    Object.prototype.hasOwnProperty.call(data, "hip_cm")
-  ) {
-    payload.hipCm =
-      Object.prototype.hasOwnProperty.call(data, "hipCm") &&
-      data.hipCm !== undefined
-        ? data.hipCm
-        : data.hip_cm;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "bicepsCm") ||
-    Object.prototype.hasOwnProperty.call(data, "biceps_cm")
-  ) {
-    payload.bicepsCm =
-      Object.prototype.hasOwnProperty.call(data, "bicepsCm") &&
-      data.bicepsCm !== undefined
-        ? data.bicepsCm
-        : data.biceps_cm;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "thighCm") ||
-    Object.prototype.hasOwnProperty.call(data, "thigh_cm")
-  ) {
-    payload.thighCm =
-      Object.prototype.hasOwnProperty.call(data, "thighCm") &&
-      data.thighCm !== undefined
-        ? data.thighCm
-        : data.thigh_cm;
-  }
-
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "activityLevel") ||
-    Object.prototype.hasOwnProperty.call(data, "activity_level")
-  ) {
-    payload.activityLevel =
-      Object.prototype.hasOwnProperty.call(data, "activityLevel") &&
-      data.activityLevel !== undefined
-        ? data.activityLevel
-        : data.activity_level;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(data, "exercisePreferences") ||
-    Object.prototype.hasOwnProperty.call(data, "exercise_preferences")
-  ) {
-    payload.exercisePreferences =
-      Object.prototype.hasOwnProperty.call(data, "exercisePreferences") &&
-      data.exercisePreferences !== undefined
-        ? data.exercisePreferences
-        : data.exercise_preferences;
-  }
+  // Fields with camelCase/snake_case variants
+  assignField("heightCm", "height_cm");
+  assignField("weightKg", "weight_kg");
+  assignField("neckCm", "neck_cm");
+  assignField("waistCm", "waist_cm");
+  assignField("hipCm", "hip_cm");
+  assignField("bicepsCm", "biceps_cm");
+  assignField("thighCm", "thigh_cm");
+  assignField("activityLevel", "activity_level");
+  assignField("exercisePreferences", "exercise_preferences");
 
   return payload;
 };
