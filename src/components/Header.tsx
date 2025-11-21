@@ -1,5 +1,4 @@
 // src/components/Header.tsx
-import { useEffect, useState } from "react";
 import styles from "./Header.module.css";
 import { useAuth } from "../context/AuthContext";
 

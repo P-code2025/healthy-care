@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useToast, ToastData } from '../hooks/useToast';
+import { useToast } from '../hooks/useToast';
+import type { ToastData } from '../hooks/useToast';
 import styles from './Toast.module.css';
 
 const ICONS = {
