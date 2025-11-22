@@ -291,7 +291,7 @@ export default function ProgressNew() {
             <div className={styles.periodButtons}>
               {(['7', '30', '90', 'all'] as const).map(p => (
                 <button key={p} className={`${styles.periodBtn} ${period === p ? styles.periodActive : ''}`} onClick={() => setPeriod(p)}>
-                  {p === 'all' ? 'Tất cả' : `${p} ngày`}
+                  {p === 'all' ? 'All' : `${p} days`}
                 </button>
               ))}
             </div>
@@ -348,7 +348,7 @@ export default function ProgressNew() {
             <div className={styles.periodButtons}>
               {(['7', '30', '90', 'all'] as const).map(p => (
                 <button key={p} className={`${styles.periodBtn} ${period === p ? styles.periodActive : ''}`} onClick={() => setPeriod(p)}>
-                  {p === 'all' ? 'Tất cả' : `${p} ngày`}
+                  {p === 'all' ? 'All' : `${p} days`}
                 </button>
               ))}
             </div>
@@ -438,7 +438,7 @@ export default function ProgressNew() {
             <div className={styles.periodButtons}>
               {(['7', '30', '90', 'all'] as const).map(p => (
                 <button key={p} className={`${styles.periodBtn} ${period === p ? styles.periodActive : ''}`} onClick={() => setPeriod(p)}>
-                  {p === 'all' ? 'Tất cả' : `${p} ngày`}
+                  {p === 'all' ? 'All' : `${p} days`}
                 </button>
               ))}
             </div>
