@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import { toast } from 'react-toastify';
 import { formatGoalWeight, getGoalWeightFromUser } from '../../utils/profile';
 import { messages } from '../../i18n/messages';
+import { useAuth } from '../../context/AuthContext';
 
 interface UserProfile {
   name: string;
@@ -21,9 +22,10 @@ interface UserProfile {
 }
 
 export default function Settings() {
+  const { refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'account'>('profile');
   const [saving, setSaving] = useState(false);
-  
+
   const [profile, setProfile] = useState<UserProfile>({
     name: "",
     email: "",
@@ -49,7 +51,7 @@ export default function Settings() {
       try {
         const user = await api.getCurrentUser();
         setProfile({
-          name: user.email.split('@')[0],
+          name: user.name || user.email.split('@')[0],
           email: user.email,
           age: user.age || 0,
           height: user.height_cm || 0,
@@ -82,6 +84,7 @@ export default function Settings() {
     setSaving(true);
     try {
       await api.updateCurrentUser({
+        name: profile.name,
         age: profile.age,
         gender: profile.gender,
         height_cm: profile.height,
@@ -89,6 +92,8 @@ export default function Settings() {
         goal: formatGoalWeight(profile.goalWeight),
       });
       toast.success(messages.settings.saveSuccess);
+      // Refresh the user context so the greeting updates immediately
+      await refreshUser();
     } catch (error) {
       console.error('Failed to save profile:', error);
       toast.error(messages.settings.saveError);
@@ -199,7 +204,7 @@ export default function Settings() {
                   </select>
                 </div>
               </div>
-              <button 
+              <button
                 className={styles.saveButton}
                 onClick={handleSave}
                 disabled={saving}
