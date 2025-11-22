@@ -6,6 +6,7 @@ const REFRESH_KEY = "hc_refresh_token";
 type RequestOptions = RequestInit & {
   skipAuth?: boolean;
   json?: any;
+  params?: Record<string, string | number | boolean | undefined>;
 };
 
 let accessToken = localStorage.getItem(ACCESS_KEY) || "";
@@ -106,9 +107,9 @@ export const http = {
 
     const contentType = response.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
-      return response.json() as Promise<T>;
+      return response.json() as T;
     }
-    return response.text() as Promise<T>;
+    return response.text() as T;
   },
 
   get<T = any>(path: string, options?: RequestOptions) {

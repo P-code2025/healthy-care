@@ -33,30 +33,13 @@ export interface Milestone {
     value: number;
 }
 
-/**
- * Log a completed workout
- */
-export const logWorkout = async (workout: {
-    date: string;
-    workoutName: string;
-    duration: number;
-    caloriesBurned: number;
-    exercises?: string[];
-}): Promise<void> => {
-    await http.post('/api/workout-log', {
-        completedAt: new Date(workout.date).toISOString(),
-        exerciseName: workout.workoutName,
-        durationMinutes: workout.duration,
-        caloriesBurnedEstimated: workout.caloriesBurned,
-        isAiSuggested: false
-    });
-};
+
 
 /**
  * Get workout progress stats
  */
 export const getWorkoutStats = async (): Promise<ProgressStats> => {
-    const response = await http.get<ProgressStats>('/api/workouts/stats');
+    const response = await http.get('/api/workouts/stats');
     return response.data;
 };
 
@@ -66,4 +49,19 @@ export const getWorkoutStats = async (): Promise<ProgressStats> => {
 export const getWorkoutLogs = async (): Promise<any[]> => {
     const response = await http.get('/api/workout-log');
     return response.data;
+};
+
+
+export const logWorkout = async (data: {
+  workoutName: string;
+  duration: number;
+  caloriesBurned: number;
+  date?: string;
+}) => {
+  await http.post('/api/workout-log', {
+    exerciseName: data.workoutName,
+    durationMinutes: data.duration,
+    caloriesBurnedEstimated: data.caloriesBurned,
+    completedAt: data.date || new Date().toISOString(),
+  });
 };

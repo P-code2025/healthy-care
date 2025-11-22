@@ -37,22 +37,15 @@ export interface Milestone {
  * Save workout log to database via API
  */
 export const saveWorkoutLog = async (workout: Omit<WorkoutLog, 'id' | 'completedAt'>): Promise<void> => {
-    try {
-        await http.request('/api/workout-log', {
-            method: 'POST',
-            body: JSON.stringify({
-                completedAt: new Date(workout.date).toISOString(),
-                exerciseName: workout.workoutName,
-                durationMinutes: workout.duration,
-                caloriesBurnedEstimated: workout.caloriesBurned,
-                isAiSuggested: false
-            })
-        });
-    } catch (error) {
-        console.error('Failed to save workout log:', error);
-        throw error;
-    }
+    await http.post('/api/workout-log', {
+        exerciseName: workout.workoutName,                // ← sửa
+        caloriesBurnedEstimated: workout.caloriesBurned, // ← sửa
+        durationMinutes: workout.duration,               // ← sửa
+        completedAt: new Date().toISOString(),          // ← sửa
+        isAiSuggested: false, // hoặc true nếu là AI plan
+    });
 };
+
 
 /**
  * Get progress stats from API

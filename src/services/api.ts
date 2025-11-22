@@ -149,8 +149,8 @@ export const api = {
       json: normalizeUserUpdatePayload(data),
     }),
   getFoodLog: (): Promise<FoodLog[]> => http.request("/api/food-log"),
-  getWorkoutLog: (): Promise<WorkoutLog[]> =>
-    http.request("/api/workout-log"),
+  getWorkoutLog: (params?: { start?: string; end?: string }): Promise<WorkoutLog[]> =>
+    http.request("/api/workout-log", { params }),
   getAiSuggestions: (): Promise<AiSuggestion[]> =>
     http.request("/api/ai-suggestions"),
   getDailyStatistics: (date: string): Promise<DailyStatistics> =>

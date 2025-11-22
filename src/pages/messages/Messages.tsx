@@ -19,6 +19,7 @@ import {
 import { messages as i18nMessages } from "../../i18n/messages";
 import { chatMessagesApi } from "../../api/chatMessages";
 import { calculateCalorieGoal } from "../../utils/healthCalculations";
+import { determineGoalIntent, parseGoalWeight } from "../../utils/profile";
 
 interface ChatMessage {
   id: string;
@@ -60,6 +61,7 @@ export default function Messages() {
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [diaryEntries, setDiaryEntries] = useState<FoodEntry[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
 
   // ĐÚNG: useState nằm trong component
   const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -74,15 +76,17 @@ export default function Messages() {
   useEffect(() => {
     if (!user) return;
 
+    const currentWeight = user.weight_kg || 70;
+    const goalWeight = parseGoalWeight(user.goal) || currentWeight;
+    const detectedGoal = determineGoalIntent(currentWeight, goalWeight);
+
     setUserProfile(prev => ({
       ...prev,
       age: user.age ?? prev.age,
       weight: user.weight_kg ?? prev.weight,
       height: user.height_cm ?? prev.height,
       gender: (user.gender === "Female" ? "Female" : "Male") as "Male" | "Female",
-      goal: (["lose", "maintain", "gain"].includes(user.goal as string)
-        ? user.goal
-        : prev.goal) as "lose" | "maintain" | "gain",
+      goal: detectedGoal,
     }));
   }, [user]);
 

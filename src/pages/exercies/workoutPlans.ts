@@ -72,7 +72,7 @@ export const SAMPLE_WORKOUT_PLANS: WorkoutPlan[] = [
     videoUrl: "https://www.youtube.com/watch?v=LqXZ628YNj4",
     isSaved: true,
     exercises: [
-      { exerciseId: "sun", name: "Sun Salutation", sets: 1, reps: "5 vòng", rest: "30s", videoUrl: "https://www.youtube.com/watch?v=H9qLZR2J3fU" },
+      { exerciseId: "sun", name: "Sun Salutation", sets: 1, reps: "5 rounds", rest: "30s", videoUrl: "https://www.youtube.com/watch?v=H9qLZR2J3fU" },
     ]
   },
   {

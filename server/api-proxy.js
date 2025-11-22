@@ -581,13 +581,37 @@ app.post("/api/food-log/batch-delete", requireAuth, async (req, res) => {
 // ========== WORKOUT LOGS ==========
 app.get("/api/workout-log", async (req, res) => {
   const userId = getUserIdOrFallback(req);
+  const { start, end } = req.query;
+
+  const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  };
+
   try {
+    const where = { userId };
+
+    if (start || end) {
+      where.completedAt = {};
+      if (start) where.completedAt.gte = parseDate(start);
+      if (end) {
+        const endDate = parseDate(end);
+        if (endDate) {
+          endDate.setUTCDate(endDate.getUTCDate() + 1);
+          where.completedAt.lt = endDate;
+        }
+      }
+    }
+
     const logs = await prisma.workoutLog.findMany({
-      where: { userId },
+      where,
       orderBy: { completedAt: "desc" },
     });
+
     res.json(logs.map(mapWorkoutLog));
   } catch (error) {
+    console.error("Workout log fetch error:", error);
     handlePrismaError(res, error, "Failed to fetch workout logs");
   }
 });
@@ -1177,6 +1201,7 @@ GUIDELINES
 - >70% → intense or active recovery
 - Select 1–3 workouts from the list below only
 - Total estimated burn: 250–600 kcal
+- Order: Strength/Cardio FIRST → Yoga/Recovery LAST
 
 AVAILABLE WORKOUTS (must match exactly):
 ${AVAILABLE_PLANS.map((p, i) => `${i + 1}. ${p}`).join("\n")}

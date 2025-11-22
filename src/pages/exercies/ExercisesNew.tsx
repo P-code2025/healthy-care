@@ -8,17 +8,20 @@ import {
   Search,
   X,
   Loader2,
+  Plus,
 } from 'lucide-react';
 import styles from './ExercisesNew.module.css';
 import YouTubePlayer from '../../components/YouTubePlayer';
 import { SAMPLE_WORKOUT_PLANS, type WorkoutPlan } from './workoutPlans';
 import { generateAIExercisePlan, type AIExercisePlan } from '../../services/aiExercisePlan';
-import type { FoodEntry} from '../../lib/types';
+import type { FoodEntry } from '../../lib/types';
 import { foodDiaryApi, mapFoodLogToEntry } from '../../services/foodDiaryApi';
 import { useAuth } from '../../context/AuthContext';
 import { determineGoalIntent, getGoalWeightFromUser } from '../../utils/profile';
 import { saveWorkoutLog, getProgressStats } from '../../services/progressTracker';
 import { toast } from 'react-toastify';
+import { logWorkout } from '../../services/api/workoutApi';
+import { api } from '../../services/api';
 
 const TABS = ['All', 'Personalized', 'Saved', 'History'] as const;
 type TabType = typeof TABS[number];
@@ -36,11 +39,36 @@ export default function ExercisesNew() {
   const [activeTab, setActiveTab] = useState<TabType>('Personalized');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
+  const [todayWorkoutSequence, setTodayWorkoutSequence] = useState<WorkoutPlan[]>([]); // ← THÊM DÒNG NÀY
   const [savedPlans, setSavedPlans] = useState<Set<string>>(new Set(['2', '5']));
   const [plans, setPlans] = useState<WorkoutPlan[]>(SAMPLE_WORKOUT_PLANS);
   const [userProfile, setUserProfile] = useState<LocalProfile | null>(null);
   const [dailyCalories, setDailyCalories] = useState(0);
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
+  const [todayBurnedCalories, setTodayBurnedCalories] = useState(0);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customActivity, setCustomActivity] = useState({
+    name: "",
+    duration: 0,
+    kcal: 0,
+  });
+  const logQuickActivity = async (name: string, duration: number, kcal: number) => {
+  try {
+    await saveWorkoutLog({
+      date: new Date().toISOString().split('T')[0],
+      workoutName: name,
+      duration,
+      caloriesBurned: kcal,
+      exercises: [],
+    });
+    // state vẫn cập nhật để UI phản hồi ngay
+    setTodayBurnedCalories(prev => prev + kcal);
+    toast.success(`Đã ghi: ${name} → +${kcal} kcal`);
+  } catch (err) {
+    toast.error("Save workout failed. Please try again.");
+  }
+};
+
 
   // AI State
   const [aiPlan, setAiPlan] = useState<AIExercisePlan>(() => {
@@ -87,6 +115,26 @@ export default function ExercisesNew() {
   }, []);
 
   useEffect(() => {
+  const loadTodayWorkouts = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const logs = await api.getWorkoutLog({ start: today, end: today });
+      
+      const totalBurned = logs.reduce((sum: number, log: any) => 
+        sum + (log.calories_burned_estimated || log.caloriesBurnedEstimated || 0), 0
+      );
+      
+      setTodayBurnedCalories(totalBurned);
+    } catch (err) {
+      console.error('Failed to load today workouts', err);
+      // Không crash UI, chỉ log
+    }
+  };
+  
+  loadTodayWorkouts();
+}, []);
+
+  useEffect(() => {
     const total = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
     setDailyCalories(total);
   }, [foodEntries]);
@@ -104,8 +152,12 @@ export default function ExercisesNew() {
       : 447.593 + 9.247 * weight + 3.098 * height - 4.33 * age;
 
     const tdee = Math.round(bmr * 1.55);
-    const targetDeficit = goalWeight < weight ? 500 : 0;
-    const recommendedBurn = Math.max(0, dailyCalories - tdee + targetDeficit);
+    const isLosing = goalWeight < weight;
+    const desiredDailyDeficit = isLosing ? 750 : 0;  // 750 kcal là mức đẹp
+    const currentDeficit = tdee - dailyCalories;
+    const recommendedBurn = isLosing
+      ? Math.max(0, desiredDailyDeficit - currentDeficit + 200)  // +200 để khuyến khích tập
+      : 200; // maintain thì vẫn nên vận động nhẹ
     const deficitPct = Math.min(100, Math.round((recommendedBurn / tdee) * 100));
 
     return {
@@ -220,37 +272,39 @@ export default function ExercisesNew() {
 
   const handleCompleteWorkout = async (plan: WorkoutPlan) => {
     try {
-      // Save workout log to database
-      await saveWorkoutLog({
-        date: new Date().toISOString().split('T')[0],
+      await logWorkout({
         workoutName: plan.title,
         duration: plan.duration,
         caloriesBurned: plan.calories,
-        exercises: plan.exercises.map(ex => ex.name)
       });
 
-      toast.success(
-        `🎉 Completed "${plan.title}"! Burned ${plan.calories} kcal`,
-        { autoClose: 4000 }
-      );
+      setTodayBurnedCalories(prev => prev + plan.calories);
 
-      // Fetch and display streak info (with error handling)
-      setTimeout(async () => {
-        try {
-          const stats = await getProgressStats();
-          toast.info(`🔥 Current streak: ${stats.currentStreak} days!`, {
-            autoClose: 3000
-          });
-        } catch (statsError) {
-          console.warn('Failed to fetch progress stats:', statsError);
-          // Don't show error to user since workout was already saved successfully
-        }
-      }, 1500);
+      toast.success(`Completed "${plan.title}"! Burned ${plan.calories} kcal`, { autoClose: 4000 });
+
+      // Hiển thị streak mới nhất
+      const stats = await getProgressStats();
+      toast.info(`Current streak: ${stats.currentStreak} days!`, { autoClose: 4000 });
+
+      // Tự động chuyển sang bài tiếp theo
+      const currentIndex = todayWorkoutSequence.findIndex(p => p.id === plan.id);
+      if (currentIndex !== -1 && currentIndex < todayWorkoutSequence.length - 1) {
+        setTimeout(() => {
+          setSelectedPlan(todayWorkoutSequence[currentIndex + 1]);
+          toast.info(`Continue: ${todayWorkoutSequence[currentIndex + 1].title}`, { autoClose: 3000 });
+        }, 1800);
+      } else {
+        // Đã hoàn thành hết → chúc mừng
+        setTimeout(() => {
+          toast.success("COMPLETED TODAY'S WORKOUT! Great job!", { autoClose: 5000 });
+        }, 1500);
+        setTodayWorkoutSequence([]);
+      }
 
       setSelectedPlan(null);
     } catch (error) {
       console.error('Failed to complete workout:', error);
-      toast.error('Failed to save workout. Please try again.');
+      toast.error('Failed to save workout. Please try again!');
     }
   };
 
@@ -279,7 +333,7 @@ export default function ExercisesNew() {
         <Search className="w-5 h-5 text-gray-500" />
         <input
           type="text"
-          placeholder="Tìm giáo án, mục tiêu..."
+          placeholder="Search workout plans, goals..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -287,87 +341,248 @@ export default function ExercisesNew() {
 
       {/* ==================== AI PERSONALIZED BANNER ==================== */}
       {activeTab === 'Personalized' && analysis && (
-        <div className={styles.aiBanner}>
-          {/* Header */}
-          <div className={styles.aiHeader}>
-            <div className={styles.aiAvatar}>AI</div>
-            <h3 className={styles.aiTitle}>Personal trainer</h3>
-          </div>
+        <div className="space-y-6">
 
-          {/* Stats */}
-          <div className={styles.aiStats}>
-            <div className={styles.aiStat}><strong>{dailyCalories}</strong> kcal consumed</div>
-            <div className={styles.aiStat}><strong>{analysis.tdee}</strong> kcal TDEE</div>
-            <div className={styles.aiStat}>
-              <strong>{analysis.bmi}</strong> BMI
-              <span className={styles.bmiStatus} style={{
-                color: Number(analysis.bmi) > 25 ? '#dc2626' : '#10b981'
-              }}>
-                {Number(analysis.bmi) > 25 ? ' - Need to lose weight' : ' - Maintain well'}
-              </span>
+          {/* 1. Thanh tiến độ đốt calo */}
+          <div className={styles.burnProgressBanner}>
+            <div>
+              <p className="text-sm opacity-90 mb-2">Total Calories Burned Today</p>
+              <p className={styles.bigNumber}>{todayBurnedCalories}</p>
+              <p className="text-xl mt-3 opacity-90">
+                Achieved {Math.round((todayBurnedCalories / analysis.recommendedBurn) * 100)}% of fat burning goal
+              </p>
+            </div>
+            <div className={styles.progressContainer}>
+              <div
+                className={styles.progressFill}
+                style={{ width: `${Math.min(100, (todayBurnedCalories / analysis.recommendedBurn) * 100)}%` }}
+              />
             </div>
           </div>
 
-          {/* Progress */}
-          <div className={styles.aiProgress}>
-            <div className={styles.aiProgressLabel}>
-              Burn <strong>{analysis.recommendedBurn} kcal</strong> to balance
-            </div>
-            <div className={styles.aiProgressBar}>
-              <div className={styles.aiProgressFill} style={{ width: `${analysis.deficitPct}%` }} />
-            </div>
-          </div>
+          <div className={styles.quickActivityCard}>
+            <h3 className="text-xl font-bold mb-5 flex items-center gap-3">
+              <Flame className="w-7 h-7" />
+              Did you exercise outside the plan today?
+            </h3>
+            <div className={styles.quickActivityGrid}>
+              {[
+                { name: "Running 30 minutes", kcal: 300 },
+                { name: "Swimming 45 minutes", kcal: 500 },
+                { name: "Soccer 1 hour", kcal: 600 },
+                { name: "Badminton 1 hour", kcal: 450 },
+                { name: "Cycling 1 hour", kcal: 550 },
+              ].map((act) => (
+                <button
+                  key={act.name}
+                  onClick={async () => {
+                    const duration = act.name.includes('30') ? 30 : act.name.includes('45') ? 45 : 60;
+                    await logQuickActivity(act.name, duration, act.kcal);
+                    setTodayBurnedCalories(prev => prev + act.kcal);
+                    toast.success(`Đã ghi: ${act.name} → +${act.kcal} kcal`);
+                  }}
+                  className={styles.quickActivityBtn}
+                >
+                  <div>{act.name}</div>
+                  <span>+{act.kcal} kcal</span>
+                </button>
+              ))}
 
-          {/* LOADING */}
-          {isLoadingAI && (
-            <div className="flex items-center gap-2 text-emerald-600 mt-3">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>AI is generating a personalized plan...</span>
-            </div>
-          )}
-
-          {/* AI PLAN - SHOW AFTER RESULTS */}
-          {!isLoadingAI && (
-            <div className={styles.aiSuggestionCard}>
-              <div className={styles.aiSuggestionInfo}>
-                <p className="font-medium text-emerald-700">{aiPlan.summary}</p>
-                <p className="text-sm mt-1">
-                  <strong>Intensity:</strong> {aiPlan.intensity} • <strong>Estimated Burn:</strong> {aiPlan.totalBurnEstimate}
-                </p>
-                <div className="mt-2 space-y-1">
-                  {aiPlan.exercises.map((ex, i) => (
-                    <div key={i} className="text-sm">
-                      <strong>{ex.name}</strong> – {ex.duration}
-                      <br />
-                      <span className="text-xs text-gray-500">→ {ex.reason}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs italic text-emerald-600 mt-2">{aiPlan.advice}</p>
-              </div>
               <button
-                onClick={() => {
-                  const matched = plans.find(p =>
-                    aiPlan.exercises.some(ex =>
-                      p.title.toLowerCase().includes(ex.name.toLowerCase()) ||
-                      ex.name.toLowerCase().includes(p.title.toLowerCase())
-                    )
-                  );
-                  setSelectedPlan(matched || plans[0]);
-                }}
-                className={styles.aiStartBtn}
+                onClick={() => setShowCustomModal(true)}
+                className={styles.customActivityBtn}
               >
-                Start Now
+                <Plus className="w-7 h-7" />
+                Custom Input
               </button>
             </div>
-          )}
-        </div>
-      )}
+          </div>
 
-      {analysis && dailyCalories < 0.3 * analysis.tdee && (
-        <div className="bg-orange-100 text-orange-700 p-2 rounded mt-2 text-sm">
-          ⚠️ You have only consumed <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> of your TDEE.
-          You should eat more before exercising to avoid fatigue.
+          {/* ==================== MODAL CUSTOM INPUT ==================== */}
+          {showCustomModal && (
+            <div className={styles.customModalOverlay} onClick={() => setShowCustomModal(false)}>
+              <div className={styles.customModal} onClick={e => e.stopPropagation()}>
+                <div className={styles.customModalHeader}>
+                  <h3>
+                    <Flame className="w-8 h-8 text-orange-500" />
+                    Log Free Activity
+                  </h3>
+                  <button onClick={() => setShowCustomModal(false)} className={styles.customModalClose}>
+                    <X className="w-7 h-7" />
+                  </button>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <label className={styles.customModalLabel}>Activity Name</label>
+                    <input
+                      type="text"
+                      value={customActivity.name}
+                      onChange={e => setCustomActivity(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g., Jump rope in the park"
+                      className={styles.customModalInput}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={styles.customModalLabel}>Duration (minutes)</label>
+                    <input
+                      type="number"
+                      value={customActivity.duration || ''}
+                      onChange={e => {
+                        const mins = Number(e.target.value) || 0;
+                        setCustomActivity(prev => ({
+                          ...prev,
+                          duration: mins,
+                          kcal: prev.kcal === 0 ? Math.round(mins * 9) : prev.kcal
+                        }));
+                      }}
+                      placeholder="30"
+                      className={styles.customModalInput}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={styles.customModalLabel}>
+                      Estimated Burn (kcal)
+                      {customActivity.duration > 0 && customActivity.kcal === 0 && (
+                        <span className={styles.customModalHint}>(auto ~9 kcal/min)</span>
+                      )}
+                    </label>
+                    <input
+                      type="number"
+                      value={customActivity.kcal || ''}
+                      onChange={e => setCustomActivity(prev => ({ ...prev, kcal: Number(e.target.value) || 0 }))}
+                      placeholder={customActivity.duration > 0 ? String(Math.round(customActivity.duration * 9)) : "250"}
+                      className={styles.customModalInput}
+                      style={{ fontWeight: 600, color: '#7c3aed' }}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.customModalActions}>
+                  <button onClick={() => setShowCustomModal(false)} className={styles.customModalCancel}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!customActivity.name.trim()) return toast.error("Enter activity name");
+                      if (customActivity.duration <= 0) return toast.error("Duration must be > 0");
+                      const kcal = customActivity.kcal || Math.round(customActivity.duration * 9);
+                      await logQuickActivity(customActivity.name, customActivity.duration, kcal);
+                      setTodayBurnedCalories(prev => prev + kcal);
+                      toast.success(`Đã ghi: ${customActivity.name} → +${kcal} kcal`);
+                      setShowCustomModal(false);
+                      setCustomActivity({ name: "", duration: 0, kcal: 0 });
+                    }}
+                    className={styles.customModalSave}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3. AI Personal Trainer Banner - giữ nguyên nhưng tối ưu layout */}
+          <div className={styles.aiBanner}>
+            <div className={styles.aiHeader}>
+              <div className={styles.aiAvatar}>AI</div>
+              <h3 className={styles.aiTitle}>Your Personal Trainer</h3>
+            </div>
+
+            <div className={styles.aiStats}>
+              <div className={styles.aiStat}>
+                <strong>{dailyCalories}</strong> kcal eaten
+              </div>
+              <div className={styles.aiStat}>
+                <strong>{analysis.tdee}</strong> kcal TDEE
+              </div>
+              <div className={styles.aiStat}>
+                <strong>{analysis.bmi}</strong> BMI
+                <span className={styles.bmiStatus} style={{
+                  color: Number(analysis.bmi) > 25 ? '#dc2626' : '#10b981'
+                }}>
+                  {Number(analysis.bmi) > 25 ? ' - Cần giảm cân' : ' - Duy trì tốt'}
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.aiProgress}>
+              <div className={styles.aiProgressLabel}>
+                Need to burn <strong>{analysis.recommendedBurn} kcal</strong> to balance
+              </div>
+              <div className={styles.aiProgressBar}>
+                <div
+                  className={styles.aiProgressFill}
+                  style={{ width: `${analysis.deficitPct}%` }}
+                />
+              </div>
+            </div>
+
+            {isLoadingAI && (
+              <div className="flex items-center gap-2 text-emerald-600 mt-3">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>AI is creating a personalized plan for you...</span>
+              </div>
+            )}
+
+            {!isLoadingAI && (
+              <div className={styles.aiSuggestionCard}>
+                <div className={styles.aiSuggestionInfo}>
+                  <p className="font-medium text-emerald-700">{aiPlan.summary}</p>
+                  <p className="text-sm mt-1">
+                    <strong>Intensity:</strong> {aiPlan.intensity} • <strong>Estimated Burn:</strong> {aiPlan.totalBurnEstimate}
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {aiPlan.exercises.map((ex, i) => (
+                      <div key={i} className="text-sm">
+                        <strong>{ex.name}</strong> – {ex.duration}
+                        <br />
+                        <span className="text-xs text-gray-500">→ {ex.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs italic text-emerald-600 mt-3">{aiPlan.advice}</p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const matchedPlans = plans.filter(p =>
+                      aiPlan.exercises.some(ex =>
+                        p.title.toLowerCase().includes(ex.name.toLowerCase()) ||
+                        ex.name.toLowerCase().includes(p.title.toLowerCase())
+                      )
+                    );
+
+                    if (matchedPlans.length === 0) {
+                      toast.error("No matching plans found");
+                      return;
+                    }
+
+                    setTodayWorkoutSequence(matchedPlans);
+                    setSelectedPlan(matchedPlans[0]);
+
+                    toast.success(
+                      `Start your workout today! You will perform ${matchedPlans.length} exercises: ${matchedPlans.map(p => p.title).join(" → ")}`,
+                      { autoClose: 7000 }
+                    );
+                  }}
+                  className={styles.aiStartBtn}
+                >
+                  Start Now
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Cảnh báo ăn ít */}
+          {dailyCalories < 0.3 * analysis.tdee && (
+            <div className="bg-orange-100 text-orange-700 p-4 rounded-xl text-sm font-medium text-center">
+              Bạn mới ăn <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> TDEE.
+              Hãy ăn thêm trước khi tập để có năng lượng nhé!
+            </div>
+          )}
         </div>
       )}
 
