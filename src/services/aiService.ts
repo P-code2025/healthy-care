@@ -1,6 +1,5 @@
 import { http } from './http';
-import type { FoodEntry } from "../lib/types";
-import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from "./foodDiaryApi";
+import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput} from "./foodDiaryApi";
 
 // Type definitions (inline to avoid import issues)
 interface FoodEntry {
@@ -20,10 +19,6 @@ interface FoodEntry {
   imageAttribution?: string;
 }
 
-interface FoodEntryInput extends Omit<FoodEntry, 'date' | 'time'> {
-  date: string;
-  time: string;
-}
 
 // CLOVA credentials
 const CLOVA_API_KEY = import.meta.env.VITE_CLOVA_API_KEY;
@@ -67,18 +62,6 @@ export interface FoodRecognitionResult {
   portionSize: string;
   confidence: number; // 0-1
 }
-
-// Mock food database for demo
-const MOCK_FOODS = [
-  { foodName: 'Phở bò', calories: 180, protein: 12.5, carbs: 25, fats: 3.2, confidence: 0.88 },
-  { foodName: 'Cơm tấm sườn', calories: 420, protein: 28, carbs: 52, fats: 12, confidence: 0.92 },
-  { foodName: 'Bánh mì thịt', calories: 360, protein: 18, carbs: 45, fats: 14, confidence: 0.85 },
-  { foodName: 'Bún chả', calories: 310, protein: 22, carbs: 38, fats: 8.5, confidence: 0.80 },
-  { foodName: 'Gỏi cuốn tôm', calories: 95, protein: 8, carbs: 12, fats: 2.5, confidence: 0.87 },
-  { foodName: 'Cơm gà xối mỡ', calories: 385, protein: 31, carbs: 42, fats: 10, confidence: 0.90 },
-  { foodName: 'Salad rau trộn', calories: 65, protein: 3, carbs: 8, fats: 2.8, confidence: 0.75 },
-  { foodName: 'Bún bò Huế', calories: 330, protein: 20, carbs: 40, fats: 9, confidence: 0.83 },
-]
 
 export interface APIError {
   status: number;
@@ -128,14 +111,6 @@ export const recognizeFoodFromImage = async (
       // Simulate API delay
       const delay = AI_SIMULATION_MIN_DELAY + Math.random() * (AI_SIMULATION_MAX_DELAY - AI_SIMULATION_MIN_DELAY);
       await new Promise(resolve => setTimeout(resolve, delay));
-
-      // Random food from mock database
-      const randomFood = MOCK_FOODS[Math.floor(Math.random() * MOCK_FOODS.length)];
-
-      return {
-        ...randomFood,
-        portionSize: '100g',
-      };
     }
 
     // Convert to base64 (without data URL prefix)
