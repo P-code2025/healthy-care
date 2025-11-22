@@ -1,4 +1,3 @@
-// src/pages/ExercisesNew.tsx
 import { useState, useEffect, useMemo } from 'react';
 import {
   Play,
@@ -39,7 +38,7 @@ export default function ExercisesNew() {
   const [activeTab, setActiveTab] = useState<TabType>('Personalized');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
-  const [todayWorkoutSequence, setTodayWorkoutSequence] = useState<WorkoutPlan[]>([]); // ← THÊM DÒNG NÀY
+  const [todayWorkoutSequence, setTodayWorkoutSequence] = useState<WorkoutPlan[]>([]);
   const [savedPlans, setSavedPlans] = useState<Set<string>>(new Set(['2', '5']));
   const [plans, setPlans] = useState<WorkoutPlan[]>(SAMPLE_WORKOUT_PLANS);
   const [userProfile, setUserProfile] = useState<LocalProfile | null>(null);
@@ -61,18 +60,15 @@ export default function ExercisesNew() {
         caloriesBurned: kcal,
         exercises: [],
       });
-      // state vẫn cập nhật để UI phản hồi ngay
       setTodayBurnedCalories(prev => prev + kcal);
-      toast.success(`Đã ghi: ${name} → +${kcal} kcal`);
+      toast.success(`Logged: ${name} → +${kcal} kcal`);
     } catch (err) {
       toast.error("Save workout failed. Please try again.");
     }
   };
 
 
-  // AI State
   const [aiPlan, setAiPlan] = useState<AIExercisePlan>(() => {
-    // Create fallback on initialization
     return {
       summary: "AI is preparing a personalized plan for you...",
       intensity: 'moderate',
@@ -83,7 +79,6 @@ export default function ExercisesNew() {
   });
   const [isLoadingAI, setIsLoadingAI] = useState(false);
 
-  // Load profile from auth context
   useEffect(() => {
     if (!user) return;
     const weight = user.weight_kg || 0;
@@ -100,7 +95,6 @@ export default function ExercisesNew() {
     });
   }, [user]);
 
-  // Load today's food entries
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     const loadEntries = async () => {
@@ -127,7 +121,6 @@ export default function ExercisesNew() {
         setTodayBurnedCalories(totalBurned);
       } catch (err) {
         console.error('Failed to load today workouts', err);
-        // Không crash UI, chỉ log
       }
     };
 
@@ -139,7 +132,6 @@ export default function ExercisesNew() {
     setDailyCalories(total);
   }, [foodEntries]);
 
-  // Tính BMI + TDEE
   const analysis = useMemo(() => {
     if (!userProfile || dailyCalories === 0) return null;
 
@@ -153,11 +145,11 @@ export default function ExercisesNew() {
 
     const tdee = Math.round(bmr * 1.55);
     const isLosing = goalWeight < weight;
-    const desiredDailyDeficit = isLosing ? 750 : 0;  // 750 kcal là mức đẹp
+    const desiredDailyDeficit = isLosing ? 750 : 0;  
     const currentDeficit = tdee - dailyCalories;
     const recommendedBurn = isLosing
-      ? Math.max(0, desiredDailyDeficit - currentDeficit + 200)  // +200 để khuyến khích tập
-      : 200; // maintain thì vẫn nên vận động nhẹ
+      ? Math.max(0, desiredDailyDeficit - currentDeficit + 200) 
+      : 200; 
     const deficitPct = Math.min(100, Math.round((recommendedBurn / tdee) * 100));
 
     return {
@@ -168,12 +160,9 @@ export default function ExercisesNew() {
     };
   }, [userProfile, dailyCalories]);
 
-  // CALL CLOVA AI + DAILY CACHE
-  // CALL CLOVA AI + CACHE BY DAY + CALORIES + PROFILE
   useEffect(() => {
     if (activeTab !== 'Personalized' || !analysis || !userProfile) return;
 
-    // CREATE CACHE KEY MATCHING aiExercisePlan.ts
     const profileKey = `${userProfile.age}_${userProfile.gender}_${userProfile.weight}_${userProfile.height}_${userProfile.goalWeight}`;
     const cacheKey = `aiPlan_daily_${new Date().toDateString()}_${dailyCalories}_${profileKey.substring(0, 50)}`;
 
@@ -204,11 +193,11 @@ export default function ExercisesNew() {
         },
         availablePlanNames,
         "Generate today's workout plan",
-        'daily' // ← IMPORTANT
+        'daily' 
       );
 
       setAiPlan(result);
-      localStorage.setItem(cacheKey, JSON.stringify(result)); // ← SAVE WITH CORRECT KEY
+      localStorage.setItem(cacheKey, JSON.stringify(result));
 
       setIsLoadingAI(false);
     };
@@ -216,7 +205,6 @@ export default function ExercisesNew() {
     fetchAI();
   }, [activeTab, analysis, userProfile, dailyCalories, foodEntries]);
 
-  // Filter plans
   const filteredPlans = useMemo(() => {
     let filtered = plans;
 
@@ -232,8 +220,6 @@ export default function ExercisesNew() {
             return planTitle.includes(exName) || exName.includes(planTitle);
           });
         });
-
-        // → PRIORITY: If ≥1 workout matches → display all
         filtered = matchedPlans.length > 0 ? matchedPlans : [plans[0]];
       } else {
         filtered = plans.slice(0, 1);
@@ -282,11 +268,9 @@ export default function ExercisesNew() {
 
       toast.success(`Completed "${plan.title}"! Burned ${plan.calories} kcal`, { autoClose: 4000 });
 
-      // Hiển thị streak mới nhất
       const stats = await getProgressStats();
       toast.info(`Current streak: ${stats.currentStreak} days!`, { autoClose: 4000 });
 
-      // Tự động chuyển sang bài tiếp theo
       const currentIndex = todayWorkoutSequence.findIndex(p => p.id === plan.id);
       if (currentIndex !== -1 && currentIndex < todayWorkoutSequence.length - 1) {
         setTimeout(() => {
@@ -294,7 +278,6 @@ export default function ExercisesNew() {
           toast.info(`Continue: ${todayWorkoutSequence[currentIndex + 1].title}`, { autoClose: 3000 });
         }, 1800);
       } else {
-        // Đã hoàn thành hết → chúc mừng
         setTimeout(() => {
           toast.success("COMPLETED TODAY'S WORKOUT! Great job!", { autoClose: 5000 });
         }, 1500);
@@ -310,12 +293,10 @@ export default function ExercisesNew() {
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
         <h1 className={styles.pageTitle}>Workout Plans</h1>
       </div>
 
-      {/* Tabs */}
       <div className={styles.tabs}>
         {TABS.map(tab => (
           <button
@@ -328,7 +309,6 @@ export default function ExercisesNew() {
         ))}
       </div>
 
-      {/* Search */}
       <div className={styles.searchBox}>
         <Search className="w-5 h-5 text-gray-500" />
         <input
@@ -339,11 +319,9 @@ export default function ExercisesNew() {
         />
       </div>
 
-      {/* ==================== AI PERSONALIZED BANNER ==================== */}
       {activeTab === 'Personalized' && analysis && (
         <div className="space-y-6">
 
-          {/* 1. Thanh tiến độ đốt calo */}
           <div className={styles.burnProgressBanner}>
             <div>
               <p className="text-sm opacity-90 mb-2">Total Calories Burned Today</p>
@@ -398,7 +376,6 @@ export default function ExercisesNew() {
             </div>
           </div>
 
-          {/* ==================== MODAL CUSTOM INPUT ==================== */}
           {showCustomModal && (
             <div className={styles.customModalOverlay} onClick={() => setShowCustomModal(false)}>
               <div className={styles.customModal} onClick={e => e.stopPropagation()}>
@@ -484,7 +461,6 @@ export default function ExercisesNew() {
             </div>
           )}
 
-          {/* 3. AI Personal Trainer Banner - giữ nguyên nhưng tối ưu layout */}
           <div className={styles.aiBanner}>
             <div className={styles.aiHeader}>
               <div className={styles.aiAvatar}>AI</div>
@@ -503,7 +479,7 @@ export default function ExercisesNew() {
                 <span className={styles.bmiStatus} style={{
                   color: Number(analysis.bmi) > 25 ? '#dc2626' : '#10b981'
                 }}>
-                  {Number(analysis.bmi) > 25 ? ' - Cần giảm cân' : ' - Duy trì tốt'}
+                  {Number(analysis.bmi) > 25 ? ' - Need to lose weight' : ' - Maintain well'}
                 </span>
               </div>
             </div>
@@ -576,17 +552,15 @@ export default function ExercisesNew() {
             )}
           </div>
 
-          {/* Cảnh báo ăn ít */}
           {dailyCalories < 0.3 * analysis.tdee && (
             <div className="bg-orange-100 text-orange-700 p-4 rounded-xl text-sm font-medium text-center">
-              Bạn mới ăn <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> TDEE.
-              Hãy ăn thêm trước khi tập để có năng lượng nhé!
+              You have only consumed <strong>{Math.round(dailyCalories / analysis.tdee * 100)}%</strong> of your TDEE.
+              Please eat more before exercising to have enough energy!
             </div>
           )}
         </div>
       )}
 
-      {/* ==================== PLAN GRID ==================== */}
       <div className={styles.grid}>
         {filteredPlans.map(plan => (
           <div key={plan.id} className={styles.card} onClick={() => setSelectedPlan(plan)}>
@@ -621,7 +595,6 @@ export default function ExercisesNew() {
         ))}
       </div>
 
-      {/* ==================== PLAN DETAIL MODAL ==================== */}
       {selectedPlan && (
         <div className={styles.modalOverlay} onClick={() => setSelectedPlan(null)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>

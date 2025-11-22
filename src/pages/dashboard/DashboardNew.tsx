@@ -1,4 +1,3 @@
-// src/pages/DashboardNew.tsx
 import { useState, useEffect, useMemo } from 'react';
 import styles from './DashboardNew.module.css';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday, startOfMonth, endOfMonth } from 'date-fns';
@@ -7,6 +6,10 @@ import weightIcon from '../../assets/weight-svgrepo-com.svg';
 import bmiIcon from '../../assets/watch-svgrepo-com.svg';
 import calorieIcon from '../../assets/carrot-svgrepo-com.svg';
 import exerciseIcon from '../../assets/sneakers-svgrepo-com.svg';
+import morningIcon from '../../assets/sun-svgrepo-com.svg';
+import afternoonIcon from '../../assets/sun-behind-cloud-svgrepo-com.svg';
+import eveningIcon from '../../assets/moon-stars-svgrepo-com.svg';
+import snackIcon from '../../assets/muesli-svgrepo-com.svg';
 
 interface CalendarWidgetProps {
   selectedDate: string;
@@ -38,8 +41,8 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedDate, onDateCha
 
       <div className={styles.calendarGrid}>
         <div className={styles.weekdays}>
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-            <div key={day} className={styles.weekday}>{day}</div>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+            <div key={index} className={styles.weekday}>{day}</div>
           ))}
         </div>
 
@@ -127,14 +130,13 @@ export default function DashboardNew() {
 
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const startDate = startOfWeek(firstDayOfMonth, { weekStartsOn: 0 }); // Chủ nhật
+  const startDate = startOfWeek(firstDayOfMonth, { weekStartsOn: 0 }); 
   const endDate = endOfWeek(lastDayOfMonth, { weekStartsOn: 0 });
 
   const days = eachDayOfInterval({ start: startDate, end: endDate })
     .map(date => {
       const day = date.getDate();
       const month = date.getMonth();
-      // Chỉ hiển thị số nếu thuộc tháng hiện tại, còn lại để trống
       return month === now.getMonth() ? day : null;
     });
 
@@ -151,7 +153,6 @@ export default function DashboardNew() {
     );
   };
 
-  // Lấy tất cả dữ liệu khi load
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
@@ -202,7 +203,6 @@ export default function DashboardNew() {
     fetchDashboardData();
   }, [selectedDate]);
 
-  // Tính BMI
   const bmi = user?.weight_kg && user?.height_cm
     ? Number((user.weight_kg / ((user.height_cm / 100) ** 2)).toFixed(1))
     : 0;
@@ -215,21 +215,17 @@ export default function DashboardNew() {
     const age = user.age || 25;
     const gender = user.gender || 'male';
 
-    // BMR chính xác (Harris-Benedict)
     const bmr = gender === 'male'
       ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
       : 447.593 + (9.247 * weight) + (3.098 * height) - (4.33 * age);
 
-    // Activity level: 1.55 = moderately active (chuẩn cho người tập gym 3-5 buổi/tuần)
     return Math.round(bmr * 1.55);
   }, [user]);
 
-  // % calo đã ăn theo TDEE thật
   const calorieIntakePercent = todayStats?.total_calories
     ? Math.min(100, Math.round((todayStats.total_calories / tdee) * 100))
     : 0;
 
-  // =============== BIỂU ĐỒ MACRO ĐẸP + CHÍNH XÁC 100% ===============
   const macroCalories = {
     protein: (todayStats?.total_protein || 0) * 4,
     carbs: (todayStats?.total_carbs || 0) * 4,
@@ -237,7 +233,6 @@ export default function DashboardNew() {
   };
   const totalEatenCalories = macroCalories.protein + macroCalories.carbs + macroCalories.fat;
 
-  // Tỷ lệ % từng macro trong tổng calo đã ăn
   const proteinPct = totalEatenCalories ? (macroCalories.protein / totalEatenCalories) * 100 : 0;
   const carbsPct = totalEatenCalories ? (macroCalories.carbs / totalEatenCalories) * 100 : 0;
   const fatPct = totalEatenCalories ? (macroCalories.fat / totalEatenCalories) * 100 : 0;
@@ -257,8 +252,6 @@ export default function DashboardNew() {
   return (
     <div className={styles.container}>
       <div className={styles.mainContent}>
-
-        {/* Stats Overview */}
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
             <div
@@ -298,9 +291,7 @@ export default function DashboardNew() {
           </div>
         </div>
 
-        {/* Charts Row */}
         <div className={styles.chartsRow}>
-          {/* Weight Donut */}
           <div className={styles.chartCard}>
             <div className={styles.cardHeader}>
               <h3>Weight Progress</h3>
@@ -322,7 +313,6 @@ export default function DashboardNew() {
             </p>
           </div>
 
-          {/* Calories Intake */}
           <div className={styles.chartCard}>
             <div className={styles.cardHeader}>
               <h3>Nutrition Distribution Today</h3>
@@ -334,11 +324,8 @@ export default function DashboardNew() {
             <div className={styles.caloriesChart}>
               <div className={styles.caloriesDonut}>
                 <svg viewBox="0 0 200 200" className={styles.macroDonut}>
-                  {/* Vòng nền xám (chưa ăn đủ TDEE) */}
                   <circle cx="100" cy="100" r="80" fill="none" stroke="#F3F4F6" strokeWidth="36" />
 
-                  {/* 3 vòng macro chồng lên – luôn đầy 100% phần đã ăn */}
-                  {/* Fat (hồng) */}
                   <circle
                     cx="100" cy="100" r="80"
                     fill="none" stroke="#FCA5A5" strokeWidth="36"
@@ -348,7 +335,6 @@ export default function DashboardNew() {
                     className={styles.macroRing}
                   />
 
-                  {/* Carbs (cam) */}
                   <circle
                     cx="100" cy="100" r="80"
                     fill="none" stroke="#FFB84D" strokeWidth="36"
@@ -358,7 +344,6 @@ export default function DashboardNew() {
                     className={styles.macroRing}
                   />
 
-                  {/* Protein (xanh) */}
                   <circle
                     cx="100" cy="100" r="80"
                     fill="none" stroke="#10b981" strokeWidth="36"
@@ -368,7 +353,6 @@ export default function DashboardNew() {
                     className={styles.macroRing}
                   />
 
-                  {/* Tổng calo đã ăn + % so với TDEE */}
                   <text x="100" y="85" textAnchor="middle" fontSize="32" fontWeight="700" fill="#1a1a1a">
                     {todayStats?.total_calories || 0}
                   </text>
@@ -378,7 +362,6 @@ export default function DashboardNew() {
                 </svg>
               </div>
 
-              {/* Legend */}
               <div className={styles.caloriesBreakdown}>
                 <div className={styles.breakdownItem}>
                   <div className={styles.breakdownLabel}>
@@ -417,7 +400,6 @@ export default function DashboardNew() {
           </div>
         </div>
 
-        {/* Recent Workouts */}
         <div className={styles.workoutSection}>
           <div className={styles.sectionHeader}>
             <h3>Recent Workouts</h3>
@@ -428,7 +410,7 @@ export default function DashboardNew() {
                 <img className={styles.statIcon} src={exerciseIcon} alt="exercise" />
                 <div className={styles.workoutInfo}>
                   <div className={styles.workoutName}>{w.exercise_name}</div>
-                  <div className={styles.workoutStats}>Đốt {w.calories_burned_estimated} kcal</div>
+                  <div className={styles.workoutStats}>Burn {w.calories_burned_estimated} kcal</div>
                 </div>
               </div>
             )) : (
@@ -437,81 +419,97 @@ export default function DashboardNew() {
           </div>
         </div>
 
-        {/* Today's Meals */}
         <div className={styles.recommendedSection}>
           <div className={styles.sectionHeader}>
             <h3>Today's Meals</h3>
           </div>
-          <div className={styles.menuGrid}>
-            {todayMeals.length > 0 ? todayMeals.map(meal => (
-              <div key={meal.id} className={styles.menuCard}>
-                <div className={styles.menuImage}>
-                  <SafeMealImage src={meal.image} alt={meal.name} />
-                  <span className={styles.menuBadge} style={{
-                    background: meal.status === 'Breakfast' ? '#D4F4DD' :
-                      meal.status === 'Lunch' ? '#FFE5B4' :
-                        meal.status === 'Snack' ? '#FED7AA' : '#BAE6FD'
-                  }}>
-                    {meal.status}
-                  </span>
-                </div>
-                <div className={styles.menuContent}>
-                  <div className={styles.menuCalories}>
-                    <span className={styles.caloriesIcon}>Fire</span>
-                    {meal.calories} kcal
+          <div className={styles.mealsGrid}>
+            {todayMeals.length > 0 ? (
+              todayMeals.map((meal) => (
+                <div key={meal.id} className={styles.mealCardModern}>
+                  <div className={styles.mealCardHeader}>
+                    <div className={styles.mealTypeBadge} data-type={meal.status}>
+                      <span>
+                        {meal.status === 'Breakfast' && <img className={styles.mealIcon} src={morningIcon} alt="Breakfast" />}
+                        {meal.status === 'Lunch' && <img className={styles.mealIcon} src={afternoonIcon} alt="Lunch" />}
+                        {meal.status === 'Snack' && <img className={styles.mealIcon} src={snackIcon} alt="Snack" />}
+                        {meal.status === 'Dinner' && <img className={styles.mealIcon} src={eveningIcon} alt="Dinner" />}
+                      </span>
+
+                      <span>{meal.status}</span>
+                    </div>
+                    <div className={styles.mealTime}>{meal.time}</div>
                   </div>
-                  <h4 className={styles.menuTitle}>{meal.name}</h4>
-                  <div className={styles.menuMacros}>
-                    P: {meal.protein}g • C: {meal.carbs}g • F: {meal.fat}g
+
+                  <div className={styles.mealCardBody}>
+                    <h4 className={styles.mealName}>{meal.name}</h4>
+                    <div className={styles.mealCaloriesBig}>
+                      {meal.calories.toLocaleString()} kcal
+                    </div>
+                  </div>
+
+                  <div className={styles.mealMacrosGrid}>
+                    <div className={styles.macroItem}>
+                      <span className={styles.macroLabel}>Protein</span>
+                      <span className={styles.macroValueProtein}>{meal.protein}g</span>
+                    </div>
+                    <div className={styles.macroItem}>
+                      <span className={styles.macroLabel}>Carbs</span>
+                      <span className={styles.macroValueCarbs}>{meal.carbs}g</span>
+                    </div>
+                    <div className={styles.macroItem}>
+                      <span className={styles.macroLabel}>Fat</span>
+                      <span className={styles.macroValueFat}>{meal.fat}g</span>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className={styles.emptyMeals}>
+                <p>No meals yet today</p>
+                <span>Add your first meal!</span>
               </div>
-            )) : (
-              <p className="col-span-2 text-center text-gray-500 py-8">No meals logged today</p>
             )}
           </div>
         </div>
 
       </div>
 
-      {/* Right Sidebar */}
       <div className={styles.rightSidebar}>
-        {/* Calendar Widget */}
         <CalendarWidget selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
-        {/* Today's Meals List */}
         <div className={styles.sidebarSection}>
           <h3 className={styles.sidebarTitle}>Today's Meals</h3>
-          <div className={styles.mealsList}>
-            {todayMeals.length > 0 ? todayMeals.map(meal => (
-              <div key={meal.id} className={styles.mealItem}>
-                <div className={styles.mealImage}>
-                  <div className={styles.mealImage}>
-                    <SafeMealImage src={meal.image} alt={meal.name} />
+          <div className={styles.mealsListModern}>
+            {todayMeals.length > 0 ? (
+              todayMeals.map((meal) => (
+                <div key={meal.id} className={styles.mealItemModern}>
+                  <div data-type={meal.status}>
+                    {meal.status === 'Breakfast' && <img className={styles.mealIconSmall} src={morningIcon} alt="Breakfast" />}
+                    {meal.status === 'Lunch' && <img className={styles.mealIconSmall} src={afternoonIcon} alt="Lunch" />}
+                    {meal.status === 'Snack' && <img className={styles.mealIconSmall} src={snackIcon} alt="Snack" />}
+                    {meal.status === 'Dinner' && <img className={styles.mealIconSmall} src={eveningIcon} alt="Dinner" />}
+                  </div>
+                  <div className={styles.mealInfoCompact}>
+                    <div className={styles.mealHeaderLine}>
+                      <span className={styles.mealNameCompact}>{meal.name}</span>
+                      <span className={styles.mealTimeSmall}>{meal.time}</span>
+                    </div>
+                    <div className={styles.mealMacrosCompact}>
+                      <span>P {meal.protein}g</span>
+                      <span>C {meal.carbs}g</span>
+                      <span>F {meal.fat}g</span>
+                      <span className={styles.caloriesSmall}>• {meal.calories} kcal</span>
+                    </div>
                   </div>
                 </div>
-                <div className={styles.mealInfo}>
-                  <span className={styles.mealBadge} style={{
-                    background: meal.status === 'Breakfast' ? '#D4F4DD' :
-                      meal.status === 'Lunch' ? '#FFE5B4' :
-                        meal.status === 'Snack' ? '#FED7AA' : '#BAE6FD'
-                  }}>
-                    {meal.status}
-                  </span>
-                  <span className={styles.mealCalories}>Fire {meal.calories} kcal</span>
-                  <h4 className={styles.mealName}>{meal.name}</h4>
-                  <div className={styles.mealMacros}>
-                    {meal.protein}g P • {meal.carbs}g C • {meal.fat}g F
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <p className="text-center text-gray-500 py-8">No meals logged today</p>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-8 text-sm">No meals yet today</p>
             )}
           </div>
         </div>
 
-        {/* Recent Activity */}
         <div className={styles.sidebarSection}>
           <div className={styles.sectionHeader}>
             <h3 className={styles.sidebarTitle}>Recent Activity</h3>
