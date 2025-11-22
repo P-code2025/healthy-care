@@ -1,4 +1,5 @@
 // src/App.tsx
+import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -25,8 +26,14 @@ import OnboardingNew from "./pages/onboarding/OnboardingNew";
 
 import { ToastContainer as ReactToastify } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { initializeToolSystem } from "./services/toolSystemInit";
 
 function App() {
+  // Initialize tool calling system once at app startup
+  useEffect(() => {
+    initializeToolSystem();
+  }, []);
+
   return (
     <ErrorBoundary>
       <AuthProvider>

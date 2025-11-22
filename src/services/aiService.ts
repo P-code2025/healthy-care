@@ -1,12 +1,33 @@
-// CLOVA Studio API Service for Food Recognition
-// Using HCX-005 Vision Model
-
+import { http } from './http';
 import type { FoodEntry } from "../lib/types";
 import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from "./foodDiaryApi";
 
-// Load API key from environment variable
+// Type definitions (inline to avoid import issues)
+interface FoodEntry {
+  date: string;
+  time: string;
+  mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack";
+  foodName: string;
+  amount: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  sugar: number;
+  status: string;
+  thoughts?: string;
+  imageUrl?: string;
+  imageAttribution?: string;
+}
+
+interface FoodEntryInput extends Omit<FoodEntry, 'date' | 'time'> {
+  date: string;
+  time: string;
+}
+
+// CLOVA credentials
 const CLOVA_API_KEY = import.meta.env.VITE_CLOVA_API_KEY;
-const CLOVA_API_URL = 'https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005';
+const CLOVA_API_URL = import.meta.env.VITE_CLOVA_API_URL || 'https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005';
 
 // Validate API key is configured
 if (!CLOVA_API_KEY && !import.meta.env.DEV) {
@@ -348,4 +369,27 @@ export const getFoodLogsHistory = async (): Promise<FoodEntry[]> => {
     return [];
   }
 };
+
+/**
+ * Chat with CLOVA AI for general conversations
+ * Used as fallback when intent-based handlers cannot handle the query
+ */
+export async function chatWithClova(
+  userMessage: string,
+  chatHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+  userProfile?: any
+): Promise<string> {
+  try {
+    const response = await http.post<{ reply: string }>('/api/chat-clova', {
+      message: userMessage,
+      history: chatHistory,
+      userProfile,
+    });
+
+    return response.reply;
+  } catch (error: any) {
+    console.error('Error calling CLOVA chat:', error);
+    throw new Error(error.message || 'Failed to get AI response');
+  }
+}
 

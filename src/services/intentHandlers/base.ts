@@ -9,6 +9,12 @@ export interface HandlerResponse {
     // Add future fields (images, charts, etc.)
     nutritionData?: any;
     exercisePlan?: any;
+    toolResults?: Array<{
+        success: boolean;
+        message: string;
+        data?: any;
+        error?: string;
+    }>; // Tool execution results
 }
 
 export interface HandlerContext {
@@ -25,7 +31,8 @@ export interface IntentHandler {
     /**
      * Intent category this handler supports
      */
-    readonly intent: IntentCategoryName;
+    readonly intent: IntentCategoryName | 'action';
+    readonly category?: IntentCategoryName | 'action';
 
     /**
      * Check if this handler can handle the given intent
@@ -44,7 +51,7 @@ export interface IntentHandler {
 export abstract class BaseIntentHandler implements IntentHandler {
     abstract readonly intent: IntentCategoryName;
 
-    canHandle(intent: DetectedIntent, context: HandlerContext): boolean {
+    canHandle(intent: DetectedIntent, _context: HandlerContext): boolean {
         return intent.category === this.intent && intent.confidence > 0.3;
     }
 

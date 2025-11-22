@@ -172,24 +172,51 @@ const sendAuthResponse = (res, user) => {
   });
 };
 
-const requireAuth = (req, res, next) => {
-  if (req.user?.id) return next();
-  const header = req.headers.authorization?.split(" ")[1];
-  if (header) {
-    try {
-      req.user = jwt.verify(header, ACCESS_TOKEN_SECRET);
-      return next();
-    } catch {
-      if (!ALLOW_GUEST_MODE) {
-        return res.status(401).json({ error: "Invalid token" });
+const requireAuth = async (req, res, next) => {
+  let userId;
+
+  // Check if user is already attached (by attachUserIfPresent)
+  if (req.user?.id) {
+    userId = req.user.id;
+  } else {
+    // Check header if not attached
+    const header = req.headers.authorization?.split(" ")[1];
+    if (header) {
+      try {
+        const decoded = jwt.verify(header, ACCESS_TOKEN_SECRET);
+        userId = decoded.id;
+      } catch {
+        // Token invalid, fall through to guest check
       }
     }
   }
-  if (ALLOW_GUEST_MODE) {
-    req.user = { id: DEFAULT_USER_ID };
-    return next();
+
+  // Fallback to guest mode if no valid token
+  if (!userId && ALLOW_GUEST_MODE) {
+    userId = DEFAULT_USER_ID;
   }
-  return res.status(401).json({ error: "Unauthorized" });
+
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  // Verify user exists in DB
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true } // Only select fields that definitely exist
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    req.user = { ...req.user, ...user }; // Merge with existing req.user if any
+    return next();
+  } catch (error) {
+    console.error("Auth verification error:", error);
+    return res.status(500).json({ error: "Internal server error during auth" });
+  }
 };
 
 const getUserIdOrFallback = (req) =>
@@ -1416,76 +1443,76 @@ Dates start from next Monday (you can use 17–23 Nov as example)
 Output ONLY the JSON object. Nothing else.`;
 
     const clovaResponse = await fetch(
-  "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-007",
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${CLOVA_API_KEY}`,
-      "X-NCP-CLOVASTUDIO-REQUEST-ID": `mealplan-${userId}-${Date.now()}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.1,           // giảm xuống 0.1 để cực kỳ ổn định
-      topP: 0.8,
-      maxCompletionTokens: 4096,
-    }),
-  }
-);
+      "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-007",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${CLOVA_API_KEY}`,
+          "X-NCP-CLOVASTUDIO-REQUEST-ID": `mealplan-${userId}-${Date.now()}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.1,           // giảm xuống 0.1 để cực kỳ ổn định
+          topP: 0.8,
+          maxCompletionTokens: 4096,
+        }),
+      }
+    );
 
-if (!clovaResponse.ok) {
-  const err = await clovaResponse.text();
-  console.error("HCX-007 Error:", clovaResponse.status, err);
-  throw new Error("AI service error");
-}
+    if (!clovaResponse.ok) {
+      const err = await clovaResponse.text();
+      console.error("HCX-007 Error:", clovaResponse.status, err);
+      throw new Error("AI service error");
+    }
 
-const rawText = await clovaResponse.text();
+    const rawText = await clovaResponse.text();
 
-// === PHẦN QUAN TRỌNG NHẤT: Parse chính xác response của HCX-007 ===
-let rawContent = "";
+    // === PHẦN QUAN TRỌNG NHẤT: Parse chính xác response của HCX-007 ===
+    let rawContent = "";
 
-if (rawText.includes('data:')) {
-  // Trường hợp streaming (dù đã tắt vẫn có thể xảy ra)
-  const lines = rawText.split("\n").filter(l => l.startsWith("data: "));
-  const lastLine = lines[lines.length - 1];
-  if (lastLine && !lastLine.includes("[DONE]")) {
-    rawContent = lastLine.replace("data: ", "").trim();
-  }
-} else {
-  // Không stream → response là JSON thuần
-  try {
-    const parsed = JSON.parse(rawText);
-    rawContent = parsed.result?.message?.content || "";
-  } catch {
-    rawContent = rawText;
-  }
-}
+    if (rawText.includes('data:')) {
+      // Trường hợp streaming (dù đã tắt vẫn có thể xảy ra)
+      const lines = rawText.split("\n").filter(l => l.startsWith("data: "));
+      const lastLine = lines[lines.length - 1];
+      if (lastLine && !lastLine.includes("[DONE]")) {
+        rawContent = lastLine.replace("data: ", "").trim();
+      }
+    } else {
+      // Không stream → response là JSON thuần
+      try {
+        const parsed = JSON.parse(rawText);
+        rawContent = parsed.result?.message?.content || "";
+      } catch {
+        rawContent = rawText;
+      }
+    }
 
-// Lấy khối JSON lớn nhất
-const jsonBlock = rawContent.match(/\{[\s\S]*\}/);
-if (!jsonBlock) {
-  console.error("No JSON found in AI response:", rawContent);
-  throw new Error("AI không trả về JSON");
-}
+    // Lấy khối JSON lớn nhất
+    const jsonBlock = rawContent.match(/\{[\s\S]*\}/);
+    if (!jsonBlock) {
+      console.error("No JSON found in AI response:", rawContent);
+      throw new Error("AI không trả về JSON");
+    }
 
-let cleaned = jsonBlock[0]
-  .replace(/```json/g, "")
-  .replace(/```/g, "")
-  .replace(/,\s*}/g, "}")   // fix trailing comma
-  .replace(/,\s*]/g, "]")
-  .trim();
+    let cleaned = jsonBlock[0]
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .replace(/,\s*}/g, "}")   // fix trailing comma
+      .replace(/,\s*]/g, "]")
+      .trim();
 
-let plan;
-try {
-  plan = JSON.parse(cleaned);
-} catch (e) {
-  console.error("Final JSON parse failed:", cleaned);
-  throw new Error("Invalid JSON from AI");
-}
+    let plan;
+    try {
+      plan = JSON.parse(cleaned);
+    } catch (e) {
+      console.error("Final JSON parse failed:", cleaned);
+      throw new Error("Invalid JSON from AI");
+    }
 
     // Cache 24h
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -1600,6 +1627,113 @@ app.get("/api/ai/context", requireAuth, async (req, res) => {
   }
 });
 
+// ========== CLOVA CHAT ENDPOINT ==========
+app.post("/api/chat-clova", requireAuth, async (req, res) => {
+  try {
+    const { message, history = [], userProfile } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    // Build system prompt with user context - ENFORCE ENGLISH
+    let systemPrompt = `You are a helpful health and fitness AI assistant. 
+IMPORTANT: You MUST respond in English only, regardless of the user's language.
+Provide concise, personalized health advice based on the user's profile.
+Keep responses brief and actionable (max 3-4 sentences).`;
+
+    if (userProfile) {
+      systemPrompt += `\n\nUser Profile:
+- Age: ${userProfile.age || 'unknown'}
+- Gender: ${userProfile.gender || 'unknown'}
+- Weight: ${userProfile.weight || 'unknown'}kg
+- Height: ${userProfile.height || 'unknown'}cm
+- Goal: ${userProfile.goal || 'general health'}`;
+    }
+
+    // Format history for CLOVA
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...history.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      { role: 'user', content: message }
+    ];
+
+    // Call CLOVA
+    const response = await fetch(CLOVA_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${CLOVA_API_KEY}`,
+        "Content-Type": "application/json",
+        "X-NCP-CLOVASTUDIO-REQUEST-ID": `chat-${req.user.id}-${Date.now()}`,
+      },
+      body: JSON.stringify({
+        messages,
+        temperature: 0.5,
+        topP: 0.8,
+        maxTokens: 500,
+        repeatPenalty: 1.2,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`CLOVA API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const reply = data.result?.message?.content || "I'm sorry, I couldn't generate a response.";
+
+    res.json({ reply });
+  } catch (error) {
+    console.error("CLOVA chat error:", error);
+    res.status(500).json({ error: "Failed to get AI response", details: error.message });
+  }
+});
+
+// CLOVA Proxy endpoint (alias for frontend compatibility)
+app.post("/api/clova-proxy/chat-completions/:appId", async (req, res) => {
+  const { appId } = req.params;
+
+  if (!CLOVA_API_KEY) {
+    return res.status(500).json({
+      error: "CLOVA_API_KEY not configured on server"
+    });
+  }
+
+  try {
+    const requestId = req.headers['x-ncp-clovastudio-request-id'];
+
+    const response = await fetch(
+      `https://clovastudio.stream.ntruss.com/v3/chat-completions/${appId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CLOVA_API_KEY}`,
+          'X-NCP-CLOVASTUDIO-REQUEST-ID': requestId || crypto.randomUUID(),
+        },
+        body: JSON.stringify(req.body),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error("Clova API proxy error:", error);
+    res.status(500).json({
+      error: "Failed to proxy Clova API request",
+      details: error.message
+    });
+  }
+});
+
 app.post("/api/clova/v3/chat-completions/:appId", async (req, res) => {
   const { appId } = req.params;
 
@@ -1695,6 +1829,252 @@ app.post("/api/chat-messages", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Error saving chat message:", error);
     handlePrismaError(res, error, "Failed to save chat message");
+  }
+});
+
+// DELETE /api/chat-messages - Clear all chat history for user
+app.delete("/api/chat-messages", requireAuth, async (req, res) => {
+  try {
+    const count = await prisma.chatMessage.deleteMany({
+      where: { userId: req.user.id },
+    });
+    res.json({ deleted: count.count });
+  } catch (error) {
+    console.error("Error clearing chat history:", error);
+    handlePrismaError(res, error, "Failed to clear chat history");
+  }
+});
+
+// ========== MEAL PLAN MODIFICATION ENDPOINT ==========
+app.post("/api/meal-plan/modify", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { day, mealType, exclude = [], preferences = '' } = req.body;
+
+    if (!day || !mealType) {
+      return res.status(400).json({ error: 'day and mealType are required' });
+    }
+
+    // Get user profile
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        age: true,
+        gender: true,
+        heightCm: true,
+        weightKg: true,
+        goal: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Calculate target calories
+    const isMale = user.gender?.toLowerCase() === 'male';
+    const bmr = isMale
+      ? 88.362 + 13.397 * user.weightKg + 4.799 * user.heightCm - 5.677 * user.age
+      : 447.593 + 9.247 * user.weightKg + 3.098 * user.heightCm - 4.33 * user.age;
+    const tdee = Math.round(bmr * 1.55);
+
+    // Define calorie targets per meal type
+    const mealCalorieTargets = {
+      breakfast: { min: 450, max: 550 },
+      lunch: { min: 600, max: 700 },
+      snack: { min: 150, max: 250 },
+      dinner: { min: 550, max: 650 },
+    };
+
+    const target = mealCalorieTargets[mealType.toLowerCase()];
+    if (!target) {
+      return res.status(400).json({ error: 'Invalid meal type' });
+    }
+
+    // Create prompt for single meal replacement
+    const excludeList = Array.isArray(exclude) ? exclude : [exclude];
+    const excludeText = excludeList.length > 0
+      ? `EXCLUDE these foods: ${excludeList.join(', ')}`
+      : '';
+
+    const prompt = `Generate ONE ${mealType} meal for ${day}.
+
+USER PROFILE:
+Gender: ${isMale ? 'Male' : 'Female'}
+Age: ${user.age}
+${preferences ? `Preferences: ${preferences}` : ''}
+
+REQUIREMENTS:
+- Calories: ${target.min}-${target.max} kcal
+- Protein: ≥25g
+${excludeText}
+
+Return ONLY this JSON:
+{
+  "name": "Meal name",
+  "calories": ${Math.round((target.min + target.max) / 2)},
+  "protein": 30,
+  "carbs": 40,
+  "fat": 15,
+  "sugar": 5,
+  "image": "/images/meal/meal.jpg"
+}`;
+
+    // Call CLOVA
+    const clovaResponse = await fetch(
+      "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-007",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${CLOVA_API_KEY}`,
+          "X-NCP-CLOVASTUDIO-REQUEST-ID": `meal-modify-${userId}-${Date.now()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: "Return only valid JSON." },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.3,
+          topP: 0.8,
+          maxCompletionTokens: 500,
+        }),
+      }
+    );
+
+    if (!clovaResponse.ok) {
+      throw new Error(`CLOVA API error: ${clovaResponse.status}`);
+    }
+
+    const rawText = await clovaResponse.text();
+    let rawContent = "";
+
+    // Parse response
+    try {
+      const parsed = JSON.parse(rawText);
+      rawContent = parsed.result?.message?.content || "";
+    } catch {
+      rawContent = rawText;
+    }
+
+    // Extract JSON
+    const jsonBlock = rawContent.match(/\{[\s\S]*\}/);
+    if (!jsonBlock) {
+      throw new Error("No JSON in AI response");
+    }
+
+    let meal = JSON.parse(jsonBlock[0].replace(/```json|```/g, "").trim());
+
+    // Ensure all fields
+    meal = {
+      name: meal.name || "Healthy meal",
+      calories: parseInt(meal.calories) || target.min,
+      protein: parseInt(meal.protein) || 25,
+      carbs: parseInt(meal.carbs) || 50,
+      fat: parseInt(meal.fat) || 15,
+      sugar: parseInt(meal.sugar) || 5,
+      image: meal.image || "/images/meal/default.jpg",
+    };
+
+    res.json({ meal });
+  } catch (error) {
+    console.error("Meal modification error:", error);
+    res.status(500).json({ error: "Failed to modify meal" });
+  }
+});
+
+// ========== EXERCISE PLAN MODIFICATION ENDPOINT ==========
+app.post("/api/exercise-plan/modify", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { constraints = {}, dailyIntake = 0 } = req.body;
+    const { intensity, excludeTypes = [], userQuery = '' } = constraints;
+
+    // Get user profile
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { age: true, gender: true, heightCm: true, weightKg: true },
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const AVAILABLE_PLANS = [
+      "Morning Yoga Flow",
+      "HIIT Fat Burn",
+      "Full Body Strength",
+      "Brisk Walking",
+      "Light Stretching"
+    ];
+
+    let constraintText = '';
+    if (intensity) {
+      constraintText += `INTENSITY: ${intensity}\n`;
+    }
+    if (excludeTypes.length > 0) {
+      constraintText += `EXCLUDE: ${excludeTypes.join(', ')}\n`;
+    }
+
+    const prompt = `Create a safe workout plan.
+${constraintText}
+User request: "${userQuery}"
+
+Select 1-2 workouts from: ${AVAILABLE_PLANS.join(', ')}
+
+Return JSON:
+{
+  "summary": "Brief summary",
+  "intensity": "${intensity || 'moderate'}",
+  "totalBurnEstimate": "350 kcal",
+  "advice": "Advice",
+  "exercises": [
+    { "name": "Workout name", "duration": "20 min", "reason": "Why" }
+  ]
+}`;
+
+    const clovaResponse = await fetch(CLOVA_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${CLOVA_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "Return only JSON." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.4,
+        maxTokens: 600,
+      }),
+    });
+
+    const data = await clovaResponse.json();
+    const raw = data.result?.message?.content || "";
+
+    let plan = {
+      summary: "Modified workout",
+      intensity: intensity || "moderate",
+      totalBurnEstimate: "350 kcal",
+      advice: "Listen to your body",
+      exercises: [{ name: "Morning Yoga Flow", duration: "20 min", reason: "Recovery" }]
+    };
+
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        plan = JSON.parse(jsonMatch[0]);
+      } catch (e) {
+        console.log("Using fallback plan");
+      }
+    }
+
+    res.json(plan);
+  } catch (error) {
+    console.error("Exercise modification error:", error);
+    res.status(500).json({ error: "Failed to modify exercise plan" });
   }
 });
 

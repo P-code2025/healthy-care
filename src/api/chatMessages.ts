@@ -46,4 +46,11 @@ export const chatMessagesApi = {
         );
         return response.message;
     },
+
+    /**
+     * Clear all chat messages
+     */
+    async clearAll(): Promise<{ deleted: number }> {
+        return await http.delete<{ deleted: number }>('/api/chat-messages');
+    },
 };

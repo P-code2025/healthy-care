@@ -1,0 +1,25 @@
+/* Clear chat button styles */
+.clearButton {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #666;
+}
+
+.clearButton:hover {
+    background-color: #fee;
+    border-color: #f44336;
+    color: #f44336;
+    transform: scale(1.05);
+}
+
+.clearButton:active {
+    transform: scale(0.95);
+}

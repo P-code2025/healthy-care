@@ -8,6 +8,9 @@ export type IntentCategoryName =
     | 'progress_check'
     | 'motivation'
     | 'general_health'
+    | 'meal_plan_request'
+    | 'meal_plan_modification'
+    | 'exercise_modification'
     | 'unknown';
 
 export interface IntentCategory {
@@ -124,6 +127,46 @@ export class IntentDetector {
             ],
             priority: 3,
             description: 'General health questions'
+        });
+
+        // Meal Planning Intents
+        this.registerIntent({
+            name: 'meal_plan_request',
+            keywords: [
+                'meal plan', 'thuc don', 'thực đơn', 'weekly plan', 'week plan',
+                'tao thuc don', 'tạo thực đơn', 'gen thuc don', 'generate meal',
+                'plan mon an', 'kế hoạch ăn', 'food plan', 'diet plan'
+            ],
+            priority: 9,
+            description: 'Request to generate weekly meal plan'
+        });
+
+        this.registerIntent({
+            name: 'meal_plan_modification',
+            keywords: [
+                'khong thich', 'không thích', 'don\'t like', 'hate', 'dislike',
+                'doi mon', 'đổi món', 'thay mon', 'thay món', 'change meal',
+                'replace meal', 'different meal', 'other meal', 'khac', 'khác',
+                'thu 2', 'thứ 2', 'thu 3', 'thứ 3', 'monday', 'tuesday',
+                'bua sang', 'bữa sáng', 'bua trua', 'bữa trưa', 'bua toi', 'bữa tối',
+                'breakfast', 'lunch', 'dinner', 'snack'
+            ],
+            priority: 8,
+            description: 'Modify specific meal in plan'
+        });
+
+        this.registerIntent({
+            name: 'exercise_modification',
+            keywords: [
+                'dau chan', 'đau chân', 'dau tay', 'đau tay', 'leg pain', 'arm pain',
+                'mat moi', 'mệt mỏi', 'tired', 'fatigue', 'sore',
+                'nhe hon', 'nhẹ hơn', 'nang hon', 'nặng hơn', 'lighter', 'harder',
+                'easier', 'more intense', 'less intense',
+                'tap nhe', 'tập nhẹ', 'tap nang', 'tập nặng', 'light workout', 'hard workout',
+                'bo bai tap', 'bỏ bài tập', 'remove exercise', 'skip exercise'
+            ],
+            priority: 8,
+            description: 'Modify exercise plan based on conditions'
         });
     }
 

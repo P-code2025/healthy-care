@@ -152,11 +152,14 @@ export class TemplateManager {
         let result = template.template;
 
         // Replace variables
-        for (const variable of template.variables) {
-            const value = data[variable];
-            if (value !== undefined) {
-                const placeholder = `{${variable}}`;
-                result = result.replace(new RegExp(placeholder, 'g'), String(value));
+        // Replace variables
+        if (template.variables && Array.isArray(template.variables)) {
+            for (const variable of template.variables) {
+                const value = data[variable];
+                if (value !== undefined) {
+                    const placeholder = `{${variable}}`;
+                    result = result.replace(new RegExp(placeholder, 'g'), String(value));
+                }
             }
         }
 

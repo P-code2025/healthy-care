@@ -20,6 +20,7 @@ import { messages as i18nMessages } from "../../i18n/messages";
 import { chatMessagesApi } from "../../api/chatMessages";
 import { calculateCalorieGoal } from "../../utils/healthCalculations";
 import { determineGoalIntent, parseGoalWeight } from "../../utils/profile";
+import { chatWithClova } from "../../services/aiService";
 
 interface ChatMessage {
   id: string;
@@ -61,7 +62,8 @@ export default function Messages() {
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [diaryEntries, setDiaryEntries] = useState<FoodEntry[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scroll
+
 
   // ĐÚNG: useState nằm trong component
   const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -89,6 +91,11 @@ export default function Messages() {
       goal: detectedGoal,
     }));
   }, [user]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isTyping]);
 
   // Load chat history from database
   useEffect(() => {
@@ -140,6 +147,22 @@ export default function Messages() {
 
   const getTodayCalories = () =>
     diaryEntries.reduce((sum, entry) => sum + entry.calories, 0);
+
+  // Clear chat history
+  const handleClearChat = async () => {
+    if (!window.confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await chatMessagesApi.clearAll();
+      setChatMessages([]);
+      toast.success('Chat history cleared!');
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+      toast.error('Failed to clear chat. Please try again.');
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -316,7 +339,38 @@ export default function Messages() {
       }
     }
 
-    return { content: i18nMessages.aiChat.defaultHelper, intent: 'general_help' };
+    // For all other queries, use CLOVA AI chat for personalized health consulting
+    try {
+      // Build chat history from recent messages (last 10 for context)
+      const recentMessages = chatMessages.slice(-10);
+      const history = recentMessages.map(msg => ({
+        role: msg.isUser ? 'user' as const : 'assistant' as const,
+        content: msg.content
+      }));
+
+      // Call CLOVA with user profile context
+      const aiReply = await chatWithClova(
+        query,
+        history,
+        {
+          age: userProfile.age,
+          weight: userProfile.weight,
+          height: userProfile.height,
+          gender: userProfile.gender,
+          goal: userProfile.goal,
+          workoutDays: userProfile.workoutDays
+        }
+      );
+
+      return { content: aiReply, intent: 'general_chat' };
+    } catch (error) {
+      console.error('CLOVA chat failed:', error);
+      // Fallback to English message if CLOVA fails
+      return {
+        content: 'Sorry, I encountered a technical issue. Please try again. 🙏\n\nYou can:\n- Ask about today\'s calories\n- Request a workout plan\n- Take a photo of food for analysis',
+        intent: 'error'
+      };
+    }
   };
 
   const handleImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -446,6 +500,25 @@ export default function Messages() {
             <h3>{i18nMessages.aiChat.headerTitle}</h3>
             <p>{i18nMessages.aiChat.headerSubtitle}</p>
           </div>
+          <div className={styles.actions} style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={handleClearChat}
+              className={styles.clearBtn}
+              title="Clear chat history"
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#ff4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500'
+              }}
+            >
+              🗑️ Clear
+            </button>
+          </div>
         </div>
 
         <div className={styles.messages}>
@@ -471,7 +544,7 @@ export default function Messages() {
                   <>
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: message.content.replace(
+                        __html: (message.content || '').replace(
                           /\*\*(.*?)\*\*/g,
                           "<strong>$1</strong>"
                         ),
@@ -516,7 +589,9 @@ export default function Messages() {
                 <div className={styles.time}>{message.timestamp}</div>
               </div>
             </div>
+
           ))}
+
 
           {isTyping && (
             <div className={styles.message}>
@@ -525,7 +600,11 @@ export default function Messages() {
                 <div className={styles.loading}>...</div>
               </div>
             </div>
+
           )}
+
+          {/* Invisible div for auto-scroll  */}
+          <div ref={messagesEndRef} />
         </div>
 
         <div className={styles.inputArea}>

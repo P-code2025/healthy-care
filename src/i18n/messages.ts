@@ -33,7 +33,7 @@ export const messages = {
     analysisFailed: "Không thể nhận diện đồ ăn",
     diarySaveSuccess: "Saved to Food Diary!",
     defaultHelper:
-      "I can analyze your meals or draft a quick training plan. Snap a picture or ask away!",
+      "I can analyze your meals or create a training plan. Snap a picture or ask me!",
     missingProfilePrompt:
       "Please enter your personal details so I can personalize the workout.",
     todayCaloriesSummary:
