@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import styles from './ProgressNew.module.css';
 import { api, type User } from '../../services/api';
-import { format, subDays, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Target, TrendingUp, Camera, Plus, Check, Ruler, Scale } from 'lucide-react';
+import { Scale, Ruler, TrendingUp, Plus, Check } from 'lucide-react';
+
+interface WeightLog {
+  date: string;
+  weight: number;
+}
 
 interface MeasurementLog {
   date: string;
-  weight: number;
   neck?: number;
   waist?: number;
   hip?: number;
@@ -16,16 +20,18 @@ interface MeasurementLog {
 }
 
 export default function ProgressNew() {
-  const [activeTab, setActiveTab] = useState<'weight' | 'measurements' | 'photos'>('measurements');
+  const [activeTab, setActiveTab] = useState<'weight' | 'measurements' | 'photos'>('weight');
   const [user, setUser] = useState<User | null>(null);
-  const [targetWeight, setTargetWeight] = useState<number | ''>('');
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [measurementLogs, setMeasurementLogs] = useState<MeasurementLog[]>([]);
   const [period, setPeriod] = useState<'7' | '30' | '90' | 'all'>('30');
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showWeightForm, setShowWeightForm] = useState(false);
+  const [showMeasurementForm, setShowMeasurementForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newEntry, setNewEntry] = useState({
-    weight: '',
+
+  const [newWeight, setNewWeight] = useState('');
+  const [newMeasurements, setNewMeasurements] = useState({
     neck: '',
     waist: '',
     hip: '',
@@ -33,7 +39,6 @@ export default function ProgressNew() {
     thigh: '',
   });
 
-  // Load dữ liệu
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -43,26 +48,28 @@ export default function ProgressNew() {
         ]);
 
         setUser(userData);
-        setTargetWeight(userData.goal ? Number(userData.goal) : '');
 
-        // Chuyển đổi từ DB → format cho biểu đồ
-        const logs = measurements
-          .map((m): MeasurementLog => {
-            const heightM = (userData.height_cm || 170) / 100;
-            const bmi = m.weight_kg / (heightM * heightM);
-            return {
-              date: m.measured_at.split('T')[0],
-              weight: m.weight_kg,
-              neck: m.neck_cm || undefined,
-              waist: m.waist_cm || undefined,
-              hip: m.hip_cm || undefined,
-              biceps: m.biceps_cm || undefined,
-              thigh: m.thigh_cm || undefined,
-            };
-          })
+        const heightM = (userData.height_cm || 170) / 100;
+
+        const weightData = measurements
+          .filter(m => m.weight_kg)
+          .map(m => ({
+            date: m.measured_at,
+            weight: m.weight_kg,
+          }))
           .sort((a, b) => a.date.localeCompare(b.date));
 
-        setMeasurementLogs(logs);
+        const measData = measurements.map(m => ({
+          date: m.measured_at,
+          neck: m.neck_cm || undefined,
+          waist: m.waist_cm || undefined,
+          hip: m.hip_cm || undefined,
+          biceps: m.biceps_cm || undefined,
+          thigh: m.thigh_cm || undefined,
+        }));
+
+        setWeightLogs(weightData);
+        setMeasurementLogs(measData);
       } catch (err) {
         console.error("Error loading progress data:", err);
       } finally {
@@ -72,59 +79,102 @@ export default function ProgressNew() {
     loadData();
   }, []);
 
-  const handleAddToday = async () => {
-    if (!newEntry.weight || parseFloat(newEntry.weight) <= 0) {
+  const handleAddWeight = async () => {
+    const weight = parseFloat(newWeight);
+    if (!weight || weight <= 0) {
       alert('Please enter a valid weight!');
       return;
     }
 
     setSaving(true);
     try {
-      const payload = {
-        weight_kg: parseFloat(newEntry.weight),
-        neck_cm: newEntry.neck ? parseFloat(newEntry.neck) : undefined,
-        waist_cm: newEntry.waist ? parseFloat(newEntry.waist) : undefined,
-        hip_cm: newEntry.hip ? parseFloat(newEntry.hip) : undefined,
-        biceps_cm: newEntry.biceps ? parseFloat(newEntry.biceps) : undefined,
-        thigh_cm: newEntry.thigh ? parseFloat(newEntry.thigh) : undefined,
-      };
-
-      const saved = await api.createOrUpdateBodyMeasurement(payload);
-
-      // Cập nhật local state
+      const saved = await api.createOrUpdateBodyMeasurement({ weight_kg: weight });
       const today = saved.measured_at.split('T')[0];
-      const heightM = (user?.height_cm || 170) / 100;
-      const bmi = saved.weight_kg / (heightM * heightM);
-
-      const newLog: MeasurementLog = {
-        date: today,
-        weight: saved.weight_kg,
-        neck: saved.neck_cm || undefined,
-        waist: saved.waist_cm || undefined,
-        hip: saved.hip_cm || undefined,
-        biceps: saved.biceps_cm || undefined,
-        thigh: saved.thigh_cm || undefined,
-      };
-
-      setMeasurementLogs(prev => {
+      setWeightLogs(prev => {
         const filtered = prev.filter(l => l.date !== today);
-        return [...filtered, newLog].sort((a, b) => a.date.localeCompare(b.date));
+        return [...filtered, { date: today, weight: saved.weight_kg }].sort((a, b) => a.date.localeCompare(b.date));
       });
 
-      setNewEntry({ weight: '', neck: '', waist: '', hip: '', biceps: '', thigh: '' });
-      setShowAddForm(false);
+      if (user) {
+        const updatedUser = await api.updateCurrentUser({ weightKg: saved.weight_kg });
+        setUser(updatedUser);
+      }
+
+      setNewWeight('');
+      setShowWeightForm(false);
     } catch (err) {
-      alert('Failed to save. Please try again.');
-      console.error(err);
+      alert('Failed to save weight!');
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredLogs = measurementLogs.slice(period === 'all' ? 0 : -Number(period));
-  const chartData = filteredLogs.map(log => ({
+  const handleAddMeasurements = async () => {
+    const payload: any = { weight_kg: user?.weight_kg || 70 };
+
+    let hasValue = false;
+    ['neck', 'waist', 'hip', 'biceps', 'thigh'].forEach(part => {
+      const key = part as keyof typeof newMeasurements;
+      if (newMeasurements[key]) {
+        payload[`${part}_cm`] = parseFloat(newMeasurements[key]);
+        hasValue = true;
+      }
+    });
+
+    if (!hasValue) {
+      alert('Please enter at least one measurement!');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const saved = await api.createOrUpdateBodyMeasurement(payload);
+
+      const today = saved.measured_at.split('T')[0];
+      setMeasurementLogs(prev => {
+        const filtered = prev.filter(l => l.date !== today);
+        return [...filtered, {
+          date: today,
+          neck: saved.neck_cm || undefined,
+          waist: saved.waist_cm || undefined,
+          hip: saved.hip_cm || undefined,
+          biceps: saved.biceps_cm || undefined,
+          thigh: saved.thigh_cm || undefined,
+        }].sort((a, b) => a.date.localeCompare(b.date));
+      });
+
+      const updatePayload: any = {};
+      if (saved.neck_cm) updatePayload.neckCm = saved.neck_cm;
+      if (saved.waist_cm) updatePayload.waistCm = saved.waist_cm;
+      if (saved.hip_cm) updatePayload.hipCm = saved.hip_cm;
+      if (saved.biceps_cm) updatePayload.bicepsCm = saved.biceps_cm;
+      if (saved.thigh_cm) updatePayload.thighCm = saved.thigh_cm;
+
+      if (Object.keys(updatePayload).
+
+        length > 0) {
+        const updatedUser = await api.updateCurrentUser(updatePayload);
+        setUser(updatedUser);
+      }
+
+      setNewMeasurements({ neck: '', waist: '', hip: '', biceps: '', thigh: '' });
+      setShowMeasurementForm(false);
+    } catch (err) {
+      alert('Failed to save measurements!');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredWeightLogs = weightLogs.slice(period === 'all' ? 0 : -Number(period));
+  const weightChartData = filteredWeightLogs.map(log => ({
     date: format(new Date(log.date), 'dd/MM'),
     weight: log.weight.toFixed(1),
+  }));
+
+  const filteredMeasLogs = measurementLogs.slice(period === 'all' ? 0 : -Number(period));
+  const measChartData = filteredMeasLogs.map(log => ({
+    date: format(new Date(log.date), 'dd/MM'),
     waist: log.waist?.toFixed(1),
     neck: log.neck?.toFixed(1),
     hip: log.hip?.toFixed(1),
@@ -132,139 +182,184 @@ export default function ProgressNew() {
     thigh: log.thigh?.toFixed(1),
   }));
 
-  const latest = measurementLogs[measurementLogs.length - 1] || {};
-  const first = measurementLogs[0] || {};
-  const weightLost = first.weight ? (first.weight - latest.weight).toFixed(1) : '0';
+  const latestWeight = weightLogs[weightLogs.length - 1]?.weight;
+  const firstWeight = weightLogs[0]?.weight;
+  const weightChange = firstWeight ? (firstWeight - (latestWeight || 0)).toFixed(1) : '0';
 
-  if (loading) {
-    return <div className={styles.container}>Loading progress...</div>;
-  }
+  if (loading) return <div className={styles.container}>Loading...</div>;
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div>
-          <h1 className={styles.pageTitle}>Your Progress</h1>
-          <p className={styles.subtitle}>Track your body's transformation journey day by day</p>
-        </div>
+        <h1 className={styles.pageTitle}>Your Progress</h1>
+        <p className={styles.subtitle}>Track your body's changes daily</p>
       </div>
 
-      {/* Stats Cards */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <Scale className={styles.statIcon} />
           <div className={styles.statLabel}>Current Weight</div>
-          <div className={styles.statValue}>{latest.weight?.toFixed(1) || '--'} <span>kg</span></div>
+          <div className={styles.statValue}>{latestWeight?.toFixed(1) || '--'} <span>kg</span></div>
         </div>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>Total Lost</div>
-          <div className={`${styles.statValue} ${Number(weightLost) > 0 ? styles.positive : styles.negative}`}>
-            {Number(weightLost) > 0 ? '-' : '+'}{Math.abs(Number(weightLost))} kg
+          <TrendingUp className={styles.statIcon} />
+          <div className={styles.statLabel}>Change</div>
+          <div className={`${styles.statValue} ${Number(weightChange) > 0 ? styles.positive : styles.negative}`}>
+            {Number(weightChange) > 0 ? '-' : '+'}{Math.abs(Number(weightChange))} kg
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className={styles.tabs}>
-        <button className={`${styles.tab} ${activeTab === 'measurements' ? styles.activeTab : ''}`} onClick={() => setActiveTab('measurements')}>
-          Measurements
-        </button>
         <button className={`${styles.tab} ${activeTab === 'weight' ? styles.activeTab : ''}`} onClick={() => setActiveTab('weight')}>
-          Weight
+          <Scale className="w-4 h-4" /> Weight
+        </button>
+        <button className={`${styles.tab} ${activeTab === 'measurements' ? styles.activeTab : ''}`} onClick={() => setActiveTab('measurements')}>
+          <Ruler className="w-4 h-4" /> Measurements
         </button>
         <button className={`${styles.tab} ${activeTab === 'photos' ? styles.activeTab : ''}`} onClick={() => setActiveTab('photos')}>
           Photos
         </button>
       </div>
 
-      {/* Main Content */}
+      {activeTab === 'weight' && (
+        <div className={styles.chartSection}>
+          <div className={styles.periodControl}>
+            <div className={styles.periodButtons}>
+              {(['7', '30', '90', 'all'] as const).map(p => (
+                <button key={p} className={`${styles.periodBtn} ${period === p ? styles.periodActive : ''}`} onClick={() => setPeriod(p)}>
+                  {p === 'all' ? 'Tất cả' : `${p} ngày`}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowWeightForm(true)} className={styles.addButton}>
+              <Plus className="w-5 h-5" /> Add Today's Weight
+            </button>
+          </div>
+
+          {showWeightForm && (
+            <div className={`${styles.card} ${styles.formCard}`}>
+              <h3>Enter Today's Weight ({format(new Date(), 'dd/MM/yyyy')})</h3>
+              <div className={styles.formGrid}>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="72.5"
+                  value={newWeight}
+                  onChange={e => setNewWeight(e.target.value)}
+                  className={styles.input}
+                />
+              </div>
+              <div className={styles.formActions}>
+                <button onClick={() => setShowWeightForm(false)} className={styles.cancelBtn}>Hủy</button>
+                <button onClick={handleAddWeight} disabled={saving} className={styles.saveBtn}>
+                  {saving ? 'Đang lưu...' : <><Check className="w-5 h-5" /> Lưu</>}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.card}>
+            <h3 className={styles.chartTitle}>Weight Changes</h3>
+            {weightChartData.length === 0 ? (
+              <p className={styles.emptyState}>No weight data available</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={weightChartData}>
+                  <CartesianGrid strokeDasharray="4 4" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={4} name="Cân nặng (kg)" />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'measurements' && (
         <div className={styles.chartSection}>
           <div className={styles.periodControl}>
             <div className={styles.periodButtons}>
               {(['7', '30', '90', 'all'] as const).map(p => (
                 <button key={p} className={`${styles.periodBtn} ${period === p ? styles.periodActive : ''}`} onClick={() => setPeriod(p)}>
-                  {p === 'all' ? 'All' : `${p} days`}
+                  {p === 'all' ? 'Tất cả' : `${p} ngày`}
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className={styles.addButton}
-            >
-              <Plus className="w-5 h-5" />
-              Add today's measurements
+            <button onClick={() => setShowMeasurementForm(true)} className={styles.addButton}>
+              <Plus className="w-5 h-5" /> Add Today's Measurements
             </button>
           </div>
 
-          {/* Form thêm số đo */}
-          {showAddForm && (
+          {showMeasurementForm && (
             <div className={`${styles.card} ${styles.formCard}`}>
-              <h3 className={styles.formTitle}>Enter today's measurements ({format(new Date(), 'dd/MM/yyyy')})</h3>
+              <h3>Enter Today's Measurements ({format(new Date(), 'dd/MM/yyyy')})</h3>
               <div className={styles.formGrid}>
-                <div>
-                  <label className={styles.formLabel}>Weight (kg) *</label>
-                  <input type="number" step="0.1" value={newEntry.weight} onChange={e => setNewEntry({ ...newEntry, weight: e.target.value })} className={styles.input} placeholder="72.5" />
-                </div>
                 {['neck', 'waist', 'hip', 'biceps', 'thigh'].map(part => (
                   <div key={part}>
                     <label className={styles.formLabel}>
                       {part === 'neck' ? 'Neck' : part === 'waist' ? 'Waist' : part === 'hip' ? 'Hip' : part === 'biceps' ? 'Biceps' : 'Thigh'} (cm)
                     </label>
-                    <input type="number" step="0.1" value={newEntry[part as keyof typeof newEntry]} onChange={e => setNewEntry({ ...newEntry, [part]: e.target.value })} className={styles.input} />
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={newMeasurements[part as keyof typeof newMeasurements]}
+                      onChange={e => setNewMeasurements(prev => ({ ...prev, [part]: e.target.value }))}
+                      className={styles.input}
+                      placeholder="38.5"
+                    />
                   </div>
                 ))}
               </div>
               <div className={styles.formActions}>
-                <button onClick={() => setShowAddForm(false)} className={styles.cancelBtn}>Cancel</button>
-                <button onClick={handleAddToday} disabled={saving} className={styles.saveBtn}>
-                  {saving ? 'Saving...' : <><Check className="w-5 h-5" /> Save Measurement</>}
+                <button onClick={() => setShowMeasurementForm(false)} className={styles.cancelBtn}>Hủy</button>
+                <button onClick={handleAddMeasurements} disabled={saving} className={styles.saveBtn}>
+                  {saving ? 'Đang lưu...' : <><Check className="w-5 h-5" /> Lưu số đo</>}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Biểu đồ */}
           <div className={styles.card}>
-            <h3 className={styles.chartTitle}>Change chart over time</h3>
-            {chartData.length === 0 ? (
-              <p className={styles.emptyState}>No data available. Please add the first measurement!</p>
+            <h3 className={styles.chartTitle}>Body Measurements Changes</h3>
+            {measChartData.length === 0 ? (
+              <p className={styles.emptyState}>No measurements available</p>
             ) : (
               <ResponsiveContainer width="100%" height={420}>
-                <LineChart data={chartData}>
+                <LineChart data={measChartData}>
                   <CartesianGrid strokeDasharray="4 4" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: '12px', color: 'white' }} />
+                  <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={4} name="Weight (kg)" />
-                  <Line type="monotone" dataKey="waist" stroke="#f59e0b" strokeWidth={3} name="Waist (cm)" />
-                  <Line type="monotone" dataKey="neck" stroke="#3b82f6" name="Neck (cm)" />
-                  <Line type="monotone" dataKey="hip" stroke="#8b5cf6" name="Hip (cm)" />
-                  <Line type="monotone" dataKey="biceps" stroke="#ef4444" name="Biceps (cm)" />
-                  <Line type="monotone" dataKey="thigh" stroke="#ec4899" name="Thigh (cm)" />
+                  <Line type="monotone" dataKey="waist" stroke="#f59e0b" strokeWidth={3} name="Eo (cm)" />
+                  <Line type="monotone" dataKey="neck" stroke="#3b82f6" name="Cổ (cm)" />
+                  <Line type="monotone" dataKey="hip" stroke="#8b5cf6" name="Mông (cm)" />
+                  <Line type="monotone" dataKey="biceps" stroke="#ef4444" name="Bắp tay (cm)" />
+                  <Line type="monotone" dataKey="thigh" stroke="#ec4899" name="Đùi (cm)" />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </div>
 
-          {/* Số đo mới nhất */}
-          {latest.weight && (
+          {measurementLogs.length > 0 && (
             <div className={`${styles.card} ${styles.latestMeasurements}`}>
-              <h3 className={styles.chartTitle}>Most recent measurement ({format(new Date(latest.date), 'dd/MM/yyyy')})</h3>
+              <h3>Latest Measurements</h3>
               <div className={styles.measurementGrid}>
                 {[
-                  { label: 'Weight', value: latest.weight?.toFixed(1), unit: 'kg' },
-                  { label: 'Waist', value: latest.waist?.toFixed(1), unit: 'cm' },
-                  { label: 'Hip', value: latest.hip?.toFixed(1), unit: 'cm' },
-                  { label: 'Neck', value: latest.neck?.toFixed(1), unit: 'cm' },
-                  { label: 'Biceps', value: latest.biceps?.toFixed(1), unit: 'cm' },
-                  { label: 'Thigh', value: latest.thigh?.toFixed(1), unit: 'cm' },
+                  { label: 'Waist', value: measurementLogs[measurementLogs.length - 1].waist?.toFixed(1) },
+                  { label: 'Neck', value: measurementLogs[measurementLogs.length - 1].neck?.toFixed(1) },
+                  { label: 'Hip', value: measurementLogs[measurementLogs.length - 1].hip?.toFixed(1) },
+                  { label: 'Biceps', value: measurementLogs[measurementLogs.length - 1].biceps?.toFixed(1) },
+                  { label: 'Thigh', value: measurementLogs[measurementLogs.length - 1].thigh?.toFixed(1) },
                 ].map(item => (
                   <div key={item.label} className={styles.measurementItem}>
                     <div className={styles.measurementLabel}>{item.label}</div>
                     <div className={styles.measurementValue}>
-                      {item.value || '--'} <span className={styles.unit}>{item.unit}</span>
+                      {item.value || '--'} <span className={styles.unit}>cm</span>
                     </div>
                   </div>
                 ))}
@@ -274,20 +369,12 @@ export default function ProgressNew() {
         </div>
       )}
 
-      {activeTab === 'weight' && (
-        <div className={styles.card}>
-          <h3 className={styles.chartTitle}>Weight Tracking</h3>
-          <p className={styles.emptyState}>Weight tracking chart will display here</p>
-        </div>
-      )}
-
       {activeTab === 'photos' && (
         <div className={styles.card}>
-          <h3 className={styles.chartTitle}>Progress Photos</h3>
-          <p className={styles.emptyState}>Upload your progress photos here</p>
+          <h3>Progress Photos</h3>
+          <p className={styles.emptyState}>Photo feature coming soon</p>
         </div>
       )}
-
     </div>
   );
 }

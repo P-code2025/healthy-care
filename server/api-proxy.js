@@ -27,7 +27,6 @@ const REFRESH_COOKIE_OPTIONS = {
 const DEFAULT_USER_ID = Number(process.env.DEFAULT_USER_ID || 1);
 const ALLOW_GUEST_MODE = process.env.ALLOW_GUEST_MODE !== "false";
 
-// CLOVA Studio credentials from environment variables
 const CLOVA_API_KEY = process.env.CLOVA_API_KEY;
 const CLOVA_API_URL =
   process.env.CLOVA_API_URL ||
@@ -38,7 +37,6 @@ if (!CLOVA_API_KEY) {
   process.exit(1);
 }
 
-// Middleware
 const allowedOrigins =
   process.env.CORS_ORIGINS?.split(",") || ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"];
 app.use(
@@ -56,7 +54,6 @@ const attachUserIfPresent = (req, res, next) => {
   try {
     req.user = jwt.verify(token, ACCESS_TOKEN_SECRET);
   } catch {
-    // ignore invalid tokens for optional routes
   }
   next();
 };
@@ -175,23 +172,19 @@ const sendAuthResponse = (res, user) => {
 const requireAuth = async (req, res, next) => {
   let userId;
 
-  // Check if user is already attached (by attachUserIfPresent)
   if (req.user?.id) {
     userId = req.user.id;
   } else {
-    // Check header if not attached
     const header = req.headers.authorization?.split(" ")[1];
     if (header) {
       try {
         const decoded = jwt.verify(header, ACCESS_TOKEN_SECRET);
         userId = decoded.id;
       } catch {
-        // Token invalid, fall through to guest check
       }
     }
   }
 
-  // Fallback to guest mode if no valid token
   if (!userId && ALLOW_GUEST_MODE) {
     userId = DEFAULT_USER_ID;
   }
@@ -200,18 +193,17 @@ const requireAuth = async (req, res, next) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  // Verify user exists in DB
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true } // Only select fields that definitely exist
+      select: { id: true, email: true } 
     });
 
     if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
 
-    req.user = { ...req.user, ...user }; // Merge with existing req.user if any
+    req.user = { ...req.user, ...user }; 
     return next();
   } catch (error) {
     console.error("Auth verification error:", error);
@@ -290,7 +282,6 @@ const buildAiContext = async (userId) => {
   };
 };
 
-// ========== BASIC ROUTES ==========
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "API Proxy is running" });
 });
@@ -306,7 +297,6 @@ app.get("/temp-image/:imageId", (req, res) => {
   res.send(buffer);
 });
 
-// ========== AUTH ROUTES ==========
 app.post(
   "/api/auth/register",
   body("email").isEmail().withMessage("Valid email required"),
@@ -396,7 +386,6 @@ app.post("/api/auth/logout", (req, res) => {
   res.status(204).send();
 });
 
-// ========== USER PROFILE ==========
 app.get("/api/users/me", requireAuth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
@@ -447,12 +436,10 @@ app.put("/api/users/me/measurements", requireAuth, async (req, res) => {
   res.json(mapUser(updated));
 });
 
-// ========== FOOD LOGS ==========
 app.get("/api/food-log", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   const { start, end } = req.query;
 
-  // Hàm chuyển YYYY-MM-DD → đúng 00:00:00 UTC của ngày đó
   const parseDate = (dateStr) => {
     if (!dateStr) return null;
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -605,7 +592,6 @@ app.post("/api/food-log/batch-delete", requireAuth, async (req, res) => {
   }
 });
 
-// ========== WORKOUT LOGS ==========
 app.get("/api/workout-log", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   const { start, end } = req.query;
@@ -715,7 +701,6 @@ app.delete("/api/workout-log/:id", requireAuth, async (req, res) => {
   }
 });
 
-// ========== AI SUGGESTIONS ==========
 app.get("/api/ai-suggestions", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   try {
@@ -729,8 +714,7 @@ app.get("/api/ai-suggestions", async (req, res) => {
   }
 });
 
-app.post(
-  "/api/ai-suggestions/:id/apply",
+app.post("/api/ai-suggestions/:id/apply",
   requireAuth,
   async (req, res) => {
     const userId = ensureUserIdentity(req, res);
@@ -748,7 +732,6 @@ app.post(
   }
 );
 
-// ========== CALENDAR ==========
 app.get("/api/calendar-events", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   const { start, end, category, linkedModule } = req.query;
@@ -846,7 +829,6 @@ app.delete("/api/calendar-events/:id", requireAuth, async (req, res) => {
   }
 });
 
-// ========== STATISTICS ==========
 app.get("/api/statistics/daily", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   const { date } = req.query;
@@ -860,7 +842,6 @@ app.get("/api/statistics/daily", async (req, res) => {
     const nextDay = new Date(targetDate);
     nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
-    // Aggregate food logs
     const foodStats = await prisma.foodLog.aggregate({
       where: {
         userId,
@@ -878,7 +859,6 @@ app.get("/api/statistics/daily", async (req, res) => {
       _count: true,
     });
 
-    // Aggregate workout logs
     const workoutStats = await prisma.workoutLog.aggregate({
       where: {
         userId,
@@ -921,9 +901,8 @@ app.get("/api/statistics/weekly", async (req, res) => {
 
     const start = parseDateOnly(startDate);
     const end = parseDateOnly(endDate);
-    end.setUTCDate(end.getUTCDate() + 1); // Include end date
+    end.setUTCDate(end.getUTCDate() + 1); 
 
-    // Get all food logs in range
     const foodLogs = await prisma.foodLog.findMany({
       where: {
         userId,
@@ -938,7 +917,6 @@ app.get("/api/statistics/weekly", async (req, res) => {
       },
     });
 
-    // Get all workout logs in range
     const workoutLogs = await prisma.workoutLog.findMany({
       where: {
         userId,
@@ -951,7 +929,6 @@ app.get("/api/statistics/weekly", async (req, res) => {
       },
     });
 
-    // Group by date
     const dailyData = {};
 
     foodLogs.forEach(log => {
@@ -996,7 +973,6 @@ app.get("/api/statistics/weekly", async (req, res) => {
       dailyData[dateKey].workouts_count += 1;
     });
 
-    // Convert to array and sort by date
     const weeklyStats = Object.values(dailyData).sort((a, b) =>
       new Date(a.date) - new Date(b.date)
     );
@@ -1007,7 +983,6 @@ app.get("/api/statistics/weekly", async (req, res) => {
   }
 });
 
-// ========== CLOVA AI FOOD RECOGNITION ==========
 app.post("/api/recognize-food", requireAuth, async (req, res) => {
   try {
     const { base64Image, overrideName, overrideAmount } = req.body;
@@ -1119,7 +1094,6 @@ Use English field names. NO extra text. Valid JSON only.`
       return res.status(500).json({ error: "AI response invalid", raw: content });
     }
 
-    // TỰ ĐỘNG CỘNG TỔNG nếu có breakdown
     if (nutritionData.breakdown && Array.isArray(nutritionData.breakdown)) {
       const totals = nutritionData.breakdown.reduce((acc, item) => ({
         calories: acc.calories + (parseFloat(item.calories) || 0),
@@ -1157,7 +1131,6 @@ Use English field names. NO extra text. Valid JSON only.`
   }
 });
 
-// ========== AI EXERCISE PLAN (giống analyze-food) ==========
 app.post("/api/ai/exercise-plan", requireAuth, async (req, res) => {
   const userId = req.user.id;
 
@@ -1168,7 +1141,6 @@ app.post("/api/ai/exercise-plan", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "dailyIntake is required" });
     }
 
-    // Lấy thông tin user
     const userProfile = await prisma.user.findUnique({
       where: { id: userId },
       select: { age: true, gender: true, heightCm: true, weightKg: true, goal: true },
@@ -1189,7 +1161,6 @@ app.post("/api/ai/exercise-plan", requireAuth, async (req, res) => {
     const tdee = Math.round(bmr * 1.55);
     const caloriePercent = tdee > 0 ? Math.round((dailyIntake / tdee) * 100) : 50;
 
-    // Cache key đơn giản
     const cacheKey = `aiPlan_${new Date().toDateString()}_${dailyIntake}_${userId}`;
     const cached = await prisma.aiExercisePlanCache.findUnique({
       where: { userId_cacheKey: { userId, cacheKey } },
@@ -1200,7 +1171,6 @@ app.post("/api/ai/exercise-plan", requireAuth, async (req, res) => {
       return res.json(cached.plan);
     }
 
-    // Danh sách bài tập có sẵn (phải khớp chính xác với frontend)
     const AVAILABLE_PLANS = [
       "20 Min HIIT Fat Loss - No Repeat Workout",
       "Full Body Strength - Week 1",
@@ -1210,7 +1180,6 @@ app.post("/api/ai/exercise-plan", requireAuth, async (req, res) => {
       "Core & Abs Crusher",
     ];
 
-    // Prompt cực rõ ràng + bắt buộc trả JSON
     const prompt = `You are a professional fitness coach. Create a safe and personalized workout plan for today.
 
 USER PROFILE
@@ -1244,7 +1213,6 @@ RETURN ONLY VALID JSON. NO EXTRA TEXT:
   ]
 }`;
 
-    // Gọi CLOVA bằng fetch thuần (không cần ClovaXClient)
     const clovaResponse = await fetch(CLOVA_API_URL, {
       method: "POST",
       headers: {
@@ -1270,7 +1238,6 @@ RETURN ONLY VALID JSON. NO EXTRA TEXT:
     const data = await clovaResponse.json();
     const raw = data.result?.message?.content || "";
 
-    // Parse JSON an toàn
     let plan = {
       summary: "Kế hoạch tập luyện hôm nay",
       intensity: "moderate",
@@ -1306,7 +1273,6 @@ RETURN ONLY VALID JSON. NO EXTRA TEXT:
       }
     }
 
-    // Cache lại 24h
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await prisma.aiExercisePlanCache.upsert({
       where: { userId_cacheKey: { userId, cacheKey } },
@@ -1319,7 +1285,6 @@ RETURN ONLY VALID JSON. NO EXTRA TEXT:
   } catch (error) {
     console.error("AI Exercise Plan Error:", error.message);
 
-    // Fallback an toàn – frontend sẽ nhận được và hiển thị đẹp
     res.json({
       summary: "Kế hoạch tập luyện hôm nay (dự phòng)",
       intensity: "moderate",
@@ -1333,12 +1298,10 @@ RETURN ONLY VALID JSON. NO EXTRA TEXT:
   }
 });
 
-// Thay thế toàn bộ route cũ bằng đoạn này
 app.post("/api/ai/meal-plan", requireAuth, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // 1. Lấy thông tin user từ DB
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -1355,7 +1318,6 @@ app.post("/api/ai/meal-plan", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Thiếu thông tin hồ sơ người dùng" });
     }
 
-    // 2. Tính BMR + TDEE
     const isMale = user.gender?.toLowerCase() === "male";
     const bmr = isMale
       ? 88.362 + 13.397 * user.weightKg + 4.799 * user.heightCm - 5.677 * user.age
@@ -1372,9 +1334,7 @@ app.post("/api/ai/meal-plan", requireAuth, async (req, res) => {
     const tdee = Math.round(bmr * activityMultiplier);
     const deficit = user.goal === "lose_weight" ? 500 : 0;
     const targetCalories = Math.round(tdee - deficit);
-    const dailyCalories = Math.max(1800, Math.min(3000, targetCalories)); // giới hạn an toàn
-
-    // 3. Cache key theo ngày + thông số chính
+    const dailyCalories = Math.max(1800, Math.min(3000, targetCalories));
     const today = new Date().toISOString().slice(0, 10);
     const cacheKey = `mealplan_hcx007_${today}_${userId}_${dailyCalories}`;
     const cached = await prisma.aiMealPlanCache.findUnique({
@@ -1386,7 +1346,6 @@ app.post("/api/ai/meal-plan", requireAuth, async (req, res) => {
       return res.json(cached.plan);
     }
 
-    // 4. Prompt tiếng Anh cực chặt (đã test 100% trả đúng JSON)
     const systemPrompt = `You are a certified nutrition expert specializing in fat-loss meal planning.
 You MUST generate a 7-day meal plan with EXACT constraints below.
 You MUST return ONLY valid JSON matching the exact schema.
@@ -1457,7 +1416,7 @@ Output ONLY the JSON object. Nothing else.`;
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          temperature: 0.1,           // giảm xuống 0.1 để cực kỳ ổn định
+          temperature: 0.1,          
           topP: 0.8,
           maxCompletionTokens: 4096,
         }),
@@ -1472,18 +1431,15 @@ Output ONLY the JSON object. Nothing else.`;
 
     const rawText = await clovaResponse.text();
 
-    // === PHẦN QUAN TRỌNG NHẤT: Parse chính xác response của HCX-007 ===
     let rawContent = "";
 
     if (rawText.includes('data:')) {
-      // Trường hợp streaming (dù đã tắt vẫn có thể xảy ra)
       const lines = rawText.split("\n").filter(l => l.startsWith("data: "));
       const lastLine = lines[lines.length - 1];
       if (lastLine && !lastLine.includes("[DONE]")) {
         rawContent = lastLine.replace("data: ", "").trim();
       }
     } else {
-      // Không stream → response là JSON thuần
       try {
         const parsed = JSON.parse(rawText);
         rawContent = parsed.result?.message?.content || "";
@@ -1492,7 +1448,6 @@ Output ONLY the JSON object. Nothing else.`;
       }
     }
 
-    // Lấy khối JSON lớn nhất
     const jsonBlock = rawContent.match(/\{[\s\S]*\}/);
     if (!jsonBlock) {
       console.error("No JSON found in AI response:", rawContent);
@@ -1502,7 +1457,7 @@ Output ONLY the JSON object. Nothing else.`;
     let cleaned = jsonBlock[0]
       .replace(/```json/g, "")
       .replace(/```/g, "")
-      .replace(/,\s*}/g, "}")   // fix trailing comma
+      .replace(/,\s*}/g, "}")  
       .replace(/,\s*]/g, "]")
       .trim();
 
@@ -1514,7 +1469,6 @@ Output ONLY the JSON object. Nothing else.`;
       throw new Error("Invalid JSON from AI");
     }
 
-    // Cache 24h
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await prisma.aiMealPlanCache.upsert({
       where: { userId_cacheKey: { userId, cacheKey } },
@@ -1544,14 +1498,13 @@ app.get("/api/ai/exercise-plan-cache", requireAuth, async (req, res) => {
       res.json(cached.plan);
     } else {
       if (cached) await prisma.aiExercisePlanCache.delete({ where: { id: cached.id } });
-      res.status(204).send(); // No content → frontend sẽ gọi AI
+      res.status(204).send();
     }
   } catch (error) {
     handlePrismaError(res, error, "Failed to get AI plan cache");
   }
 });
 
-// POST cache
 app.post("/api/ai/exercise-plan-cache", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const { key, plan } = req.body;
@@ -1559,7 +1512,7 @@ app.post("/api/ai/exercise-plan-cache", requireAuth, async (req, res) => {
   if (!key || !plan) return res.status(400).json({ error: "key and plan required" });
 
   try {
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h (hoặc 1 ngày tự nhiên)
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const result = await prisma.aiExercisePlanCache.upsert({
       where: { userId_cacheKey: { userId, cacheKey: key } },
@@ -1574,7 +1527,6 @@ app.post("/api/ai/exercise-plan-cache", requireAuth, async (req, res) => {
 });
 
 
-// ========== AI FEEDBACK & CONTEXT ==========
 app.post(
   "/api/ai-feedback",
   requireAuth,
@@ -1627,7 +1579,6 @@ app.get("/api/ai/context", requireAuth, async (req, res) => {
   }
 });
 
-// ========== CLOVA CHAT ENDPOINT ==========
 app.post("/api/chat-clova", requireAuth, async (req, res) => {
   try {
     const { message, history = [], userProfile } = req.body;
@@ -1636,7 +1587,6 @@ app.post("/api/chat-clova", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Message is required" });
     }
 
-    // Build system prompt with user context - ENFORCE ENGLISH
     let systemPrompt = `You are a helpful health and fitness AI assistant. 
 IMPORTANT: You MUST respond in English only, regardless of the user's language.
 Provide concise, personalized health advice based on the user's profile.
@@ -1651,7 +1601,6 @@ Keep responses brief and actionable (max 3-4 sentences).`;
 - Goal: ${userProfile.goal || 'general health'}`;
     }
 
-    // Format history for CLOVA
     const messages = [
       { role: 'system', content: systemPrompt },
       ...history.map(msg => ({
@@ -1661,7 +1610,6 @@ Keep responses brief and actionable (max 3-4 sentences).`;
       { role: 'user', content: message }
     ];
 
-    // Call CLOVA
     const response = await fetch(CLOVA_API_URL, {
       method: "POST",
       headers: {
@@ -1692,7 +1640,6 @@ Keep responses brief and actionable (max 3-4 sentences).`;
   }
 });
 
-// CLOVA Proxy endpoint (alias for frontend compatibility)
 app.post("/api/clova-proxy/chat-completions/:appId", async (req, res) => {
   const { appId } = req.params;
 
@@ -1775,8 +1722,6 @@ app.post("/api/clova/v3/chat-completions/:appId", async (req, res) => {
   }
 });
 
-// ========== CHAT MESSAGES API ==========
-// GET /api/chat-messages - List user's chat history
 app.get("/api/chat-messages", requireAuth, async (req, res) => {
   try {
     const { limit = 50, before } = req.query;
@@ -1792,7 +1737,6 @@ app.get("/api/chat-messages", requireAuth, async (req, res) => {
       take: parseInt(limit),
     });
 
-    // Return in ascending order (oldest first)
     res.json({ messages: messages.reverse() });
   } catch (error) {
     console.error("Error fetching chat messages:", error);
@@ -1800,7 +1744,6 @@ app.get("/api/chat-messages", requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/chat-messages - Save a new chat message
 app.post("/api/chat-messages", requireAuth, async (req, res) => {
   try {
     const { role, content, intent } = req.body;
@@ -1832,7 +1775,6 @@ app.post("/api/chat-messages", requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/chat-messages - Clear all chat history for user
 app.delete("/api/chat-messages", requireAuth, async (req, res) => {
   try {
     const count = await prisma.chatMessage.deleteMany({
@@ -1845,7 +1787,6 @@ app.delete("/api/chat-messages", requireAuth, async (req, res) => {
   }
 });
 
-// ========== MEAL PLAN MODIFICATION ENDPOINT ==========
 app.post("/api/meal-plan/modify", requireAuth, async (req, res) => {
   const userId = req.user.id;
 
@@ -1856,7 +1797,6 @@ app.post("/api/meal-plan/modify", requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'day and mealType are required' });
     }
 
-    // Get user profile
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -1872,14 +1812,12 @@ app.post("/api/meal-plan/modify", requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Calculate target calories
     const isMale = user.gender?.toLowerCase() === 'male';
     const bmr = isMale
       ? 88.362 + 13.397 * user.weightKg + 4.799 * user.heightCm - 5.677 * user.age
       : 447.593 + 9.247 * user.weightKg + 3.098 * user.heightCm - 4.33 * user.age;
     const tdee = Math.round(bmr * 1.55);
 
-    // Define calorie targets per meal type
     const mealCalorieTargets = {
       breakfast: { min: 450, max: 550 },
       lunch: { min: 600, max: 700 },
@@ -1892,7 +1830,6 @@ app.post("/api/meal-plan/modify", requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid meal type' });
     }
 
-    // Create prompt for single meal replacement
     const excludeList = Array.isArray(exclude) ? exclude : [exclude];
     const excludeText = excludeList.length > 0
       ? `EXCLUDE these foods: ${excludeList.join(', ')}`
@@ -1921,7 +1858,6 @@ Return ONLY this JSON:
   "image": "/images/meal/meal.jpg"
 }`;
 
-    // Call CLOVA
     const clovaResponse = await fetch(
       "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-007",
       {
@@ -1950,7 +1886,6 @@ Return ONLY this JSON:
     const rawText = await clovaResponse.text();
     let rawContent = "";
 
-    // Parse response
     try {
       const parsed = JSON.parse(rawText);
       rawContent = parsed.result?.message?.content || "";
@@ -1958,7 +1893,6 @@ Return ONLY this JSON:
       rawContent = rawText;
     }
 
-    // Extract JSON
     const jsonBlock = rawContent.match(/\{[\s\S]*\}/);
     if (!jsonBlock) {
       throw new Error("No JSON in AI response");
@@ -1966,7 +1900,6 @@ Return ONLY this JSON:
 
     let meal = JSON.parse(jsonBlock[0].replace(/```json|```/g, "").trim());
 
-    // Ensure all fields
     meal = {
       name: meal.name || "Healthy meal",
       calories: parseInt(meal.calories) || target.min,
@@ -1984,7 +1917,6 @@ Return ONLY this JSON:
   }
 });
 
-// ========== EXERCISE PLAN MODIFICATION ENDPOINT ==========
 app.post("/api/exercise-plan/modify", requireAuth, async (req, res) => {
   const userId = req.user.id;
 
@@ -1992,7 +1924,6 @@ app.post("/api/exercise-plan/modify", requireAuth, async (req, res) => {
     const { constraints = {}, dailyIntake = 0 } = req.body;
     const { intensity, excludeTypes = [], userQuery = '' } = constraints;
 
-    // Get user profile
     const userProfile = await prisma.user.findUnique({
       where: { id: userId },
       select: { age: true, gender: true, heightCm: true, weightKg: true },
@@ -2102,7 +2033,6 @@ app.get("/api/body-measurements", requireAuth, async (req, res) => {
   }
 });
 
-// POST: Thêm/cập nhật số đo hôm nay (upsert)
 app.post("/api/body-measurements", requireAuth, async (req, res) => {
   const userId = req.user.id;
   const {
@@ -2115,36 +2045,36 @@ app.post("/api/body-measurements", requireAuth, async (req, res) => {
   } = req.body;
 
   if (!weight_kg || weight_kg <= 0) {
-    return res.status(400).json({ error: "Cân nặng là bắt buộc" });
+    return res.status(400).json({ error: "Cân nặng là bắt buộc và phải > 0" });
   }
 
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayDateOnly = new Date(
+  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" })
+);
+
+    const data = {
+      weightKg: Number(weight_kg),
+      neckCm: neck_cm ? Number(neck_cm) : null,
+      waistCm: waist_cm ? Number(waist_cm) : null,
+      hipCm: hip_cm ? Number(hip_cm) : null,
+      bicepsCm: biceps_cm ? Number(biceps_cm) : null,
+      thighCm: thigh_cm ? Number(thigh_cm) : null,
+    };
 
     const measurement = await prisma.bodyMeasurement.upsert({
       where: {
         userId_measuredAt: {
           userId,
-          measuredAt: today,
+          measuredAt: todayDateOnly,
         },
       },
-      update: {
-        weightKg: Number(weight_kg),
-        neckCm: neck_cm ? Number(neck_cm) : null,
-        waistCm: waist_cm ? Number(waist_cm) : null,
-        hipCm: hip_cm ? Number(hip_cm) : null,
-        bicepsCm: biceps_cm ? Number(biceps_cm) : null,
-        thighCm: thigh_cm ? Number(thigh_cm) : null,
-      },
+      update: data,
       create: {
         userId,
-        weightKg: Number(weight_kg),
-        neckCm: neck_cm ? Number(neck_cm) : null,
-        waistCm: waist_cm ? Number(waist_cm) : null,
-        hipCm: hip_cm ? Number(hip_cm) : null,
-        bicepsCm: biceps_cm ? Number(biceps_cm) : null,
-        thighCm: thigh_cm ? Number(thigh_cm) : null,
+        measuredAt: todayDateOnly,
+        ...data,
       },
     });
 
@@ -2152,15 +2082,25 @@ app.post("/api/body-measurements", requireAuth, async (req, res) => {
       id: measurement.id,
       measured_at: measurement.measuredAt.toISOString().split("T")[0],
       weight_kg: measurement.weightKg,
-      neck_cm: measurement.neckCm,
-      waist_cm: measurement.waistCm,
-      hip_cm: measurement.hipCm,
-      biceps_cm: measurement.bicepsCm,
-      thigh_cm: measurement.thighCm,
+      neck_cm: measurement.neckCm ?? undefined,
+      waist_cm: measurement.waistCm ?? undefined,
+      hip_cm: measurement.hipCm ?? undefined,
+      biceps_cm: measurement.bicepsCm ?? undefined,
+      thigh_cm: measurement.thighCm ?? undefined,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Lưu số đo thất bại" });
+    console.error("Lỗi lưu BodyMeasurement:", error);
+
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        error: "Đã có dữ liệu hôm nay. Đang thử cập nhật lại...",
+      });
+    }
+
+    res.status(500).json({
+      error: "Lưu số đo thất bại",
+      details: error.message,
+    });
   }
 });
 
