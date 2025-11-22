@@ -81,14 +81,3 @@ export function EmptyMealPlan({ onCreate }: { onCreate: () => void }) {
     );
 }
 
-export function EmptyGroceryList({ onAdd }: { onAdd: () => void }) {
-    return (
-        <EmptyState
-            icon="🛒"
-            title="Your grocery list is empty"
-            description="Add items to your grocery list to prepare for healthy meals."
-            actionLabel="Add Items"
-            onAction={onAdd}
-        />
-    );
-}

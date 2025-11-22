@@ -106,16 +106,6 @@ export interface NewsArticle {
 }
 
 
-export interface UserProfile {
-  age?: number;
-  gender?: "male" | "female";
-  weight?: number;
-  height?: number;
-  goal?: "lose" | "maintain" | "gain";
-  activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active";
-  workoutPreference?: ("yoga" | "gym" | "cardio")[];
-}
-
 export interface FoodItem {
   name: string;
   grams?: number;

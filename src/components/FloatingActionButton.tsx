@@ -22,12 +22,6 @@ const QUICK_ACTIONS: QuickAction[] = [
         path: '/exercises',
         color: '#BAE6FD',
     },
-    {
-        icon: '💧',
-        label: 'Add Water',
-        path: '/food-diary',
-        color: '#29B6F6',
-    },
 ];
 
 export default function FloatingActionButton() {

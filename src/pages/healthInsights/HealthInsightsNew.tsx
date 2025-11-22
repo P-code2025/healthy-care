@@ -314,21 +314,6 @@ export default function HealthInsightsNew() {
             </div>
           </div>
         </div>
-
-        {/* Promotional Banner */}
-        <div className={styles.promoBanner}>
-          <div className={styles.promoContent}>
-            <div className={styles.promoVeggies}>🥬</div>
-            <div className={styles.promoText}>
-              <p className={styles.promoTitle}>Start your health journey</p>
-              <p className={styles.promoSubtitle}>
-                with a <strong>FREE 1-month</strong>
-              </p>
-              <p className={styles.promoSubtitle}>access to Nutrigo</p>
-            </div>
-          </div>
-          <button className={styles.claimBtn}>Claim Now!</button>
-        </div>
       </div>
 
       {/* Sidebar */}

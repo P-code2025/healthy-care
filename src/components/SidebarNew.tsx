@@ -8,7 +8,6 @@ const menuItems = [
   { name: "AI Chat", icon: "💬", path: '/messages', badge: null },
   { name: "Healthy Menu", icon: "🥗", path: "/healthy-menu", badge: null },
   { name: "Meal Plan", icon: "📝", path: "/meal-plan", badge: null },
-  { name: "Grocery List", icon: "🛒", path: "/grocery-list", badge: null },
   { name: "Food Diary", icon: "📔", path: "/food-diary", badge: null },
   { name: "Progress", icon: "📈", path: "/progress", badge: null },
   { name: "Exercises", icon: "🏋️", path: "/exercises", badge: null },

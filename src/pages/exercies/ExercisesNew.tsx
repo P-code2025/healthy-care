@@ -13,7 +13,7 @@ import styles from './ExercisesNew.module.css';
 import YouTubePlayer from '../../components/YouTubePlayer';
 import { SAMPLE_WORKOUT_PLANS, type WorkoutPlan } from './workoutPlans';
 import { generateAIExercisePlan, type AIExercisePlan } from '../../services/aiExercisePlan';
-import type { FoodEntry } from '../../lib/types';
+import type { FoodEntry} from '../../lib/types';
 import { foodDiaryApi, mapFoodLogToEntry } from '../../services/foodDiaryApi';
 import { useAuth } from '../../context/AuthContext';
 import { determineGoalIntent, getGoalWeightFromUser } from '../../utils/profile';
@@ -22,16 +22,14 @@ import { toast } from 'react-toastify';
 
 const TABS = ['All', 'Personalized', 'Saved', 'History'] as const;
 type TabType = typeof TABS[number];
-
-interface ExerciseUserProfile {
+type LocalProfile = {
   age: number;
-  gender: 'Nam' | 'Nữ' | string;
-  weight: number;
+  gender: string;
   height: number;
+  weight: number;
   goalWeight: number;
-  goal: 'lose' | 'maintain' | 'gain';
-  workoutPreference?: string[];
-}
+  workoutPreference: string[];
+};
 
 export default function ExercisesNew() {
   const { user } = useAuth();
@@ -40,7 +38,7 @@ export default function ExercisesNew() {
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
   const [savedPlans, setSavedPlans] = useState<Set<string>>(new Set(['2', '5']));
   const [plans, setPlans] = useState<WorkoutPlan[]>(SAMPLE_WORKOUT_PLANS);
-  const [userProfile, setUserProfile] = useState<ExerciseUserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<LocalProfile | null>(null);
   const [dailyCalories, setDailyCalories] = useState(0);
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
 
@@ -60,22 +58,17 @@ export default function ExercisesNew() {
   // Load profile from auth context
   useEffect(() => {
     if (!user) return;
-    const normalizedGender =
-      user.gender?.toLowerCase() === 'male'
-        ? 'Nam'
-        : user.gender?.toLowerCase() === 'female'
-          ? 'Nữ'
-          : user.gender || 'Nam';
     const weight = user.weight_kg || 0;
     const goalWeight = getGoalWeightFromUser(user);
     setUserProfile({
       age: user.age || 0,
-      gender: normalizedGender,
-      weight,
-      height: user.height_cm || 0,
-      goalWeight,
-      goal: determineGoalIntent(weight, goalWeight),
-      workoutPreference: [],
+      gender: user.gender || 'Male',
+      height: user.height_cm ?? 0,
+      weight: weight,
+      goalWeight: goalWeight,
+      workoutPreference: Object.entries(user.exercise_preferences || {})
+        .filter(([_, v]) => v)
+        .map(([k, _]) => k as "yoga" | "gym" | "cardio"),
     });
   }, [user]);
 
@@ -106,7 +99,7 @@ export default function ExercisesNew() {
     if (!weight || !height || !age || !gender) return null;
 
     const bmi = weight / ((height / 100) ** 2);
-    const bmr = gender === 'Nam'
+    const bmr = gender === 'male'
       ? 88.362 + 13.397 * weight + 4.799 * height - 5.677 * age
       : 447.593 + 9.247 * weight + 3.098 * height - 4.33 * age;
 
@@ -298,19 +291,19 @@ export default function ExercisesNew() {
           {/* Header */}
           <div className={styles.aiHeader}>
             <div className={styles.aiAvatar}>AI</div>
-            <h3 className={styles.aiTitle}>Huấn luyện viên cá nhân</h3>
+            <h3 className={styles.aiTitle}>Personal trainer</h3>
           </div>
 
           {/* Stats */}
           <div className={styles.aiStats}>
-            <div className={styles.aiStat}><strong>{dailyCalories}</strong> kcal nạp</div>
+            <div className={styles.aiStat}><strong>{dailyCalories}</strong> kcal consumed</div>
             <div className={styles.aiStat}><strong>{analysis.tdee}</strong> kcal TDEE</div>
             <div className={styles.aiStat}>
               <strong>{analysis.bmi}</strong> BMI
               <span className={styles.bmiStatus} style={{
                 color: Number(analysis.bmi) > 25 ? '#dc2626' : '#10b981'
               }}>
-                {Number(analysis.bmi) > 25 ? 'Cần giảm cân' : 'Duy trì tốt'}
+                {Number(analysis.bmi) > 25 ? ' - Need to lose weight' : ' - Maintain well'}
               </span>
             </div>
           </div>
@@ -318,7 +311,7 @@ export default function ExercisesNew() {
           {/* Progress */}
           <div className={styles.aiProgress}>
             <div className={styles.aiProgressLabel}>
-              Đốt <strong>{analysis.recommendedBurn} kcal</strong> để cân bằng
+              Burn <strong>{analysis.recommendedBurn} kcal</strong> to balance
             </div>
             <div className={styles.aiProgressBar}>
               <div className={styles.aiProgressFill} style={{ width: `${analysis.deficitPct}%` }} />

@@ -17,22 +17,24 @@ export default function StepGoalSelection({ data, onNext }: Props) {
     const targetWeight = parseFloat(goalWeight);
     const isValid = targetWeight > 0 && targetWeight < 300;
 
-    // Calculate TDEE
-    const tdee = calculateTDEE({
-        weightKg: currentWeight,
-        heightCm: parseFloat(data.height),
-        age: parseInt(data.age),
-        gender: data.gender,
-        activityLevel: 'moderate'
-    });
+    const profileForTDEE = {
+        weight: currentWeight,
+        height: parseFloat(data.height),
+        age: parseInt(data.age || '30'),
+        gender: data.gender === 'Nam' ? 'Male' as const : 'Female' as const,
+        workoutDays: 3, // bạn có thể cho người dùng chọn sau, tạm để 3 = tập đều
+    };
 
-    // Determine goal type
-    const goalType = isValid ? determineGoalType(currentWeight, targetWeight) : 'maintain';
+    const tdee = calculateTDEE(profileForTDEE);
 
-    // Calculate recommended calories
+    const goalType = isValid
+        ? determineGoalType(currentWeight, targetWeight)
+        : 'maintain';
+
     const recommendedCalories = calculateCalorieGoal({
-        tdee,
-        goalType
+        ...profileForTDEE,
+        goal: goalType,
+        aggressive: false, // hoặc thêm nút chọn "giảm nhanh"
     });
 
     const weightDiff = targetWeight - currentWeight;

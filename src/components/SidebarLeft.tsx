@@ -26,7 +26,6 @@ const menuItems = [
     icon: <LuScrollText size={20} />,
     children: [
       { name: "Meal Plan", path: "/meal-plan" },
-      { name: "Grocery List", path: "/grocery-list" },
     ],
   },
   { name: "Food Diary", icon: <LuListTodo size={20} />, path: "/food-diary" },
@@ -46,7 +45,6 @@ const SidebarLeft: React.FC = () => {
 
   const isMealPlanActive =
     location.pathname.startsWith("/meal-plan") ||
-    location.pathname.startsWith("/grocery-list");
 
   useEffect(() => {
     if (!isMealPlanActive && openDropdown === "Meal Plan") {

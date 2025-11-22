@@ -86,6 +86,9 @@ type UserUpdatePayload = Partial<
   thighCm?: number;
   activityLevel?: string;
   exercisePreferences?: User["exercise_preferences"];
+  tdee?: number;
+  recommendedCalories?: number;
+  goalType?: string;
 };
 
 const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {

@@ -9,7 +9,6 @@ const menuItems = [
     { name: 'AI Chat', icon: '💬', path: '/messages' },
     { name: 'Healthy Menu', icon: '🥗', path: '/healthy-menu' },
     { name: 'Meal Plan', icon: '📝', path: '/meal-plan' },
-    { name: 'Grocery List', icon: '🛒', path: '/grocery-list' },
     { name: 'Food Diary', icon: '📔', path: '/food-diary' },
     { name: 'Progress', icon: '📈', path: '/progress' },
     { name: 'Exercises', icon: '🏋️', path: '/exercises' },

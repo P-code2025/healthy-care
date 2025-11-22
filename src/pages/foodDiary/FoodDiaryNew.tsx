@@ -7,7 +7,6 @@ import { compressImage } from '../../utils/imageUtils';
 import { detectBarcodeWithQuagga } from '../../utils/barcodeUtils';
 import { FaWalking, FaRunning, FaDumbbell, FaSwimmer, FaBicycle } from 'react-icons/fa';
 import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput } from '../../services/foodDiaryApi';
-import { generateMealPlanFromHistory, saveAIMealPlan } from '../../services/aiMealPlanGenerator';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -488,39 +487,6 @@ export default function FoodDiaryNew() {
     }
   };
 
-  const handleGenerateMealPlan = async () => {
-    if (foodEntries.length < 7) {
-      toast.warning('Add at least 7 meals to generate a meal plan');
-      return;
-    }
-
-    const toastId = toast.info('🤖 Analyzing your eating habits...', { autoClose: false });
-
-    try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const recentEntries = foodEntries.filter(entry =>
-        new Date(entry.date) >= thirtyDaysAgo
-      );
-
-      const plan = await generateMealPlanFromHistory(recentEntries, 'maintain');
-      saveAIMealPlan(plan);
-
-      toast.update(toastId, {
-        render: '✨ Your meal plan is ready!',
-        type: 'success',
-        autoClose: 2000
-      });
-
-      setTimeout(() => navigate('/meal-plan'), 500);
-    } catch (error) {
-      toast.update(toastId, {
-        render: 'Failed to generate plan',
-        type: 'error',
-        autoClose: 3000
-      });
-    }
-  };
 
 
 
@@ -529,14 +495,6 @@ export default function FoodDiaryNew() {
       {/* Header */}
       <div className={styles.header}>
         <h1 className={styles.pageTitle}>Food Diary</h1>
-        <button
-          className={styles.generateMealPlanBtn}
-          onClick={handleGenerateMealPlan}
-          disabled={foodEntries.length < 7}
-          title={foodEntries.length < 7 ? 'Add at least 7 meals' : 'Generate meal plan from your history'}
-        >
-          ✨ Generate Meal Plan
-        </button>
       </div>
 
       {/* KPI Cards */}

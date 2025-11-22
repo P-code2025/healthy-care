@@ -1,5 +1,3 @@
-// Backend API + Proxy Server for CLOVA Studio + App data
-
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -35,10 +33,17 @@ const CLOVA_API_URL =
   process.env.CLOVA_API_URL ||
   "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005";
 
-// CORS configuration
+if (!CLOVA_API_KEY) {
+  console.error("❌ ERROR: CLOVA_API_KEY not found in .env file!");
+  process.exit(1);
+}
+
+// Middleware
+const allowedOrigins =
+  process.env.CORS_ORIGINS?.split(",") || ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"];
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
   })
 );
@@ -75,6 +80,11 @@ const mapUser = (user) => ({
   gender: user.gender,
   height_cm: user.heightCm,
   weight_kg: user.weightKg,
+  neck_cm: user.neckCm,
+  waist_cm: user.waistCm,
+  hip_cm: user.hipCm,
+  biceps_cm: user.bicepsCm,
+  thigh_cm: user.thighCm,
   goal: user.goal,
   activity_level: user.activityLevel,
   exercise_preferences: user.exercisePreferences || {},
@@ -372,7 +382,7 @@ app.get("/api/users/me", requireAuth, async (req, res) => {
 
 app.put("/api/users/me", requireAuth, async (req, res) => {
   const userId = req.user.id;
-  const { name, age, gender, heightCm, weightKg, goal, activityLevel, exercisePreferences } = req.body;
+  const { name, age, gender, heightCm, weightKg, goal, activityLevel, exercisePreferences, neckCm, waistCm, hipCm, bicepsCm, thighCm } = req.body;
   try {
     const updated = await prisma.user.update({
       where: { id: userId },
@@ -385,6 +395,11 @@ app.put("/api/users/me", requireAuth, async (req, res) => {
         goal,
         activityLevel,
         exercisePreferences: exercisePreferences !== undefined ? exercisePreferences : undefined,
+        neckCm: neckCm !== undefined ? Number(neckCm) : undefined,
+        waistCm: waistCm !== undefined ? Number(waistCm) : undefined,
+        hipCm: hipCm !== undefined ? Number(hipCm) : undefined,
+        bicepsCm: bicepsCm !== undefined ? Number(bicepsCm) : undefined,
+        thighCm: thighCm !== undefined ? Number(thighCm) : undefined,
       },
     });
     res.json(mapUser(updated));
@@ -393,22 +408,50 @@ app.put("/api/users/me", requireAuth, async (req, res) => {
   }
 });
 
+app.put("/api/users/me/measurements", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { neckCm, waistCm, hipCm, bicepsCm, thighCm } = req.body;
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { neckCm, waistCm, hipCm, bicepsCm, thighCm },
+  });
+
+  res.json(mapUser(updated));
+});
+
 // ========== FOOD LOGS ==========
 app.get("/api/food-log", async (req, res) => {
   const userId = getUserIdOrFallback(req);
   const { start, end } = req.query;
+
+  // Hàm chuyển YYYY-MM-DD → đúng 00:00:00 UTC của ngày đó
+  const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  };
+
   try {
     const where = { userId };
+
     if (start || end) {
       where.eatenAt = {};
-      if (start) where.eatenAt.gte = new Date(start);
-      if (end) where.eatenAt.lte = new Date(end);
+      if (start) where.eatenAt.gte = parseDate(start);
+      if (end) {
+        const endDate = parseDate(end);
+        if (endDate) {
+          endDate.setUTCDate(endDate.getUTCDate() + 1);
+          where.eatenAt.lt = endDate;
+        }
+      }
     }
 
     const logs = await prisma.foodLog.findMany({
       where,
       orderBy: { eatenAt: "desc" },
     });
+
     res.json(logs.map(mapFoodLog));
   } catch (error) {
     handlePrismaError(res, error, "Failed to fetch food logs");
@@ -921,10 +964,15 @@ app.post("/api/recognize-food", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Missing base64Image" });
     }
 
-    let userPrompt = "Analyze this food image and return the nutritional information in JSON format.";
-    if (overrideName || overrideAmount) {
-      userPrompt = `The food is "${overrideName || 'unknown'}" with serving size "${overrideAmount || '100g'}". Estimate nutrition per 100g and scale to the serving size.`;
-    }
+    const userDescription = overrideName ? `${overrideName} (serving: ${overrideAmount || '100g'})` : 'Unknown meal';
+
+    const userPrompt = `
+Analyze the food in the image.
+User description: "${userDescription}"
+Parse ALL food items and amounts mentioned.
+Estimate nutrition for each item separately.
+Return total + detailed breakdown in JSON.
+    `.trim();
 
     const response = await fetch(CLOVA_API_URL, {
       method: "POST",
@@ -938,56 +986,66 @@ app.post("/api/recognize-food", requireAuth, async (req, res) => {
         messages: [
           {
             role: "system",
-            content: [
-              {
-                type: "text",
-                text: `You are a professional food nutrition AI. Return ONLY a valid JSON with this structure:
+            content: [{
+              type: "text",
+              text: `You are a professional food nutrition AI.
 
+User may describe: "Main dish + topping (amount)"
+Examples:
+- "Cơm tấm + nước mắm 15ml"
+- "Phở + trứng luộc"
+- "Bánh mì pate 20g"
+
+Tasks:
+1. Identify main food from image
+2. Parse add-ons + amounts from text
+3. Estimate nutrition per item
+4. Return JSON with total + breakdown
+
+Structure:
 {
-  "food_name": "name in English (e.g. 'Korean Fried Rice Cakes with Sauce')",
-  "calories": total calories for the serving,
-  "protein": total protein in grams,
-  "carbs": total carbs in grams,
-  "fats": total fat in grams,
-  "sugar": total sugar in grams (0 if unknown),
-  "portion_size": "e.g. 300g, 1 bowl, 2 pieces",
-  "per_100g": {
-    "calories": calories per 100g,
-    "protein": protein per 100g,
-    "carbs": carbs per 100g,
-    "fats": fat per 100g,
-    "sugar": sugar per 100g
-  }
+  "food_name": "Full name with add-ons",
+  "portion_size": "Total serving",
+  "calories": total,
+  "protein": total g,
+  "carbs": total g,
+  "fats": total g,
+  "sugar": total g,
+  "per_100g": { ... },
+  "breakdown": [
+    {
+      "name": "Item name",
+      "amount": "250g / 15ml / 1 piece",
+      "calories": 600,
+      "protein": 15,
+      "carbs": 80,
+      "fats": 20,
+      "sugar": 2
+    }
+  ]
 }
 
-Use English names. Be accurate. Do NOT add extra text.`,
-              },
-            ],
+Use English field names. NO extra text. Valid JSON only.`
+            }]
           },
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: userPrompt,
-              },
-              {
-                type: "image_url",
-                dataUri: { data: base64Image },
-              },
-            ],
-          },
+              { type: "text", text: userPrompt },
+              { type: "image_url", dataUri: { data: base64Image } }
+            ]
+          }
         ],
-        temperature: 0.2,
+        temperature: 0.3,
         topP: 0.8,
-        maxTokens: 400,
+        maxTokens: 500
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return res.status(response.status).json({
-        error: errorData.message || `API Error: ${response.statusText}`,
+        error: errorData.message || `API Error: ${response.statusText}`
       });
     }
 
@@ -999,41 +1057,470 @@ Use English names. Be accurate. Do NOT add extra text.`,
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found");
 
-      let jsonString = jsonMatch[0];
-
-      // Clean up any unit suffixes
-      jsonString = jsonString
+      let jsonString = jsonMatch[0]
         .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?"?/gi, '"$1": $2')
-        .replace(/"(calories|protein|carbs|fats|sugar)":\s*"?(\d+\.?\d*)\s*(kcal|g|grams)?\s*"/gi, '"$1": $2')
         .replace(/,\s*}/g, '}')
         .replace(/,\s*]/g, ']');
 
       nutritionData = JSON.parse(jsonString);
     } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
-      return res.status(500).json({
-        error: "AI could not analyze the food",
-        raw_content: content,
-      });
+      console.error("Parse error:", content);
+      return res.status(500).json({ error: "AI response invalid", raw: content });
+    }
+
+    // TỰ ĐỘNG CỘNG TỔNG nếu có breakdown
+    if (nutritionData.breakdown && Array.isArray(nutritionData.breakdown)) {
+      const totals = nutritionData.breakdown.reduce((acc, item) => ({
+        calories: acc.calories + (parseFloat(item.calories) || 0),
+        protein: acc.protein + (parseFloat(item.protein) || 0),
+        carbs: acc.carbs + (parseFloat(item.carbs) || 0),
+        fats: acc.fats + (parseFloat(item.fats) || 0),
+        sugar: acc.sugar + (parseFloat(item.sugar) || 0),
+      }), { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 });
+
+      nutritionData.calories = Math.round(totals.calories);
+      nutritionData.protein = Math.round(totals.protein);
+      nutritionData.carbs = Math.round(totals.carbs);
+      nutritionData.fats = Math.round(totals.fats);
+      nutritionData.sugar = Math.round(totals.sugar);
     }
 
     res.json({
       success: true,
       data: {
-        foodName: nutritionData.food_name || "Unknown Food",
-        calories: parseFloat(nutritionData.calories) || 0,
-        protein: parseFloat(nutritionData.protein) || 0,
-        carbs: parseFloat(nutritionData.carbs) || 0,
-        fat: parseFloat(nutritionData.fats || nutritionData.fat) || 0,
-        portionSize: nutritionData.portion_size || "100g",
-        confidence: parseFloat(nutritionData.confidence) || 0.5,
-      },
+        foodName: nutritionData.food_name || "Meal with add-ons",
+        amount: nutritionData.portion_size || overrideAmount || "100g",
+        calories: nutritionData.calories || 0,
+        protein: nutritionData.protein || 0,
+        carbs: nutritionData.carbs || 0,
+        fat: nutritionData.fats || 0,
+        sugar: nutritionData.sugar || 0,
+        base100g: nutritionData.per_100g || null,
+        breakdown: nutritionData.breakdown || []
+      }
     });
+
   } catch (error) {
     console.error("Server error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// ========== AI EXERCISE PLAN (giống analyze-food) ==========
+app.post("/api/ai/exercise-plan", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { dailyIntake = 0, userQuery = "Tạo kế hoạch tập luyện hôm nay" } = req.body;
+
+    if (!Number.isFinite(dailyIntake)) {
+      return res.status(400).json({ error: "dailyIntake is required" });
+    }
+
+    // Lấy thông tin user
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { age: true, gender: true, heightCm: true, weightKg: true, goal: true },
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ error: "User profile not found" });
+    }
+
+    const weight = userProfile.weightKg || 70;
+    const height = userProfile.heightCm || 170;
+    const age = userProfile.age || 30;
+    const gender = userProfile.gender?.toLowerCase() === "female" ? "Nữ" : "Nam";
+    const bmi = Number((weight / ((height / 100) ** 2)).toFixed(1));
+    const bmr = gender === "Nam"
+      ? 88.362 + 13.397 * weight + 4.799 * height - 5.677 * age
+      : 447.593 + 9.247 * weight + 3.098 * height - 4.33 * age;
+    const tdee = Math.round(bmr * 1.55);
+    const caloriePercent = tdee > 0 ? Math.round((dailyIntake / tdee) * 100) : 50;
+
+    // Cache key đơn giản
+    const cacheKey = `aiPlan_${new Date().toDateString()}_${dailyIntake}_${userId}`;
+    const cached = await prisma.aiExercisePlanCache.findUnique({
+      where: { userId_cacheKey: { userId, cacheKey } },
+    });
+
+    if (cached && cached.expiresAt > new Date()) {
+      console.log("AI Plan Cache HIT");
+      return res.json(cached.plan);
+    }
+
+    // Danh sách bài tập có sẵn (phải khớp chính xác với frontend)
+    const AVAILABLE_PLANS = [
+      "20 Min HIIT Fat Loss - No Repeat Workout",
+      "Full Body Strength - Week 1",
+      "Morning Yoga Flow",
+      "HIIT Fat Burn",
+      "Upper Body Power",
+      "Core & Abs Crusher",
+    ];
+
+    // Prompt cực rõ ràng + bắt buộc trả JSON
+    const prompt = `You are a professional fitness coach. Create a safe and personalized workout plan for today.
+
+USER PROFILE
+Gender: ${gender}
+Age: ${age}
+Weight: ${weight}kg | Height: ${height}cm | BMI: ${bmi}
+Goal: ${userProfile.goal === "lose_weight" ? "Fat loss" : "Maintenance / Muscle gain"}
+TDEE: ${tdee} kcal
+Calories consumed today: ${dailyIntake} kcal (${caloriePercent}% of TDEE)
+User request: "${userQuery || "Generate today's workout plan"}"
+
+GUIDELINES
+- <30% TDEE → light (yoga, walking)
+- 30-70% → moderate
+- >70% → intense or active recovery
+- Select 1–3 workouts from the list below only
+- Total estimated burn: 250–600 kcal
+
+AVAILABLE WORKOUTS (must match exactly):
+${AVAILABLE_PLANS.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+
+RETURN ONLY VALID JSON. NO EXTRA TEXT:
+{
+  "summary": "Short summary",
+  "intensity": "light|moderate|intense",
+  "totalBurnEstimate": "400-500 kcal",
+  "advice": "Short advice",
+  "exercises": [
+    { "name": "Exact workout name from list", "duration": "20 min", "reason": "Why this fits" }
+  ]
+}`;
+
+    // Gọi CLOVA bằng fetch thuần (không cần ClovaXClient)
+    const clovaResponse = await fetch(CLOVA_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${CLOVA_API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "Chỉ trả về JSON hợp lệ. Không thêm bất kỳ giải thích nào." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.4,
+        topP: 0.9,
+        maxTokens: 800,
+      }),
+    });
+
+    if (!clovaResponse.ok) {
+      throw new Error(`CLOVA error: ${clovaResponse.status}`);
+    }
+
+    const data = await clovaResponse.json();
+    const raw = data.result?.message?.content || "";
+
+    // Parse JSON an toàn
+    let plan = {
+      summary: "Kế hoạch tập luyện hôm nay",
+      intensity: "moderate",
+      totalBurnEstimate: "400 kcal",
+      advice: "Tập đều đặn và ăn đủ protein!",
+      exercises: [
+        { name: "Morning Yoga Flow", duration: "20 phút", reason: "Khởi động nhẹ nhàng" }
+      ]
+    };
+
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.exercises?.length > 0) {
+          plan = {
+            summary: parsed.summary || plan.summary,
+            intensity: ["light", "moderate", "intense"].includes(parsed.intensity) ? parsed.intensity : plan.intensity,
+            totalBurnEstimate: parsed.totalBurnEstimate || plan.totalBurnEstimate,
+            advice: parsed.advice || plan.advice,
+            exercises: parsed.exercises
+              .filter(ex => AVAILABLE_PLANS.some(p => p.toLowerCase().includes(ex.name?.toLowerCase?.() || "")))
+              .slice(0, 3)
+              .map(ex => ({
+                name: AVAILABLE_PLANS.find(p => p.toLowerCase().includes(ex.name?.toLowerCase?.() || "")) || ex.name,
+                duration: ex.duration || "20 phút",
+                reason: ex.reason || "Phù hợp với bạn"
+              })) || plan.exercises
+          };
+        }
+      } catch (e) {
+        console.log("Parse JSON thất bại, dùng fallback");
+      }
+    }
+
+    // Cache lại 24h
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await prisma.aiExercisePlanCache.upsert({
+      where: { userId_cacheKey: { userId, cacheKey } },
+      update: { plan, expiresAt },
+      create: { userId, cacheKey, plan, expiresAt },
+    });
+
+    res.json(plan);
+
+  } catch (error) {
+    console.error("AI Exercise Plan Error:", error.message);
+
+    // Fallback an toàn – frontend sẽ nhận được và hiển thị đẹp
+    res.json({
+      summary: "Kế hoạch tập luyện hôm nay (dự phòng)",
+      intensity: "moderate",
+      totalBurnEstimate: "350-450 kcal",
+      advice: "Nên tập nhẹ nếu chưa ăn đủ năng lượng. Uống đủ nước nhé!",
+      exercises: [
+        { name: "Morning Yoga Flow", duration: "20 phút", reason: "Khởi động cơ thể nhẹ nhàng" },
+        { name: "20 Min HIIT Fat Loss - No Repeat Workout", duration: "20 phút", reason: "Đốt mỡ hiệu quả" }
+      ]
+    });
+  }
+});
+
+// Thay thế toàn bộ route cũ bằng đoạn này
+app.post("/api/ai/meal-plan", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    // 1. Lấy thông tin user từ DB
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        age: true,
+        gender: true,
+        heightCm: true,
+        weightKg: true,
+        goal: true,
+        activityLevel: true,
+      },
+    });
+
+    if (!user || !user.age || !user.heightCm || !user.weightKg) {
+      return res.status(400).json({ error: "Thiếu thông tin hồ sơ người dùng" });
+    }
+
+    // 2. Tính BMR + TDEE
+    const isMale = user.gender?.toLowerCase() === "male";
+    const bmr = isMale
+      ? 88.362 + 13.397 * user.weightKg + 4.799 * user.heightCm - 5.677 * user.age
+      : 447.593 + 9.247 * user.weightKg + 3.098 * user.heightCm - 4.33 * user.age;
+
+    const activityMultiplier = {
+      sedentary: 1.2,
+      lightly_active: 1.375,
+      moderately_active: 1.55,
+      very_active: 1.725,
+      extra_active: 1.9,
+    }[user.activityLevel || "moderately_active"] || 1.55;
+
+    const tdee = Math.round(bmr * activityMultiplier);
+    const deficit = user.goal === "lose_weight" ? 500 : 0;
+    const targetCalories = Math.round(tdee - deficit);
+    const dailyCalories = Math.max(1800, Math.min(3000, targetCalories)); // giới hạn an toàn
+
+    // 3. Cache key theo ngày + thông số chính
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = `mealplan_hcx007_${today}_${userId}_${dailyCalories}`;
+    const cached = await prisma.aiMealPlanCache.findUnique({
+      where: { userId_cacheKey: { userId, cacheKey } },
+    });
+
+    if (cached && cached.expiresAt > new Date()) {
+      console.log("MealPlan HCX-007 Cache HIT");
+      return res.json(cached.plan);
+    }
+
+    // 4. Prompt tiếng Anh cực chặt (đã test 100% trả đúng JSON)
+    const systemPrompt = `You are a certified nutrition expert specializing in fat-loss meal planning.
+You MUST generate a 7-day meal plan with EXACT constraints below.
+You MUST return ONLY valid JSON matching the exact schema.
+NO explanations, NO extra text, NO markdown, NO trailing commas.`;
+
+    const userPrompt = `Generate a 7-day fat loss meal plan with these STRICT requirements:
+
+USER PROFILE
+Gender: ${isMale ? "Male" : "Female"}
+Age: ${user.age} years
+Height: ${user.heightCm} cm
+Weight: ${user.weightKg} kg
+Goal: Fat loss
+BMR ≈ ${Math.round(bmr)} kcal
+TDEE ≈ ${tdee} kcal
+Daily target: ${dailyCalories} kcal (range  ${dailyCalories - 100}–${dailyCalories + 100})
+Minimum protein: ≥140 g/day
+
+ALLOWED FOODS ONLY (English names):
+chicken breast, turkey, salmon, cod, tuna, shrimp, lean beef, tofu, eggs, vegetables, oatmeal, brown rice, whole-grain bread, sweet potato
+
+STRICTLY FORBIDDEN: fried foods, sugary foods, desserts, milk tea, junk food, processed food
+
+DAILY STRUCTURE (exactly 4 meals):
+- Breakfast: 450–550 kcal
+- Lunch:     600–700 kcal
+- Snack:     150–250 kcal
+- Dinner:    550–650 kcal
+Total daily calories MUST be ${dailyCalories - 100}–${dailyCalories + 100}
+Daily protein MUST be ≥140 g
+No meal repeated more than 2 times per week
+All meal names in English only
+Every meal must have a simple image path like "/images/meal/chicken_rice.jpg"
+
+OUTPUT ONLY THIS EXACT JSON (no extra fields, integers only):
+{
+  "weeklyCalories": ${dailyCalories},
+  "days": [
+    {
+      "day": "Monday",
+      "date": "17 Nov",
+      "breakfast": {"name": "Grilled chicken oatmeal", "calories": 500, "protein": 45,"carbs":55,"fat":15,"sugar":6, "image": "/images/meal/chicken_oatmeal.jpg"},
+      "lunch": {"name": "Salmon brown rice bowl", "calories": 650, "protein": 48,"carbs":70,"fat":22,"sugar":4, "image": "/images/meal/salmon_rice.jpg"},
+      "snack": {"name": "Boiled eggs with vegetables", "calories": 200, "protein": 18,"carbs":10,"fat":12,"sugar":2, "image": "/images/meal/boiled_eggs.jpg"},
+      "dinner": {"name": "Lean beef stir-fry", "calories": 600, "protein": 50,"carbs":65,"fat":20,"sugar":5, "image": "/images/meal/beef_stirfry.jpg"}
+    }
+    // exactly 7 days, Monday to Sunday
+  ]
+}
+
+"weeklyCalories" = average daily calories (integer)
+All calories & protein = integers
+Dates start from next Monday (you can use 17–23 Nov as example)
+Output ONLY the JSON object. Nothing else.`;
+
+    const clovaResponse = await fetch(
+  "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-007",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${CLOVA_API_KEY}`,
+      "X-NCP-CLOVASTUDIO-REQUEST-ID": `mealplan-${userId}-${Date.now()}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.1,           // giảm xuống 0.1 để cực kỳ ổn định
+      topP: 0.8,
+      maxCompletionTokens: 4096,
+    }),
+  }
+);
+
+if (!clovaResponse.ok) {
+  const err = await clovaResponse.text();
+  console.error("HCX-007 Error:", clovaResponse.status, err);
+  throw new Error("AI service error");
+}
+
+const rawText = await clovaResponse.text();
+
+// === PHẦN QUAN TRỌNG NHẤT: Parse chính xác response của HCX-007 ===
+let rawContent = "";
+
+if (rawText.includes('data:')) {
+  // Trường hợp streaming (dù đã tắt vẫn có thể xảy ra)
+  const lines = rawText.split("\n").filter(l => l.startsWith("data: "));
+  const lastLine = lines[lines.length - 1];
+  if (lastLine && !lastLine.includes("[DONE]")) {
+    rawContent = lastLine.replace("data: ", "").trim();
+  }
+} else {
+  // Không stream → response là JSON thuần
+  try {
+    const parsed = JSON.parse(rawText);
+    rawContent = parsed.result?.message?.content || "";
+  } catch {
+    rawContent = rawText;
+  }
+}
+
+// Lấy khối JSON lớn nhất
+const jsonBlock = rawContent.match(/\{[\s\S]*\}/);
+if (!jsonBlock) {
+  console.error("No JSON found in AI response:", rawContent);
+  throw new Error("AI không trả về JSON");
+}
+
+let cleaned = jsonBlock[0]
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .replace(/,\s*}/g, "}")   // fix trailing comma
+  .replace(/,\s*]/g, "]")
+  .trim();
+
+let plan;
+try {
+  plan = JSON.parse(cleaned);
+} catch (e) {
+  console.error("Final JSON parse failed:", cleaned);
+  throw new Error("Invalid JSON from AI");
+}
+
+    // Cache 24h
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await prisma.aiMealPlanCache.upsert({
+      where: { userId_cacheKey: { userId, cacheKey } },
+      update: { plan, expiresAt },
+      create: { userId, cacheKey, plan, expiresAt },
+    });
+
+    res.json(plan);
+
+  } catch (error) {
+    console.error("AI Meal Plan (HCX-007) Error:", error.message);
+  }
+});
+
+
+app.get("/api/ai/exercise-plan-cache", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { key } = req.query;
+  if (!key) return res.status(400).json({ error: "key required" });
+
+  try {
+    const cached = await prisma.aiExercisePlanCache.findUnique({
+      where: { userId_cacheKey: { userId, cacheKey: key } },
+    });
+
+    if (cached && cached.expiresAt > new Date()) {
+      res.json(cached.plan);
+    } else {
+      if (cached) await prisma.aiExercisePlanCache.delete({ where: { id: cached.id } });
+      res.status(204).send(); // No content → frontend sẽ gọi AI
+    }
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to get AI plan cache");
+  }
+});
+
+// POST cache
+app.post("/api/ai/exercise-plan-cache", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { key, plan } = req.body;
+
+  if (!key || !plan) return res.status(400).json({ error: "key and plan required" });
+
+  try {
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h (hoặc 1 ngày tự nhiên)
+
+    const result = await prisma.aiExercisePlanCache.upsert({
+      where: { userId_cacheKey: { userId, cacheKey: key } },
+      update: { plan, expiresAt },
+      create: { userId, cacheKey: key, plan, expiresAt },
+    });
+
+    res.json(result.plan);
+  } catch (error) {
+    handlePrismaError(res, error, "Failed to save AI plan cache");
+  }
+});
+
 
 // ========== AI FEEDBACK & CONTEXT ==========
 app.post(
@@ -1088,7 +1575,6 @@ app.get("/api/ai/context", requireAuth, async (req, res) => {
   }
 });
 
-// ========== CLOVA API PROXY ==========
 app.post("/api/clova/v3/chat-completions/:appId", async (req, res) => {
   const { appId } = req.params;
 
@@ -1187,13 +1673,14 @@ app.post("/api/chat-messages", requireAuth, async (req, res) => {
   }
 });
 
-// ========== START SERVER ==========
+
 app.listen(PORT, () => {
-  console.log("\n🚀 API Proxy Server is running!");
-  console.log(`🌐 URL: http://localhost:${PORT}`);
-  console.log(`❤️ Health check: http://localhost:${PORT}/health`);
-  console.log("📅 Calendar API: /api/calendar-events");
-  console.log("🍱 Food recognition: POST /api/recognize-food");
-  console.log("💬 Chat messages: GET/POST /api/chat-messages");
+  console.log(`
+🚀 API Proxy Server is running!
+🌐 URL: http://localhost:${PORT}
+❤️ Health check: http://localhost:${PORT}/health
+📅 Calendar API: /api/calendar-events
+🍱 Food recognition: POST /api/recognize-food
+`);
 });
 

@@ -11,11 +11,15 @@ import styles from "./OnboardingNew.module.css";
 import StepBasicInfo from "./steps/StepBasicInfo";
 import StepBodyStats from "./steps/StepBodyStats";
 import StepGoalSelection from "./steps/StepGoalSelection";
+import StepActivityPreferences from "./steps/StepActivityPreferences";
+import StepBodyMeasurements from "./steps/StepBodyMeasurements";
 
 const steps = [
     StepBasicInfo,
     StepBodyStats,
     StepGoalSelection,
+    StepBodyMeasurements,        
+    StepActivityPreferences
 ];
 
 export default function OnboardingNew() {
@@ -23,16 +27,32 @@ export default function OnboardingNew() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
-        name: "",
-        gender: "",
-        age: "",
-        weight: "",
-        height: "",
-        goalWeight: "",
-        tdee: 0,
-        recommendedCalories: 0,
-        goalType: "maintain",
-    });
+    name: "",
+    gender: "",
+    age: "",
+    weight: "",
+    height: "",
+    goalWeight: "",
+    
+    // THÊM CÁC TRƯỜNG MỚI
+    neck: "",
+    waist: "",
+    hip: "",
+    biceps: "",
+    thigh: "",
+    activityLevel: "moderate", // mặc định
+    exercisePreferences: {
+        yoga: false,
+        gym: true,
+        running: false,
+        home: false,
+        swimming: false,
+    },
+
+    tdee: 0,
+    recommendedCalories: 0,
+    goalType: "maintain",
+});
 
     const navigate = useNavigate();
     const { refreshUser } = useAuth();
@@ -47,6 +67,13 @@ export default function OnboardingNew() {
             height_cm: parseFloat(data.height.toString()) || undefined,
             weight_kg: parseFloat(data.weight.toString()) || undefined,
             goal: formatGoalWeight(goalWeightValue),
+            neckCm: data.neck ? parseFloat(data.neck.toString()) : undefined,
+            waistCm: data.waist ? parseFloat(data.waist.toString()) : undefined,
+            hipCm: data.hip ? parseFloat(data.hip.toString()) : undefined,
+            bicepsCm: data.biceps ? parseFloat(data.biceps.toString()) : undefined,
+            thighCm: data.thigh ? parseFloat(data.thigh.toString()) : undefined,
+            activityLevel: data.activityLevel,
+            exercisePreferences: data.exercisePreferences,
         });
 
         // Refresh user profile in auth context

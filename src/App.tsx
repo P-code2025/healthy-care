@@ -12,7 +12,6 @@ import Calendar from "./pages/calendar/Calendar";
 import FoodDiaryNew from "./pages/foodDiary/FoodDiaryNew";
 import ProgressNew from "./pages/progress/ProgressNew";
 import MealPlanNew from "./pages/mealPlan/MealPlanNew";
-import GroceryListNew from "./pages/groceryList/GroceryListNew";
 import Messages from "./pages/messages/Messages";
 import HealthyMenu from "./pages/healthyMenu/HealthyMenu";
 import ExercisesNew from "./pages/exercies/ExercisesNew";
@@ -49,7 +48,6 @@ function App() {
                 <Route path="/calendar" element={<Calendar />} />
                 <Route path="/healthy-menu" element={<HealthyMenu />} />
                 <Route path="/meal-plan" element={<MealPlanNew />} />
-                <Route path="/grocery-list" element={<GroceryListNew />} />
                 <Route path="/food-diary" element={<FoodDiaryNew />} />
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/progress" element={<ProgressNew />} />

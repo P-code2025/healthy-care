@@ -18,6 +18,7 @@ import {
 } from "../../services/aiExercisePlan";
 import { messages as i18nMessages } from "../../i18n/messages";
 import { chatMessagesApi } from "../../api/chatMessages";
+import { calculateCalorieGoal } from "../../utils/healthCalculations";
 
 interface ChatMessage {
   id: string;
@@ -40,14 +41,7 @@ interface UserProfile {
 }
 
 const AI_AVATAR = "AI";
-const DEFAULT_PROFILE: UserProfile = {
-  age: 0,
-  weight: 0,
-  height: 0,
-  gender: "Male",
-  goal: "maintain",
-  workoutDays: 3,
-};
+
 
 const formatTimestamp = () =>
   new Date().toLocaleTimeString("en-US", {
@@ -64,9 +58,33 @@ export default function Messages() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showProfileForm, setShowProfileForm] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [diaryEntries, setDiaryEntries] = useState<FoodEntry[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ĐÚNG: useState nằm trong component
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    age: 30,
+    weight: 70,
+    height: 170,
+    gender: "Male",
+    goal: "maintain",
+    workoutDays: 3,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+
+    setUserProfile(prev => ({
+      ...prev,
+      age: user.age ?? prev.age,
+      weight: user.weight_kg ?? prev.weight,
+      height: user.height_cm ?? prev.height,
+      gender: (user.gender === "Female" ? "Female" : "Male") as "Male" | "Female",
+      goal: (["lose", "maintain", "gain"].includes(user.goal as string)
+        ? user.goal
+        : prev.goal) as "lose" | "maintain" | "gain",
+    }));
+  }, [user]);
 
   // Load chat history from database
   useEffect(() => {
@@ -92,27 +110,11 @@ export default function Messages() {
     loadMessages();
   }, []);
 
-  // Prepare profile defaults from the authenticated user
-  useEffect(() => {
-    if (!user) return;
-    const genderValue = (user.gender ?? "").toLowerCase();
-    const normalizedGender =
-      genderValue.includes("female") || genderValue.includes("nu")
-        ? "Female"
-        : "Male";
-    setUserProfile({
-      age: user.age || DEFAULT_PROFILE.age,
-      weight: user.weight_kg || DEFAULT_PROFILE.weight,
-      height: user.height_cm || DEFAULT_PROFILE.height,
-      gender: normalizedGender,
-      goal: (user.goal as UserProfile["goal"]) || DEFAULT_PROFILE.goal,
-      workoutDays: DEFAULT_PROFILE.workoutDays,
-    });
-  }, [user]);
 
   // Load today's diary entries so we can reply with calorie context
   useEffect(() => {
     const todayOnly = new Date().toISOString().split("T")[0];
+
     const loadEntries = async () => {
       try {
         const logs = await foodDiaryApi.list({
@@ -122,11 +124,14 @@ export default function Messages() {
         setDiaryEntries(logs.map(mapFoodLogToEntry));
       } catch (error) {
         console.error("Failed to load diary entries for chat assistant", error);
-        toast.error(i18nMessages.errors.diaryLoad);
       }
     };
 
     loadEntries();
+
+    const interval = setInterval(loadEntries, 8000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const getTodayCalories = () =>
@@ -201,14 +206,21 @@ export default function Messages() {
       normalized.includes("kcal") ||
       normalized.includes("calorie");
     const mentionsToday =
-      normalized.includes("hom nay") ||
-      normalized.includes("hÃ´m nay") ||
-      normalized.includes("today") ||
-      normalized.includes("nay");
+      normalized.includes("today")
 
     if (mentionsCalories && mentionsToday) {
       const total = getTodayCalories();
-      const goal = 2000;
+
+
+      const goal = calculateCalorieGoal({
+        age: userProfile.age,
+        weight: userProfile.weight,
+        height: userProfile.height,
+        gender: userProfile.gender,
+        goal: userProfile.goal,
+        workoutDays: userProfile.workoutDays,
+        aggressive: false // có thể thêm tùy chọn sau
+      });
       const diff = total - goal;
       const diffText = diff > 0 ? `+${diff}` : `${diff}`;
       const summary = i18nMessages.aiChat.todayCaloriesSummary
@@ -419,7 +431,7 @@ export default function Messages() {
     reader.readAsDataURL(file);
   };
 
-  const profileValues = userProfile ?? DEFAULT_PROFILE;
+  const profileValues = userProfile;
 
   return (
     <div className={styles.container}>
@@ -550,7 +562,7 @@ export default function Messages() {
               value={profileValues.age || ""}
               onChange={(event) =>
                 setUserProfile((prev) => ({
-                  ...(prev ?? DEFAULT_PROFILE),
+                  ...prev,
                   age: Number(event.target.value),
                 }))
               }
@@ -561,7 +573,7 @@ export default function Messages() {
               value={profileValues.weight || ""}
               onChange={(event) =>
                 setUserProfile((prev) => ({
-                  ...(prev ?? DEFAULT_PROFILE),
+                  ...prev,
                   weight: Number(event.target.value),
                 }))
               }
@@ -572,7 +584,7 @@ export default function Messages() {
               value={profileValues.height || ""}
               onChange={(event) =>
                 setUserProfile((prev) => ({
-                  ...(prev ?? DEFAULT_PROFILE),
+                  ...prev,
                   height: Number(event.target.value),
                 }))
               }
@@ -581,7 +593,7 @@ export default function Messages() {
               value={profileValues.gender}
               onChange={(event) =>
                 setUserProfile((prev) => ({
-                  ...(prev ?? DEFAULT_PROFILE),
+                  ...prev,
                   gender: event.target.value as UserProfile["gender"],
                 }))
               }
@@ -595,7 +607,7 @@ export default function Messages() {
               value={profileValues.goal}
               onChange={(event) =>
                 setUserProfile((prev) => ({
-                  ...(prev ?? DEFAULT_PROFILE),
+                  ...prev,
                   goal: event.target.value as UserProfile["goal"],
                 }))
               }
@@ -612,7 +624,7 @@ export default function Messages() {
               value={profileValues.workoutDays || ""}
               onChange={(event) =>
                 setUserProfile((prev) => ({
-                  ...(prev ?? DEFAULT_PROFILE),
+                  ...prev,
                   workoutDays: Number(event.target.value),
                 }))
               }
