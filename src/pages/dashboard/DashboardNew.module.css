@@ -34,7 +34,7 @@
 /* Stats Grid */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -873,6 +873,25 @@
   color: #374151;
   line-height: 1.5;
 }
+
+.macroDonut circle {
+  transition: stroke-dasharray 1.2s ease-in-out, stroke-dashoffset 1.2s ease-in-out;
+}
+
+.macroRing {
+  animation: drawRing 1.5s ease-out forwards;
+}
+
+@keyframes drawRing {
+  from {
+    stroke-dasharray: 0 502;
+  }
+}
+
+/* Đảm bảo vòng tròn chồng lên đúng thứ tự */
+.macroDonut circle:nth-child(2) { /* Fat */   z-index: 3; }
+.macroDonut circle:nth-child(3) { /* Carbs */ z-index: 4; }
+.macroDonut circle:nth-child(4) { /* Protein */ z-index: 5; }
 
 /* Responsive */
 @media (max-width: 1400px) {

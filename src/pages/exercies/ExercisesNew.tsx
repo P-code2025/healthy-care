@@ -53,21 +53,21 @@ export default function ExercisesNew() {
     kcal: 0,
   });
   const logQuickActivity = async (name: string, duration: number, kcal: number) => {
-  try {
-    await saveWorkoutLog({
-      date: new Date().toISOString().split('T')[0],
-      workoutName: name,
-      duration,
-      caloriesBurned: kcal,
-      exercises: [],
-    });
-    // state vẫn cập nhật để UI phản hồi ngay
-    setTodayBurnedCalories(prev => prev + kcal);
-    toast.success(`Đã ghi: ${name} → +${kcal} kcal`);
-  } catch (err) {
-    toast.error("Save workout failed. Please try again.");
-  }
-};
+    try {
+      await saveWorkoutLog({
+        date: new Date().toISOString().split('T')[0],
+        workoutName: name,
+        duration,
+        caloriesBurned: kcal,
+        exercises: [],
+      });
+      // state vẫn cập nhật để UI phản hồi ngay
+      setTodayBurnedCalories(prev => prev + kcal);
+      toast.success(`Đã ghi: ${name} → +${kcal} kcal`);
+    } catch (err) {
+      toast.error("Save workout failed. Please try again.");
+    }
+  };
 
 
   // AI State
@@ -115,24 +115,24 @@ export default function ExercisesNew() {
   }, []);
 
   useEffect(() => {
-  const loadTodayWorkouts = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const logs = await api.getWorkoutLog({ start: today, end: today });
-      
-      const totalBurned = logs.reduce((sum: number, log: any) => 
-        sum + (log.calories_burned_estimated || log.caloriesBurnedEstimated || 0), 0
-      );
-      
-      setTodayBurnedCalories(totalBurned);
-    } catch (err) {
-      console.error('Failed to load today workouts', err);
-      // Không crash UI, chỉ log
-    }
-  };
-  
-  loadTodayWorkouts();
-}, []);
+    const loadTodayWorkouts = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const logs = await api.getWorkoutLog({ start: today, end: today });
+
+        const totalBurned = logs.reduce((sum: number, log: any) =>
+          sum + (log.calories_burned_estimated || log.caloriesBurnedEstimated || 0), 0
+        );
+
+        setTodayBurnedCalories(totalBurned);
+      } catch (err) {
+        console.error('Failed to load today workouts', err);
+        // Không crash UI, chỉ log
+      }
+    };
+
+    loadTodayWorkouts();
+  }, []);
 
   useEffect(() => {
     const total = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
