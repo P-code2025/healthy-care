@@ -3,7 +3,7 @@ import styles from './ProgressNew.module.css';
 import { api, type User } from '../../services/api';
 import { format } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Scale, Ruler, TrendingUp, Plus, Check } from 'lucide-react';
+import { Scale, Ruler, TrendingUp, Plus, Check, Camera } from 'lucide-react';
 
 interface WeightLog {
   date: string;
@@ -38,6 +38,69 @@ export default function ProgressNew() {
     biceps: '',
     thigh: '',
   });
+
+  const [photosData, setPhotosData] = useState<Record<string, any>>({});
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'photos') {
+      const loadPhotos = async () => {
+        setLoading(true);
+        try {
+          const res = await api.getProgressPhotos();
+          setPhotosData(res);
+          const dates = Object.keys(res).sort().reverse();
+          if (dates.length > 0) setSelectedDate(dates[0]);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadPhotos();
+    }
+  }, [activeTab]);
+
+  const handleUpload = async (view: "front" | "side" | "back", file: File) => {
+    if (!file) return;
+
+    setUploading(true);
+
+    const toBase64 = (file: File): Promise<string> =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+      });
+
+    try {
+      const base64 = await toBase64(file); 
+      const today = new Date().toISOString().split("T")[0];
+
+      await api.uploadProgressPhoto({
+        date: today,
+        view,
+        imageBase64: base64,
+        note: "",
+      });
+
+      const res = await api.getProgressPhotos();
+      setPhotosData(res);
+
+      const dates = Object.keys(res).sort((a, b) => b.localeCompare(a));
+      const latestDate = dates[0];
+      setSelectedDate(latestDate);
+
+      alert("Upload thành công!");
+    } catch (err: any) {
+      console.error("Upload failed:", err);
+      alert("Upload thất bại: " + (err.message || "Lỗi không xác định"));
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -370,9 +433,84 @@ export default function ProgressNew() {
       )}
 
       {activeTab === 'photos' && (
-        <div className={styles.card}>
-          <h3>Progress Photos</h3>
-          <p className={styles.emptyState}>Photo feature coming soon</p>
+        <div className={styles.chartSection}>
+          <div className={styles.periodControl}>
+            <div className={styles.periodButtons}>
+              {(['7', '30', '90', 'all'] as const).map(p => (
+                <button key={p} className={`${styles.periodBtn} ${period === p ? styles.periodActive : ''}`} onClick={() => setPeriod(p)}>
+                  {p === 'all' ? 'Tất cả' : `${p} ngày`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={`${styles.card} ${styles.formCard}`}>
+            <h3>Upload body's image today ({format(new Date(), 'dd/MM/yyyy')})</h3>
+            <div className={styles.photoUploadGrid}>
+              {(['front', 'side', 'back'] as const).map(view => (
+                <div key={view} className={styles.uploadBox}>
+                  <label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => e.target.files?.[0] && handleUpload(view, e.target.files[0])}
+                      disabled={uploading}
+                      style={{ display: 'none' }}
+                    />
+                    <div className={styles.uploadPlaceholder}>
+                      {uploading ? "Uploading..." : (
+                        <>
+                          <Camera className="w-8 h-8" />
+                          <p>{view === 'front' ? 'Front' : view === 'side' ? 'Side' : 'Back'}</p>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.card}>
+            <h3>Compare changes</h3>
+            <div className={styles.dateSelector}>
+              {Object.keys(photosData)
+                .sort((a, b) => b.localeCompare(a))
+                .filter((_, i) => period === 'all' || i < Number(period))
+                .map(d => (
+                  <button
+                    key={d}
+                    className={`${styles.dateBtn} ${selectedDate === d ? styles.dateActive : ''}`}
+                    onClick={() => setSelectedDate(d)}
+                  >
+                    {format(new Date(d), 'dd/MM')}
+                  </button>
+                ))}
+            </div>
+
+            {selectedDate && photosData[selectedDate] && (
+              <div className={styles.comparisonGrid}>
+                {(['front', 'side', 'back'] as const).map(view => {
+                  const img = photosData[selectedDate][view];
+                  return (
+                    <div key={view} className={styles.photoItem}>
+                      <p className={styles.photoLabel}>
+                        {view === 'front' ? 'Front' : view === 'side' ? 'Side' : 'Back'}
+                      </p>
+                      {img ? (
+                        <img src={img.imageUrl} alt={view} className={styles.progressImg} />
+                      ) : (
+                        <div className={styles.noPhoto}>No photo</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!selectedDate && <p className={styles.emptyState}>No photos yet. Please upload today's photos!</p>}
+          </div>
         </div>
       )}
     </div>

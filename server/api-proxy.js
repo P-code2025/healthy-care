@@ -2104,6 +2104,95 @@ app.post("/api/body-measurements", requireAuth, async (req, res) => {
   }
 });
 
+app.post("/api/progress-photos", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { date, view, imageBase64, note } = req.body;
+
+  if (!date || !view || !imageBase64) {
+    return res.status(400).json({ error: "date, view, imageBase64 là bắt buộc" });
+  }
+
+  if (!["front", "side", "back"].includes(view)) {
+    return res.status(400).json({ error: "view phải là front, side hoặc back" });
+  }
+
+  try {
+    const photoDate = new Date(Date.UTC(
+      Number(date.substring(0,4)),
+      Number(date.substring(5,7)) - 1,
+      Number(date.substring(8,10))
+    ));
+
+    const photo = await prisma.progressPhoto.upsert({
+      where: {
+        userId_date_view: {
+          userId,
+          date: photoDate,
+          view,
+        },
+      },
+      update: {
+        imageUrl: imageBase64,
+        note: note || null,
+      },
+      create: {
+        userId,
+        date: photoDate,
+        view,
+        imageUrl: imageBase64,
+        note: note || null,
+      },
+    });
+
+    res.json({
+      success: true,
+      photo: {
+        id: photo.id,
+        date: photo.date.toISOString().split("T")[0],
+        view: photo.view,
+        imageUrl: photo.imageUrl,
+        note: photo.note,
+      },
+    });
+  } catch (error) {
+    console.error("Upload progress photo error:", error);
+    res.status(500).json({ error: "Lưu ảnh thất bại" });
+  }
+});
+
+app.get("/api/progress-photos", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const { date } = req.query; 
+
+  try {
+    const where= { userId };
+    if (date) {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      where.date = d;
+    }
+
+    const photos = await prisma.progressPhoto.findMany({
+      where,
+      orderBy: { date: "desc" },
+    });
+
+    const grouped = photos.reduce((acc, p) => {
+      const d = p.date.toISOString().split("T")[0];
+      if (!acc[d]) acc[d] = { front: null, side: null, back: null };
+      acc[d][p.view] = {
+        imageUrl: p.imageUrl,
+        note: p.note,
+      };
+      return acc;
+    }, {});
+
+    res.json(grouped);
+  } catch (error) {
+    handlePrismaError(res, error, "Lấy ảnh thất bại");
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`

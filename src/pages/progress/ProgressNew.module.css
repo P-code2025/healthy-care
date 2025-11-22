@@ -319,6 +319,77 @@
   margin-left: 4px;
 }
 
+.photoUploadGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.uploadBox {
+  text-align: center;
+}
+
+.uploadPlaceholder {
+  border: 2px dashed #94a3b8;
+  border-radius: 12px;
+  padding: 32px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f8fafc;
+}
+
+.uploadPlaceholder:hover {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.comparisonGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.progressImg {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.noPhoto {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  border-radius: 12px;
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+.dateSelector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.dateBtn {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+}
+
+.dateActive {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
 @media (max-width: 768px) {
   .periodControl {
     flex-direction: column;
