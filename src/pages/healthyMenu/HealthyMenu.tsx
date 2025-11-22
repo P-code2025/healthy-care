@@ -26,308 +26,894 @@ interface Recipe {
 const CATEGORIES = ['All', 'Breakfast', 'Lunch', 'Snack', 'Dinner'];
 
 const RECIPES: Recipe[] = [
-  // Featured Menu
+  // ==================== BREAKFAST (8 món) ====================
   {
-    id: 'featured-1',
-    name: 'Grilled Turkey Breast with Steamed Asparagus and Brown Rice',
-    image: '/images/healthy-menu/grilled-turkey-breast.jpg',
-    category: 'Lunch',
-    calories: 450,
-    protein: 82,
-    carbs: 32,
-    fat: 4,
+    id: 'breakfast-1',
+    name: 'Oatmeal with Almond Butter, Banana & Chia Seeds',
+    image: '/images/recipes/breakfast/Oatmeal.jpg',
+    category: 'Breakfast',
+    calories: 380,
+    protein: 15,
+    carbs: 52,
+    fat: 12,
     time: 10,
-    difficulty: 'Medium',
+    difficulty: 'Easy',
     rating: 4.8,
-    reviews: 125,
+    reviews: 342,
     healthScore: 9,
     steps: 4,
     isFeatured: true,
     ingredients: [
-      '200g turkey breast',
-      'Fresh asparagus',
-      'Brown rice',
-      'Olive oil',
-      'Garlic',
-      'Lemon'
+      '50g rolled oats',
+      '200ml almond milk',
+      '1 tbsp almond butter',
+      '1 banana',
+      '1 tsp chia seeds',
+      'Cinnamon'
     ],
     instructions: [
-      'Season and grill turkey breast',
-      'Steam asparagus until tender',
-      'Cook brown rice',
-      'Plate and serve'
-    ]
-  },
-  // Popular Menu
-  {
-    id: 'popular-1',
-    name: 'Greek Salad with Feta and Olives',
-    image: '/images/healthy-menu/greek-salad.jpg',
-    category: 'Lunch',
-    calories: 450,
-    protein: 15,
-    carbs: 25,
-    fat: 32,
-    time: 15,
-    difficulty: 'Easy',
-    rating: 4.9,
-    reviews: 89,
-    healthScore: 8,
-    steps: 3,
-    isPopular: true,
-    ingredients: [
-      'Mixed greens',
-      'Feta cheese',
-      'Olives',
-      'Tomatoes',
-      'Cucumber',
-      'Olive oil'
-    ],
-    instructions: [
-      'Chop all vegetables',
-      'Mix with feta and olives',
-      'Drizzle with olive oil dressing'
+      'Cook oats with almond milk until creamy',
+      'Top with sliced banana',
+      'Add almond butter & chia seeds',
+      'Sprinkle cinnamon'
     ]
   },
   {
-    id: 'popular-2',
-    name: 'Blueberry Protein Smoothie',
-    image: '/images/healthy-menu/blueberry-smoothie.jpg',
+    id: 'breakfast-2',
+    name: 'Greek Yogurt Parfait with Berries & Granola',
+    image: '/images/recipes/breakfast/yogurt-parfait.jpg',
     category: 'Breakfast',
-    calories: 40,
-    protein: 35,
-    carbs: 28,
-    fat: 12,
+    calories: 320,
+    protein: 22,
+    carbs: 38,
+    fat: 10,
     time: 5,
     difficulty: 'Easy',
-    rating: 4.5,
-    reviews: 156,
-    healthScore: 9,
-    steps: 2,
-    isPopular: true,
-    ingredients: [
-      'Blueberries',
-      'Protein powder',
-      'Almond milk',
-      'Banana',
-      'Honey'
-    ],
-    instructions: [
-      'Blend all ingredients',
-      'Serve immediately'
-    ]
-  },
-  {
-    id: 'popular-3',
-    name: 'Grilled Salmon with Lemon and Asparagus',
-    image: '/images/healthy-menu/grilled-salmon.jpg',
-    category: 'Dinner',
-    calories: 520,
-    protein: 45,
-    carbs: 18,
-    fat: 28,
-    time: 25,
-    difficulty: 'Medium',
     rating: 4.9,
-    reviews: 203,
+    reviews: 289,
     healthScore: 9,
-    steps: 4,
-    isPopular: true,
-    ingredients: [
-      '200g salmon fillet',
-      'Asparagus',
-      'Lemon',
-      'Olive oil',
-      'Garlic',
-      'Herbs'
-    ],
-    instructions: [
-      'Season salmon',
-      'Grill for 6-8 minutes',
-      'Steam asparagus',
-      'Serve with lemon'
-    ]
-  },
-  // Recommended Menu
-  {
-    id: 'recommended-1',
-    name: 'Oatmeal with Almond Butter and Berries',
-    image: '/images/healthy-menu/oatmeal.jpg',
-    category: 'Breakfast',
-    calories: 350,
-    protein: 12,
-    carbs: 55,
-    fat: 10,
-    time: 10,
-    difficulty: 'Easy',
-    rating: 4.7,
-    reviews: 98,
-    healthScore: 8,
     steps: 3,
-    isRecommended: true,
     ingredients: [
-      'Oatmeal',
-      'Almond butter',
+      '200g Greek yogurt (0% fat)',
       'Mixed berries',
-      'Honey',
-      'Almond milk'
+      '30g low-sugar granola',
+      '1 tsp honey'
     ],
     instructions: [
-      'Cook oatmeal',
-      'Top with almond butter and berries',
+      'Layer yogurt in glass',
+      'Add berries and granola',
       'Drizzle with honey'
     ]
   },
   {
-    id: 'recommended-2',
-    name: 'Grilled Chicken Wrap with Avocado and Spinach',
-    image: '/images/healthy-menu/chicken-wrap.jpg',
-    category: 'Lunch',
-    calories: 450,
-    protein: 38,
-    carbs: 42,
-    fat: 15,
-    time: 20,
+    id: 'breakfast-3',
+    name: 'Avocado Toast with Poached Eggs & Cherry Tomatoes',
+    image: '/images/recipes/breakfast/avocado-toast.jpg',
+    category: 'Breakfast',
+    calories: 410,
+    protein: 18,
+    carbs: 35,
+    fat: 22,
+    time: 15,
     difficulty: 'Easy',
-    rating: 4.6,
-    reviews: 142,
-    healthScore: 8,
-    steps: 4,
-    isRecommended: true,
-    ingredients: [
-      'Chicken breast',
-      'Whole wheat wrap',
-      'Avocado',
-      'Spinach',
-      'Tomatoes'
-    ],
-    instructions: [
-      'Grill chicken',
-      'Slice avocado',
-      'Assemble wrap',
-      'Roll and serve'
-    ]
-  },
-  {
-    id: 'recommended-3',
-    name: 'Quinoa Salad with Roasted Vegetables and Feta',
-    image: '/images/healthy-menu/quinoa-salad.jpg',
-    category: 'Dinner',
-    calories: 400,
-    protein: 16,
-    carbs: 52,
-    fat: 14,
-    time: 30,
-    difficulty: 'Medium',
-    rating: 4.8,
-    reviews: 87,
+    rating: 4.7,
+    reviews: 456,
     healthScore: 9,
     steps: 5,
-    isRecommended: true,
     ingredients: [
-      'Quinoa',
-      'Bell peppers',
-      'Zucchini',
-      'Feta cheese',
-      'Olive oil',
-      'Herbs'
-    ],
-    instructions: [
-      'Cook quinoa',
-      'Roast vegetables',
-      'Mix together',
-      'Add feta',
-      'Season and serve'
-    ]
-  },
-  // All Menu Items
-  {
-    id: 'all-1',
-    name: 'Avocado Toast with Poached Egg',
-    image: '/images/healthy-menu/avocado-toast.jpg',
-    category: 'Breakfast',
-    calories: 350,
-    protein: 16,
-    carbs: 32,
-    fat: 18,
-    time: 12,
-    difficulty: 'Easy',
-    rating: 4.8,
-    reviews: 234,
-    healthScore: 9,
-    steps: 4,
-    ingredients: [
-      'Whole grain bread',
-      'Avocado',
-      'Eggs',
+      '2 slices whole grain bread',
+      '1 ripe avocado',
+      '2 eggs',
       'Cherry tomatoes',
-      'Lemon'
+      'Lemon juice, salt, pepper'
     ],
     instructions: [
       'Toast bread',
-      'Mash avocado',
+      'Mash avocado with lemon & salt',
       'Poach eggs',
-      'Assemble'
+      'Top toast with avocado, egg, tomatoes',
+      'Season'
     ]
   },
   {
-    id: 'all-2',
-    name: 'Grilled Shrimp Tacos with Mango Salsa',
-    image: '/images/healthy-menu/shrimp-tacos.jpg',
-    category: 'Lunch',
-    calories: 380,
-    protein: 32,
-    carbs: 42,
-    fat: 12,
-    time: 25,
+    id: 'breakfast-4',
+    name: 'Spinach & Mushroom Egg White Omelette',
+    image: '/images/recipes/breakfast/egg-omelette.jpg',
+    category: 'Breakfast',
+    calories: 280,
+    protein: 28,
+    carbs: 12,
+    fat: 14,
+    time: 12,
+    difficulty: 'Easy',
+    rating: 4.6,
+    reviews: 201,
+    healthScore: 9,
+    steps: 4,
+    ingredients: [
+      '6 egg whites',
+      'Handful spinach',
+      '100g mushrooms',
+      '1 tsp olive oil',
+      'Herbs'
+    ],
+    instructions: [
+      'Sauté mushrooms in olive oil',
+      'Add spinach until wilted',
+      'Pour in egg whites',
+      'Cook until set, fold'
+    ]
+  },
+  {
+    id: 'breakfast-5',
+    name: 'Protein Pancakes with Fresh Fruit',
+    image: '/images/recipes/breakfast/protein-pancakes.jpg',
+    category: 'Breakfast',
+    calories: 390,
+    protein: 25,
+    carbs: 48,
+    fat: 10,
+    time: 15,
     difficulty: 'Medium',
-    rating: 4.7,
-    reviews: 189,
+    rating: 4.8,
+    reviews: 378,
     healthScore: 8,
     steps: 5,
     ingredients: [
-      'Shrimp',
-      'Corn tortillas',
-      'Mango',
-      'Cilantro',
-      'Lime'
+      '1 scoop protein powder',
+      '1 banana',
+      '50g oats',
+      '2 egg whites',
+      'Berries & honey'
     ],
     instructions: [
-      'Grill shrimp',
-      'Make salsa',
-      'Warm tortillas',
-      'Assemble tacos',
-      'Serve'
+      'Blend all ingredients',
+      'Cook on non-stick pan',
+      'Stack pancakes',
+      'Top with berries & honey',
+      'Serve warm'
     ]
   },
   {
-    id: 'all-3',
-    name: 'Baked Chicken Breast with Quinoa and Kale',
-    image: '/images/healthy-menu/baked-chicken.jpg',
-    category: 'Dinner',
+    id: 'breakfast-6',
+    name: 'Chia Seed Pudding with Mango & Coconut',
+    image: '/images/recipes/breakfast/chia-pudding.webp',
+    category: 'Breakfast',
+    calories: 310,
+    protein: 12,
+    carbs: 42,
+    fat: 14,
+    time: 10,
+    difficulty: 'Easy',
+    rating: 4.7,
+    reviews: 167,
+    healthScore: 9,
+    steps: 3,
+    ingredients: [
+      '3 tbsp chia seeds',
+      '200ml coconut milk',
+      'Fresh mango',
+      'Shredded coconut'
+    ],
+    instructions: [
+      'Mix chia with coconut milk',
+      'Let sit 4+ hours or overnight',
+      'Top with mango & coconut'
+    ]
+  },
+  {
+    id: 'breakfast-7',
+    name: 'Smoked Salmon & Whole Grain Bagel',
+    image: '/images/recipes/breakfast/salmon-bagel.avif',
+    category: 'Breakfast',
+    calories: 420,
+    protein: 28,
+    carbs: 45,
+    fat: 16,
+    time: 8,
+    difficulty: 'Easy',
+    rating: 4.9,
+    reviews: 298,
+    healthScore: 8,
+    steps: 3,
+    ingredients: [
+      'Whole grain bagel',
+      '100g smoked salmon',
+      'Cream cheese (light)',
+      'Capers, red onion'
+    ],
+    instructions: [
+      'Toast bagel',
+      'Spread cream cheese',
+      'Add salmon, capers, onion'
+    ]
+  },
+  {
+    id: 'breakfast-8',
+    name: 'Green Smoothie Bowl',
+    image: '/images/recipes/breakfast/green-smoothie.webp',
+    category: 'Breakfast',
+    calories: 360,
+    protein: 20,
+    carbs: 48,
+    fat: 12,
+    time: 7,
+    difficulty: 'Easy',
+    rating: 4.6,
+    reviews: 312,
+    healthScore: 9,
+    steps: 3,
+    ingredients: [
+      'Spinach, banana, protein powder',
+      'Almond milk',
+      'Toppings: kiwi, seeds, coconut'
+    ],
+    instructions: [
+      'Blend all base ingredients',
+      'Pour into bowl',
+      'Add toppings'
+    ]
+  },
+
+  // ==================== LUNCH (8 món) ====================
+  {
+    id: 'lunch-1',
+    name: 'Grilled Turkey Breast with Quinoa & Roasted Veggies',
+    image: '/images/recipes/lunch/turkey-quinoa.webp',
+    category: 'Lunch',
     calories: 480,
-    protein: 52,
-    carbs: 40,
-    fat: 10,
-    time: 35,
+    protein: 42,
+    carbs: 45,
+    fat: 16,
+    time: 25,
     difficulty: 'Medium',
     rating: 4.9,
+    reviews: 412,
+    healthScore: 9,
+    steps: 5,
+    isFeatured: true,
+    ingredients: [
+      '180g turkey breast',
+      '100g quinoa',
+      'Broccoli, bell pepper, zucchini',
+      'Olive oil, herbs'
+    ],
+    instructions: [
+      'Season and grill turkey',
+      'Cook quinoa',
+      'Roast vegetables',
+      'Plate together',
+      'Drizzle olive oil'
+    ]
+  },
+  {
+    id: 'lunch-2',
+    name: 'Tuna & White Bean Salad',
+    image: '/images/recipes/lunch/tuna-bean.jpg',
+    category: 'Lunch',
+    calories: 450,
+    protein: 38,
+    carbs: 40,
+    fat: 18,
+    time: 15,
+    difficulty: 'Easy',
+    rating: 4.8,
+    reviews: 267,
+    healthScore: 9,
+    steps: 4,
+    ingredients: [
+      '1 can tuna in water',
+      '1 can white beans',
+      'Cherry tomatoes, cucumber',
+      'Lemon, olive oil'
+    ],
+    instructions: [
+      'Drain tuna and beans',
+      'Chop vegetables',
+      'Mix all',
+      'Dress with lemon & oil'
+    ]
+  },
+  {
+    id: 'lunch-3',
+    name: 'Chicken & Sweet Potato Bowl',
+    image: '/images/recipes/lunch/chicken-sweetpotato.jpg',
+    category: 'Lunch',
+    calories: 520,
+    protein: 40,
+    carbs: 52,
+    fat: 15,
+    time: 30,
+    difficulty: 'Medium',
+    rating: 4.7,
+    reviews: 389,
+    healthScore: 9,
+    steps: 5,
+    ingredients: [
+      '150g chicken breast',
+      '1 medium sweet potato',
+      'Kale, avocado',
+      'Tahini dressing'
+    ],
+    instructions: [
+      'Bake sweet potato',
+      'Grill chicken',
+      'Sauté kale',
+      'Assemble bowl',
+      'Drizzle tahini'
+    ]
+  },
+  {
+    id: 'lunch-4',
+    name: 'Lentil & Vegetable Soup',
+    image: '/images/recipes/lunch/lentil-soup.webp',
+    category: 'Lunch',
+    calories: 380,
+    protein: 22,
+    carbs: 55,
+    fat: 8,
+    time: 35,
+    difficulty: 'Medium',
+    rating: 4.6,
+    reviews: 198,
+    healthScore: 9,
+    steps: 6,
+    ingredients: [
+      '100g green lentils',
+      'Carrot, celery, onion',
+      'Garlic, tomato paste',
+      'Vegetable broth'
+    ],
+    instructions: [
+      'Sauté vegetables',
+      'Add lentils and broth',
+      'Simmer 25 mins',
+      'Season and serve'
+    ]
+  },
+  {
+    id: 'lunch-5',
+    name: 'Grilled Salmon with Asparagus & Brown Rice',
+    image: '/images/recipes/lunch/salmon-asparagus.jpg',
+    category: 'Lunch',
+    calories: 510,
+    protein: 45,
+    carbs: 42,
+    fat: 22,
+    time: 25,
+    difficulty: 'Medium',
+    rating: 4.9,
+    reviews: 501,
+    healthScore: 10,
+    steps: 4,
+    ingredients: [
+      '180g salmon',
+      'Asparagus',
+      '100g brown rice',
+      'Lemon, garlic'
+    ],
+    instructions: [
+      'Cook brown rice',
+      'Grill salmon',
+      'Steam asparagus',
+      'Serve with lemon'
+    ]
+  },
+  {
+    id: 'lunch-6',
+    name: 'Chickpea & Avocado Wrap',
+    image: '/images/recipes/lunch/chickpea-wrap.avif',
+    category: 'Lunch',
+    calories: 460,
+    protein: 18,
+    carbs: 58,
+    fat: 20,
+    time: 15,
+    difficulty: 'Easy',
+    rating: 4.7,
+    reviews: 234,
+    healthScore: 8,
+    steps: 4,
+    ingredients: [
+      'Whole wheat wrap',
+      '1 can chickpeas',
+      'Avocado, spinach',
+      'Hummus'
+    ],
+    instructions: [
+      'Mash chickpeas',
+      'Spread hummus',
+      'Add avocado & spinach',
+      'Roll and cut'
+    ]
+  },
+  {
+    id: 'lunch-7',
+    name: 'Beef Stir-Fry with Broccoli & Brown Rice',
+    image: '/images/recipes/lunch/beef-stirfry.jpeg',
+    category: 'Lunch',
+    calories: 530,
+    protein: 40,
+    carbs: 48,
+    fat: 18,
+    time: 20,
+    difficulty: 'Medium',
+    rating: 4.8,
     reviews: 312,
     healthScore: 9,
     steps: 5,
     ingredients: [
-      'Chicken breast',
-      'Quinoa',
-      'Kale',
-      'Garlic',
+      '150g lean beef',
+      'Broccoli',
+      'Brown rice',
+      'Soy sauce, garlic'
+    ],
+    instructions: [
+      'Cook rice',
+      'Stir-fry beef',
+      'Add broccoli',
+      'Season with soy',
+      'Serve over rice'
+    ]
+  },
+  {
+    id: 'lunch-8',
+    name: 'Mediterranean Quinoa Bowl',
+    image: '/images/recipes/lunch/mediterranean-bowl.jpg',
+    category: 'Lunch',
+    calories: 470,
+    protein: 20,
+    carbs: 55,
+    fat: 22,
+    time: 25,
+    difficulty: 'Medium',
+    rating: 4.8,
+    reviews: 267,
+    healthScore: 9,
+    steps: 5,
+    ingredients: [
+      '100g quinoa',
+      'Feta, olives, cucumber',
+      'Cherry tomatoes',
+      'Olive oil dressing'
+    ],
+    instructions: [
+      'Cook quinoa',
+      'Chop vegetables',
+      'Mix all',
+      'Add feta & olives',
+      'Dress with oil'
+    ]
+  },
+
+  // ==================== SNACK (8 món) ====================
+  {
+    id: 'snack-1',
+    name: 'Apple with Almond Butter',
+    image: '/images/recipes/snack/apple-almond.jpg',
+    category: 'Snack',
+    calories: 200,
+    protein: 5,
+    carbs: 25,
+    fat: 12,
+    time: 2,
+    difficulty: 'Easy',
+    rating: 4.9,
+    reviews: 567,
+    healthScore: 9,
+    steps: 2,
+    ingredients: [
+      '1 apple',
+      '2 tbsp almond butter'
+    ],
+    instructions: [
+      'Slice apple',
+      'Spread almond butter'
+    ]
+  },
+  {
+    id: 'snack-2',
+    name: 'Greek Yogurt with Honey & Walnuts',
+    image: '/images/recipes/snack/yogurt-honey.jpg',
+    category: 'Snack',
+    calories: 180,
+    protein: 15,
+    carbs: 18,
+    fat: 8,
+    time: 3,
+    difficulty: 'Easy',
+    rating: 4.8,
+    reviews: 432,
+    healthScore: 9,
+    steps: 3,
+    ingredients: [
+      '150g Greek yogurt',
+      '1 tsp honey',
+      '5 walnuts'
+    ],
+    instructions: [
+      'Scoop yogurt',
+      'Drizzle honey',
+      'Top with walnuts'
+    ]
+  },
+  {
+    id: 'snack-3',
+    name: 'Protein Energy Balls',
+    image: '/images/recipes/snack/energy-balls.jpg',
+    category: 'Snack',
+    calories: 220,
+    protein: 12,
+    carbs: 20,
+    fat: 10,
+    time: 10,
+    difficulty: 'Easy',
+    rating: 4.7,
+    reviews: 389,
+    healthScore: 8,
+    steps: 4,
+    ingredients: [
+      'Oats, protein powder',
+      'Peanut butter, honey',
+      'Dark chocolate chips'
+    ],
+    instructions: [
+      'Mix all ingredients',
+      'Roll into balls',
+      'Chill 30 mins',
+      'Enjoy'
+    ]
+  },
+  {
+    id: 'snack-4',
+    name: 'Carrot Sticks with Hummus',
+    image: '/images/recipes/snack/carrot-hummus.webp',
+    category: 'Snack',
+    calories: 160,
+    protein: 6,
+    carbs: 22,
+    fat: 8,
+    time: 5,
+    difficulty: 'Easy',
+    rating: 4.6,
+    reviews: 298,
+    healthScore: 9,
+    steps: 2,
+    ingredients: [
+      '2 carrots',
+      '3 tbsp hummus'
+    ],
+    instructions: [
+      'Cut carrots into sticks',
+      'Serve with hummus'
+    ]
+  },
+  {
+    id: 'snack-5',
+    name: 'Cottage Cheese with Pineapple',
+    image: '/images/recipes/snack/cottage-pineapple.jpg',
+    category: 'Snack',
+    calories: 190,
+    protein: 18,
+    carbs: 20,
+    fat: 4,
+    time: 3,
+    difficulty: 'Easy',
+    rating: 4.7,
+    reviews: 256,
+    healthScore: 9,
+    steps: 2,
+    ingredients: [
+      '150g low-fat cottage cheese',
+      'Fresh pineapple chunks'
+    ],
+    instructions: [
+      'Scoop cottage cheese',
+      'Top with pineapple'
+    ]
+  },
+  {
+    id: 'snack-6',
+    name: 'Handful of Mixed Nuts',
+    image: '/images/recipes/snack/mixed-nuts.jpg',
+    category: 'Snack',
+    calories: 180,
+    protein: 5,
+    carbs: 6,
+    fat: 16,
+    time: 1,
+    difficulty: 'Easy',
+    rating: 4.5,
+    reviews: 412,
+    healthScore: 8,
+    steps: 1,
+    ingredients: [
+      '30g almonds, walnuts, cashews'
+    ],
+    instructions: [
+      'Grab and eat!'
+    ]
+  },
+  {
+    id: 'snack-7',
+    name: 'Rice Cake with Avocado & Egg',
+    image: '/images/recipes/snack/rice-cake.jpg',
+    category: 'Snack',
+    calories: 210,
+    protein: 10,
+    carbs: 22,
+    fat: 12,
+    time: 8,
+    difficulty: 'Easy',
+    rating: 4.6,
+    reviews: 334,
+    healthScore: 9,
+    steps: 3,
+    ingredients: [
+      '1 rice cake',
+      '½ avocado',
+      '1 boiled egg'
+    ],
+    instructions: [
+      'Mash avocado',
+      'Spread on rice cake',
+      'Top with sliced egg'
+    ]
+  },
+  {
+    id: 'snack-8',
+    name: 'Berry Protein Shake',
+    image: '/images/recipes/snack/berry-shake.jpg',
+    category: 'Snack',
+    calories: 240,
+    protein: 25,
+    carbs: 28,
+    fat: 4,
+    time: 5,
+    difficulty: 'Easy',
+    rating: 4.8,
+    reviews: 501,
+    healthScore: 9,
+    steps: 2,
+    ingredients: [
+      '1 scoop protein powder',
+      'Mixed berries',
+      'Almond milk'
+    ],
+    instructions: [
+      'Blend all',
+      'Drink!'
+    ]
+  },
+
+  // ==================== DINNER (8 món) ====================
+  {
+    id: 'dinner-1',
+    name: 'Baked Cod with Sweet Potato & Green Beans',
+    image: '/images/recipes/dinner/baked-cod.avif',
+    category: 'Dinner',
+    calories: 460,
+    protein: 40,
+    carbs: 45,
+    fat: 12,
+    time: 30,
+    difficulty: 'Medium',
+    rating: 4.9,
+    reviews: 423,
+    healthScore: 10,
+    steps: 5,
+    isFeatured: true,
+    ingredients: [
+      '180g cod fillet',
+      '1 sweet potato',
+      'Green beans',
+      'Lemon, garlic'
+    ],
+    instructions: [
+      'Bake sweet potato',
+      'Season and bake cod',
+      'Steam green beans',
+      'Plate with lemon',
+      'Serve'
+    ]
+  },
+  {
+    id: 'dinner-2',
+    name: 'Turkey Meatballs with Zucchini Noodles',
+    image: '/images/recipes/dinner/turkey-meatballs.jpg',
+    category: 'Dinner',
+    calories: 420,
+    protein: 38,
+    carbs: 18,
+    fat: 22,
+    time: 25,
+    difficulty: 'Medium',
+    rating: 4.8,
+    reviews: 356,
+    healthScore: 9,
+    steps: 5,
+    ingredients: [
+      '400g ground turkey',
+      'Zucchini',
+      'Marinara sauce (low sugar)',
+      'Herbs'
+    ],
+    instructions: [
+      'Make turkey meatballs',
+      'Bake 20 mins',
+      'Spiralize zucchini',
+      'Warm sauce',
+      'Combine'
+    ]
+  },
+  {
+    id: 'dinner-3',
+    name: 'Grilled Chicken with Cauliflower Rice',
+    image: '/images/recipes/dinner/chicken-cauliflower.webp',
+    category: 'Dinner',
+    calories: 480,
+    protein: 45,
+    carbs: 20,
+    fat: 24,
+    time: 20,
+    difficulty: 'Easy',
+    rating: 4.7,
+    reviews: 389,
+    healthScore: 9,
+    steps: 4,
+    ingredients: [
+      '180g chicken breast',
+      'Cauliflower rice',
+      'Broccoli',
       'Olive oil'
     ],
     instructions: [
-      'Season chicken',
-      'Bake at 375°F',
+      'Grill chicken',
+      'Sauté cauliflower rice',
+      'Steam broccoli',
+      'Serve'
+    ]
+  },
+  {
+    id: 'dinner-4',
+    name: 'Shrimp Stir-Fry with Mixed Vegetables',
+    image: '/images/recipes/dinner/shrimp-stirfry.jpg',
+    category: 'Dinner',
+    calories: 450,
+    protein: 35,
+    carbs: 38,
+    fat: 18,
+    time: 15,
+    difficulty: 'Easy',
+    rating: 4.8,
+    reviews: 298,
+    healthScore: 9,
+    steps: 4,
+    ingredients: [
+      '200g shrimp',
+      'Bell peppers, broccoli, carrot',
+      'Soy sauce, garlic'
+    ],
+    instructions: [
+      'Stir-fry vegetables',
+      'Add shrimp',
+      'Season',
+      'Serve hot'
+    ]
+  },
+  {
+    id: 'dinner-5',
+    name: 'Stuffed Bell Peppers with Ground Turkey',
+    image: '/images/recipes/dinner/stuffed-peppers.webp',
+    category: 'Dinner',
+    calories: 510,
+    protein: 40,
+    carbs: 45,
+    fat: 20,
+    time: 40,
+    difficulty: 'Medium',
+    rating: 4.9,
+    reviews: 412,
+    healthScore: 9,
+    steps: 6,
+    ingredients: [
+      '4 bell peppers',
+      '400g ground turkey',
+      'Quinoa, tomato sauce',
+      'Cheese (optional)'
+    ],
+    instructions: [
       'Cook quinoa',
-      'Sauté kale',
-      'Plate together'
+      'Brown turkey',
+      'Mix with sauce',
+      'Stuff peppers',
+      'Bake 30 mins',
+      'Top with cheese'
+    ]
+  },
+  {
+    id: 'dinner-6',
+    name: 'Tofu & Vegetable Curry',
+    image: '/images/recipes/dinner/tofu-curry.webp',
+    category: 'Dinner',
+    calories: 430,
+    protein: 22,
+    carbs: 48,
+    fat: 18,
+    time: 30,
+    difficulty: 'Medium',
+    rating: 4.7,
+    reviews: 234,
+    healthScore: 9,
+    steps: 5,
+    ingredients: [
+      '200g firm tofu',
+      'Coconut milk (light)',
+      'Mixed vegetables',
+      'Curry paste'
+    ],
+    instructions: [
+      'Cube tofu',
+      'Sauté vegetables',
+      'Add curry paste',
+      'Pour coconut milk',
+      'Simmer'
+    ]
+  },
+  {
+    id: 'dinner-7',
+    name: 'Baked Chicken Thighs with Brussels Sprouts',
+    image: '/images/recipes/dinner/chicken-brussels.jpg',
+    category: 'Dinner',
+    calories: 520,
+    protein: 42,
+    carbs: 28,
+    fat: 28,
+    time: 35,
+    difficulty: 'Medium',
+    rating: 4.8,
+    reviews: 301,
+    healthScore: 9,
+    steps: 4,
+    ingredients: [
+      '4 chicken thighs (skinless)',
+      'Brussels sprouts',
+      'Olive oil, balsamic'
+    ],
+    instructions: [
+      'Season chicken',
+      'Roast with sprouts',
+      'Drizzle balsamic',
+      'Bake 30 mins'
+    ]
+  },
+  {
+    id: 'dinner-8',
+    name: 'Salmon & Lentil Salad',
+    image: '/images/recipes/dinner/salmon-lentil.jpg',
+    category: 'Dinner',
+    calories: 500,
+    protein: 45,
+    carbs: 40,
+    fat: 22,
+    time: 25,
+    difficulty: 'Medium',
+    rating: 4.9,
+    reviews: 456,
+    healthScore: 10,
+    steps: 5,
+    ingredients: [
+      '180g baked salmon',
+      '100g cooked lentils',
+      'Arugula, cucumber',
+      'Lemon vinaigrette'
+    ],
+    instructions: [
+      'Bake salmon',
+      'Cook lentils',
+      'Mix greens',
+      'Flake salmon on top',
+      'Dress'
     ]
   }
 ];
@@ -392,9 +978,6 @@ export default function HealthyMenu() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className={styles.addButton}>
-            <span>+</span> Add Menu
-          </button>
         </div>
       </div>
 
@@ -403,7 +986,6 @@ export default function HealthyMenu() {
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Featured Menu</h2>
-            <button className={styles.moreButton}>•••</button>
           </div>
           <div className={styles.featuredCard}>
             <div className={styles.featuredImage}>
@@ -433,7 +1015,6 @@ export default function HealthyMenu() {
                   <span>{featuredRecipe.steps} steps</span>
                 </div>
               </div>
-              <button className={styles.addToMealButton}>Add to Meal Plan</button>
             </div>
             <div className={styles.featuredStats}>
               <div className={styles.statBox} style={{ backgroundColor: '#D4F4DD' }}>
@@ -458,7 +1039,6 @@ export default function HealthyMenu() {
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Popular Menu</h2>
-            <button className={styles.moreButton}>•••</button>
           </div>
           <div className={styles.popularGrid}>
             {popularRecipes.map((recipe) => (
@@ -490,7 +1070,6 @@ export default function HealthyMenu() {
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Recommended Menu</h2>
-            <button className={styles.moreButton}>•••</button>
           </div>
           <div className={styles.recommendedGrid}>
             {recommendedRecipes.map((recipe) => (
@@ -523,7 +1102,6 @@ export default function HealthyMenu() {
                     </span>
                   </div>
                 </div>
-                <button className={styles.recommendedAddButton}>+</button>
               </div>
             ))}
           </div>
@@ -534,31 +1112,9 @@ export default function HealthyMenu() {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>All Menu</h2>
-          <div className={styles.menuControls}>
-            <button 
-              className={styles.iconButton}
-              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <rect x="2" y="2" width="6" height="6" stroke="currentColor" strokeWidth="1.5"/>
-                <rect x="12" y="2" width="6" height="6" stroke="currentColor" strokeWidth="1.5"/>
-                <rect x="2" y="12" width="6" height="6" stroke="currentColor" strokeWidth="1.5"/>
-                <rect x="12" y="12" width="6" height="6" stroke="currentColor" strokeWidth="1.5"/>
-              </svg>
-            </button>
-            <button className={styles.iconButton}>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M2 6h16M2 10h16M2 14h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </button>
-            <button className={styles.moreButton}>•••</button>
-          </div>
         </div>
 
         <div className={styles.filterControls}>
-          <button className={styles.filterButton}>
-            <span>⚙️</span> Filter
-          </button>
           <div className={styles.categoryTabs}>
             {CATEGORIES.map((category) => (
               <button
@@ -572,15 +1128,6 @@ export default function HealthyMenu() {
               </button>
             ))}
           </div>
-          <select 
-            className={styles.sortSelect}
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-          >
-            <option value="calories">Calories</option>
-            <option value="rating">Rating</option>
-            <option value="time">Time</option>
-          </select>
         </div>
 
         <div className={styles.allMenuList}>
@@ -619,17 +1166,6 @@ export default function HealthyMenu() {
                       <span className={styles.metaIcon}>🧈</span> {recipe.fat}g fats
                     </span>
                   </div>
-                </div>
-
-                <div className={styles.menuListRight}>
-                  <div className={styles.healthScore}>
-                    <span className={styles.healthScoreLabel}>Health Score:</span>
-                    <div className={styles.healthScoreBar}>
-                      {getHealthScoreBar(recipe.healthScore)}
-                    </div>
-                    <span className={styles.healthScoreValue}>{recipe.healthScore}/10</span>
-                  </div>
-                  <button className={styles.addToMealButtonSmall}>Add to Meal Plan</button>
                 </div>
               </div>
             </div>
