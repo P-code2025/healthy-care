@@ -106,8 +106,6 @@ const mapFoodLog = (log) => ({
   sugar: log.sugarGrams,
   status: log.status,
   thoughts: log.thoughts,
-  imageUrl: log.imageUrl,           // TRẢ VỀ CHO FRONTEND
-  imageAttribution: log.imageAttribution,
 });
 
 const mapWorkoutLog = (log) => ({
@@ -477,8 +475,6 @@ app.post("/api/food-log", requireAuth, async (req, res) => {
     sugar,
     status,
     thoughts,
-    imageUrl,           // NHẬN THÊM
-    imageAttribution,   // NHẬN THÊM
   } = req.body;
   try {
     const created = await prisma.foodLog.create({
@@ -497,8 +493,6 @@ app.post("/api/food-log", requireAuth, async (req, res) => {
         sugarGrams: sugar !== undefined ? Number(sugar) : null,
         status: status || null,
         thoughts: thoughts || null,
-        imageUrl: imageUrl || null,                   // LƯU THÊM
-        imageAttribution: imageAttribution || null,   // LƯU THÊM
       },
     });
     res.status(201).json(mapFoodLog(created));
@@ -525,8 +519,6 @@ app.put("/api/food-log/:id", requireAuth, async (req, res) => {
     sugar,
     status,
     thoughts,
-    imageUrl,
-    imageAttribution,
   } = req.body;
   try {
     const updated = await prisma.foodLog.update({
@@ -546,8 +538,6 @@ app.put("/api/food-log/:id", requireAuth, async (req, res) => {
         sugarGrams: sugar !== undefined ? Number(sugar) : undefined,
         status,
         thoughts,
-        imageUrl,
-        imageAttribution,
       },
     });
     res.json(mapFoodLog(updated));
@@ -1066,7 +1056,7 @@ Use English field names. NO extra text. Valid JSON only.`
             role: "user",
             content: [
               { type: "text", text: userPrompt },
-              { type: "imageUrl", dataUri: { data: base64Image } }
+              { type: "image_url", dataUri: { data: base64Image } }
             ]
           }
         ],

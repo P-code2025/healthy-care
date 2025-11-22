@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+﻿﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import styles from './FoodDiaryNew.module.css';
 import { analyzeFood } from '../../services/analyzeFood';
 import type { AnalysisResult, FoodEntry } from '../../lib/types';
@@ -111,7 +111,6 @@ export default function FoodDiaryNew() {
   const [filterFatRange, setFilterFatRange] = useState<[number, number]>([0, 300]);
   const [filterSugarRange, setFilterSugarRange] = useState<[number, number]>([0, 200]);
   const [filterThoughts, setFilterThoughts] = useState('');
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const { start: periodStart, end: periodEnd } = useMemo(() => {
     return getDateRange(selectedPeriod);
@@ -397,8 +396,6 @@ export default function FoodDiaryNew() {
 
         // STEP 2: use AI
         const compressed = await compressImage(originalBase64, 900, 0.8);
-        setUploadedImageUrl(compressed);  
-
         const result = await analyzeFood(compressed);
 
         if (result.error) {
@@ -444,8 +441,6 @@ export default function FoodDiaryNew() {
       fat: Number(analysisResult.fat) || 0,
       sugar: Number(analysisResult.sugar) || 0,
       status: status || 'Satisfied',
-      imageUrl: uploadedImageUrl || undefined,
-      imageAttribution: "User uploaded",
       thoughts,
     };
 
@@ -470,7 +465,6 @@ export default function FoodDiaryNew() {
 
   const resetForm = () => {
     setAnalysisResult({ foodName: '', amount: '', calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0 });
-    setUploadedImageUrl(null);
     setSelectedImage(null);
     setError(null);
   };
