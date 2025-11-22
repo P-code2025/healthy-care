@@ -2078,6 +2078,92 @@ Return JSON:
   }
 });
 
+app.get("/api/body-measurements", requireAuth, async (req, res) => {
+  try {
+    const measurements = await prisma.bodyMeasurement.findMany({
+      where: { userId: req.user.id },
+      orderBy: { measuredAt: "asc" },
+    });
+
+    res.json(
+      measurements.map((m) => ({
+        id: m.id,
+        measured_at: m.measuredAt.toISOString().split("T")[0],
+        weight_kg: m.weightKg,
+        neck_cm: m.neckCm || null,
+        waist_cm: m.waistCm || null,
+        hip_cm: m.hipCm || null,
+        biceps_cm: m.bicepsCm || null,
+        thigh_cm: m.thighCm || null,
+      }))
+    );
+  } catch (error) {
+    handlePrismaError(res, error, "Không thể lấy lịch sử số đo");
+  }
+});
+
+// POST: Thêm/cập nhật số đo hôm nay (upsert)
+app.post("/api/body-measurements", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const {
+    weight_kg,
+    neck_cm,
+    waist_cm,
+    hip_cm,
+    biceps_cm,
+    thigh_cm,
+  } = req.body;
+
+  if (!weight_kg || weight_kg <= 0) {
+    return res.status(400).json({ error: "Cân nặng là bắt buộc" });
+  }
+
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const measurement = await prisma.bodyMeasurement.upsert({
+      where: {
+        userId_measuredAt: {
+          userId,
+          measuredAt: today,
+        },
+      },
+      update: {
+        weightKg: Number(weight_kg),
+        neckCm: neck_cm ? Number(neck_cm) : null,
+        waistCm: waist_cm ? Number(waist_cm) : null,
+        hipCm: hip_cm ? Number(hip_cm) : null,
+        bicepsCm: biceps_cm ? Number(biceps_cm) : null,
+        thighCm: thigh_cm ? Number(thigh_cm) : null,
+      },
+      create: {
+        userId,
+        weightKg: Number(weight_kg),
+        neckCm: neck_cm ? Number(neck_cm) : null,
+        waistCm: waist_cm ? Number(waist_cm) : null,
+        hipCm: hip_cm ? Number(hip_cm) : null,
+        bicepsCm: biceps_cm ? Number(biceps_cm) : null,
+        thighCm: thigh_cm ? Number(thigh_cm) : null,
+      },
+    });
+
+    res.json({
+      id: measurement.id,
+      measured_at: measurement.measuredAt.toISOString().split("T")[0],
+      weight_kg: measurement.weightKg,
+      neck_cm: measurement.neckCm,
+      waist_cm: measurement.waistCm,
+      hip_cm: measurement.hipCm,
+      biceps_cm: measurement.bicepsCm,
+      thigh_cm: measurement.thighCm,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Lưu số đo thất bại" });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`

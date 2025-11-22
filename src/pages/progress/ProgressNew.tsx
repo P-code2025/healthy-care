@@ -1,255 +1,293 @@
-// src/pages/ProgressNew.tsx
 import { useState, useEffect } from 'react';
 import styles from './ProgressNew.module.css';
 import { api, type User } from '../../services/api';
-import { format, subDays } from 'date-fns';
+import { format, subDays, addDays } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Target, TrendingUp, Camera, Plus, Check, Ruler, Scale } from 'lucide-react';
 
-interface BodyMeasurement {
-  label: string;
-  key: 'biceps_cm' | 'neck_cm' | 'waist_cm' | 'hip_cm' | 'thigh_cm';
-  unit: string;
-  position: { top: string; left: string };
+interface MeasurementLog {
+  date: string;
+  weight: number;
+  neck?: number;
+  waist?: number;
+  hip?: number;
+  biceps?: number;
+  thigh?: number;
 }
 
-const BODY_MEASUREMENTS: BodyMeasurement[] = [
-  { label: 'Arm', key: 'biceps_cm', unit: 'cm', position: { top: '15%', left: '25%' } },
-  { label: 'Chest', key: 'neck_cm', unit: 'cm', position: { top: '25%', left: '15%' } }, // dùng neck thay chest tạm
-  { label: 'Waist', key: 'waist_cm', unit: 'cm', position: { top: '40%', left: '25%' } },
-  { label: 'Hips', key: 'hip_cm', unit: 'cm', position: { top: '55%', left: '25%' } },
-  { label: 'Thigh', key: 'thigh_cm', unit: 'cm', position: { top: '75%', left: '20%' } },
-];
-
 export default function ProgressNew() {
+  const [activeTab, setActiveTab] = useState<'weight' | 'measurements' | 'photos'>('measurements');
   const [user, setUser] = useState<User | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<User>>({});
+  const [targetWeight, setTargetWeight] = useState<number | ''>('');
+  const [measurementLogs, setMeasurementLogs] = useState<MeasurementLog[]>([]);
+  const [period, setPeriod] = useState<'7' | '30' | '90' | 'all'>('30');
+  const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [newEntry, setNewEntry] = useState({
+    weight: '',
+    neck: '',
+    waist: '',
+    hip: '',
+    biceps: '',
+    thigh: '',
+  });
 
-  // Lấy user + stats
+  // Load dữ liệu
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
       try {
-        const userData = await api.getCurrentUser();
+        const [userData, measurements] = await Promise.all([
+          api.getCurrentUser(),
+          api.getBodyMeasurements(),
+        ]);
+
         setUser(userData);
-        setEditForm({
-          weight_kg: userData.weight_kg || 0,
-          height_cm: userData.height_cm || 0,
-          neck_cm: userData.neck_cm || 0,
-          waist_cm: userData.waist_cm || 0,
-          hip_cm: userData.hip_cm || 0,
-          biceps_cm: userData.biceps_cm || 0,
-          thigh_cm: userData.thigh_cm || 0,
-        });
+        setTargetWeight(userData.goal ? Number(userData.goal) : '');
+
+        // Chuyển đổi từ DB → format cho biểu đồ
+        const logs = measurements
+          .map((m): MeasurementLog => {
+            const heightM = (userData.height_cm || 170) / 100;
+            const bmi = m.weight_kg / (heightM * heightM);
+            return {
+              date: m.measured_at.split('T')[0],
+              weight: m.weight_kg,
+              neck: m.neck_cm || undefined,
+              waist: m.waist_cm || undefined,
+              hip: m.hip_cm || undefined,
+              biceps: m.biceps_cm || undefined,
+              thigh: m.thigh_cm || undefined,
+            };
+          })
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        setMeasurementLogs(logs);
       } catch (err) {
-        console.error(err);
+        console.error("Error loading progress data:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    loadData();
   }, []);
 
-  const handleSave = async () => {
-    if (!user) return;
+  const handleAddToday = async () => {
+    if (!newEntry.weight || parseFloat(newEntry.weight) <= 0) {
+      alert('Please enter a valid weight!');
+      return;
+    }
+
     setSaving(true);
     try {
-      const updated = await api.updateCurrentUser({
-        weightKg: editForm.weight_kg ?? undefined,
-        heightCm: editForm.height_cm ?? undefined,
-        neckCm: editForm.neck_cm ?? undefined,
-        waistCm: editForm.waist_cm ?? undefined,
-        hipCm: editForm.hip_cm ?? undefined,
-        bicepsCm: editForm.biceps_cm ?? undefined,
-        thighCm: editForm.thigh_cm ?? undefined,
+      const payload = {
+        weight_kg: parseFloat(newEntry.weight),
+        neck_cm: newEntry.neck ? parseFloat(newEntry.neck) : undefined,
+        waist_cm: newEntry.waist ? parseFloat(newEntry.waist) : undefined,
+        hip_cm: newEntry.hip ? parseFloat(newEntry.hip) : undefined,
+        biceps_cm: newEntry.biceps ? parseFloat(newEntry.biceps) : undefined,
+        thigh_cm: newEntry.thigh ? parseFloat(newEntry.thigh) : undefined,
+      };
+
+      const saved = await api.createOrUpdateBodyMeasurement(payload);
+
+      // Cập nhật local state
+      const today = saved.measured_at.split('T')[0];
+      const heightM = (user?.height_cm || 170) / 100;
+      const bmi = saved.weight_kg / (heightM * heightM);
+
+      const newLog: MeasurementLog = {
+        date: today,
+        weight: saved.weight_kg,
+        neck: saved.neck_cm || undefined,
+        waist: saved.waist_cm || undefined,
+        hip: saved.hip_cm || undefined,
+        biceps: saved.biceps_cm || undefined,
+        thigh: saved.thigh_cm || undefined,
+      };
+
+      setMeasurementLogs(prev => {
+        const filtered = prev.filter(l => l.date !== today);
+        return [...filtered, newLog].sort((a, b) => a.date.localeCompare(b.date));
       });
-      setUser(updated);
-      setEditing(false);
-      alert('Cập nhật thành công!');
+
+      setNewEntry({ weight: '', neck: '', waist: '', hip: '', biceps: '', thigh: '' });
+      setShowAddForm(false);
     } catch (err) {
-      alert('Lỗi khi lưu, thử lại nhé!');
+      alert('Failed to save. Please try again.');
+      console.error(err);
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return <div className={styles.container}>Đang tải dữ liệu...</div>;
-  }
+  const filteredLogs = measurementLogs.slice(period === 'all' ? 0 : -Number(period));
+  const chartData = filteredLogs.map(log => ({
+    date: format(new Date(log.date), 'dd/MM'),
+    weight: log.weight.toFixed(1),
+    waist: log.waist?.toFixed(1),
+    neck: log.neck?.toFixed(1),
+    hip: log.hip?.toFixed(1),
+    biceps: log.biceps?.toFixed(1),
+    thigh: log.thigh?.toFixed(1),
+  }));
 
-  if (!user) {
-    return <div className={styles.container}>Không tìm thấy thông tin người dùng</div>;
+  const latest = measurementLogs[measurementLogs.length - 1] || {};
+  const first = measurementLogs[0] || {};
+  const weightLost = first.weight ? (first.weight - latest.weight).toFixed(1) : '0';
+
+  if (loading) {
+    return <div className={styles.container}>Loading progress...</div>;
   }
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.pageTitle}>Tiến Độ Của Bạn</h1>
-        <button
-          onClick={() => setEditing(!editing)}
-          className={styles.periodBtn + ' ' + (editing ? styles.active : '')}
-        >
-          {editing ? 'Hủy' : 'Chỉnh sửa số đo'}
+        <div>
+          <h1 className={styles.pageTitle}>Your Progress</h1>
+          <p className={styles.subtitle}>Track your body's transformation journey day by day</p>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}>
+          <Scale className={styles.statIcon} />
+          <div className={styles.statLabel}>Current Weight</div>
+          <div className={styles.statValue}>{latest.weight?.toFixed(1) || '--'} <span>kg</span></div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Total Lost</div>
+          <div className={`${styles.statValue} ${Number(weightLost) > 0 ? styles.positive : styles.negative}`}>
+            {Number(weightLost) > 0 ? '-' : '+'}{Math.abs(Number(weightLost))} kg
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className={styles.tabs}>
+        <button className={`${styles.tab} ${activeTab === 'measurements' ? styles.activeTab : ''}`} onClick={() => setActiveTab('measurements')}>
+          Measurements
+        </button>
+        <button className={`${styles.tab} ${activeTab === 'weight' ? styles.activeTab : ''}`} onClick={() => setActiveTab('weight')}>
+          Weight
+        </button>
+        <button className={`${styles.tab} ${activeTab === 'photos' ? styles.activeTab : ''}`} onClick={() => setActiveTab('photos')}>
+          Photos
         </button>
       </div>
 
-      <div className={styles.mainGrid}>
-        {/* Cột trái - Body Measurements */}
-        <div className={styles.leftColumn}>
+      {/* Main Content */}
+      {activeTab === 'measurements' && (
+        <div className={styles.chartSection}>
+          <div className={styles.periodControl}>
+            <div className={styles.periodButtons}>
+              {(['7', '30', '90', 'all'] as const).map(p => (
+                <button key={p} className={`${styles.periodBtn} ${period === p ? styles.periodActive : ''}`} onClick={() => setPeriod(p)}>
+                  {p === 'all' ? 'All' : `${p} days`}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className={styles.addButton}
+            >
+              <Plus className="w-5 h-5" />
+              Add today's measurements
+            </button>
+          </div>
+
+          {/* Form thêm số đo */}
+          {showAddForm && (
+            <div className={`${styles.card} ${styles.formCard}`}>
+              <h3 className={styles.formTitle}>Enter today's measurements ({format(new Date(), 'dd/MM/yyyy')})</h3>
+              <div className={styles.formGrid}>
+                <div>
+                  <label className={styles.formLabel}>Weight (kg) *</label>
+                  <input type="number" step="0.1" value={newEntry.weight} onChange={e => setNewEntry({ ...newEntry, weight: e.target.value })} className={styles.input} placeholder="72.5" />
+                </div>
+                {['neck', 'waist', 'hip', 'biceps', 'thigh'].map(part => (
+                  <div key={part}>
+                    <label className={styles.formLabel}>
+                      {part === 'neck' ? 'Neck' : part === 'waist' ? 'Waist' : part === 'hip' ? 'Hip' : part === 'biceps' ? 'Biceps' : 'Thigh'} (cm)
+                    </label>
+                    <input type="number" step="0.1" value={newEntry[part as keyof typeof newEntry]} onChange={e => setNewEntry({ ...newEntry, [part]: e.target.value })} className={styles.input} />
+                  </div>
+                ))}
+              </div>
+              <div className={styles.formActions}>
+                <button onClick={() => setShowAddForm(false)} className={styles.cancelBtn}>Cancel</button>
+                <button onClick={handleAddToday} disabled={saving} className={styles.saveBtn}>
+                  {saving ? 'Saving...' : <><Check className="w-5 h-5" /> Save Measurement</>}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Biểu đồ */}
           <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Số Đo Cơ Thể</h3>
-            </div>
-
-            <div className={styles.bodyMeasurementContainer}>
-              <div className={styles.bodySvgWrapper}>
-                {/* SVG giữ nguyên */}
-                <svg viewBox="0 0 300 600" className={styles.bodySvg}>
-                  <ellipse cx="150" cy="50" rx="30" ry="40" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <line x1="150" y1="90" x2="150" y2="110" stroke="#9CA3AF" strokeWidth="15"/>
-                  <circle cx="110" cy="120" r="15" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <circle cx="190" cy="120" r="15" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <ellipse cx="150" cy="200" rx="50" ry="80" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <line x1="110" y1="120" x2="70" y2="220" stroke="#9CA3AF" strokeWidth="12"/>
-                  <line x1="190" y1="120" x2="230" y2="220" stroke="#9CA3AF" strokeWidth="12"/>
-                  <line x1="70" y1="220" x2="50" y2="300" stroke="#9CA3AF" strokeWidth="10"/>
-                  <line x1="230" y1="220" x2="250" y2="300" stroke="#9CA3AF" strokeWidth="10"/>
-                  <circle cx="50" cy="310" r="12" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <circle cx="250" cy="310" r="12" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <ellipse cx="150" cy="300" rx="55" ry="30" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <line x1="130" y1="330" x2="120" y2="450" stroke="#9CA3AF" strokeWidth="18"/>
-                  <line x1="170" y1="330" x2="180" y2="450" stroke="#9CA3AF" strokeWidth="18"/>
-                  <line x1="120" y1="450" x2="115" y2="550" stroke="#9CA3AF" strokeWidth="14"/>
-                  <line x1="180" y1="450" x2="185" y2="550" stroke="#9CA3AF" strokeWidth="14"/>
-                  <ellipse cx="115" cy="565" rx="15" ry="8" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <ellipse cx="185" cy="565" rx="15" ry="8" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2"/>
-                  <circle cx="110" cy="150" r="4" fill="#FF6B6B"/>
-                  <circle cx="150" cy="180" r="4" fill="#FF6B6B"/>
-                  <circle cx="150" cy="250" r="4" fill="#FF6B6B"/>
-                  <circle cx="150" cy="310" r="4" fill="#FF6B6B"/>
-                  <circle cx="125" cy="390" r="4" fill="#FF6B6B"/>
-                </svg>
-
-                {/* Labels - DỮ LIỆU THẬT + EDIT MODE */}
-                {BODY_MEASUREMENTS.map((m) => {
-                  const value = user[m.key] as number | null;
-                  return (
-                    <div key={m.key} className={styles.measurementLabel} style={m.position}>
-                      <div className={styles.measurementLine}></div>
-                      <div className={styles.measurementBadge}>
-                        <div className={styles.measurementText}>{m.label}</div>
-                        {editing ? (
-                          <input
-                            type="number"
-                            value={editForm[m.key] ?? ''}
-                            onChange={(e) => setEditForm({ ...editForm, [m.key]: parseFloat(e.target.value) || 0 })}
-                            className={styles.measurementInput}
-                            step="0.1"
-                          />
-                        ) : (
-                          <div className={styles.measurementValue}>
-                            {value?.toFixed(1) || '--'} {m.unit}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Form chỉnh sửa cân nặng, chiều cao */}
-            {editing && (
-              <div className={styles.editForm}>
-                <div className={styles.formRow}>
-                  <div>
-                    <label>Cân nặng (kg)</label>
-                    <input
-                      type="number"
-                      value={editForm.weight_kg || ''}
-                      onChange={(e) => setEditForm({ ...editForm, weight_kg: parseFloat(e.target.value) || 0 })}
-                      step="0.1"
-                    />
-                  </div>
-                  <div>
-                    <label>Chiều cao (cm)</label>
-                    <input
-                      type="number"
-                      value={editForm.height_cm || ''}
-                      onChange={(e) => setEditForm({ ...editForm, height_cm: parseFloat(e.target.value) || 0 })}
-                      step="0.1"
-                    />
-                  </div>
-                </div>
-                <div className={styles.formActions}>
-                  <button onClick={handleSave} disabled={saving} className={styles.saveBtn}>
-                    {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </button>
-                </div>
-              </div>
+            <h3 className={styles.chartTitle}>Change chart over time</h3>
+            {chartData.length === 0 ? (
+              <p className={styles.emptyState}>No data available. Please add the first measurement!</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={420}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="4 4" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: '12px', color: 'white' }} />
+                  <Legend />
+                  <Line type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={4} name="Weight (kg)" />
+                  <Line type="monotone" dataKey="waist" stroke="#f59e0b" strokeWidth={3} name="Waist (cm)" />
+                  <Line type="monotone" dataKey="neck" stroke="#3b82f6" name="Neck (cm)" />
+                  <Line type="monotone" dataKey="hip" stroke="#8b5cf6" name="Hip (cm)" />
+                  <Line type="monotone" dataKey="biceps" stroke="#ef4444" name="Biceps (cm)" />
+                  <Line type="monotone" dataKey="thigh" stroke="#ec4899" name="Thigh (cm)" />
+                </LineChart>
+              </ResponsiveContainer>
             )}
           </div>
-        </div>
 
-        {/* Cột giữa - Weight Chart (dùng dữ liệu thật từ user.weight_kg) */}
-        <div className={styles.middleColumn}>
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Theo Dõi Cân Nặng</h3>
-            </div>
-            <div className={styles.weightInfo}>
-              <div className={styles.weightStat}>
-                <span className={styles.weightLabel}>Cân nặng hiện tại</span>
-                <span className={styles.weightValue}>{user.weight_kg?.toFixed(1) || '--'} kg</span>
-              </div>
-              <div className={styles.weightStat}>
-                <span className={styles.weightLabel}>Chiều cao</span>
-                <span className={styles.weightValue}>{user.height_cm || '--'} cm</span>
-              </div>
-              <div className={styles.weightStat}>
-                <span className={styles.weightLabel}>BMI</span>
-                <span className={styles.weightValue}>
-                  {user.weight_kg && user.height_cm
-                    ? ((user.weight_kg / ((user.height_cm / 100) ** 2))).toFixed(1)
-                    : '--'}
-                </span>
+          {/* Số đo mới nhất */}
+          {latest.weight && (
+            <div className={`${styles.card} ${styles.latestMeasurements}`}>
+              <h3 className={styles.chartTitle}>Most recent measurement ({format(new Date(latest.date), 'dd/MM/yyyy')})</h3>
+              <div className={styles.measurementGrid}>
+                {[
+                  { label: 'Weight', value: latest.weight?.toFixed(1), unit: 'kg' },
+                  { label: 'Waist', value: latest.waist?.toFixed(1), unit: 'cm' },
+                  { label: 'Hip', value: latest.hip?.toFixed(1), unit: 'cm' },
+                  { label: 'Neck', value: latest.neck?.toFixed(1), unit: 'cm' },
+                  { label: 'Biceps', value: latest.biceps?.toFixed(1), unit: 'cm' },
+                  { label: 'Thigh', value: latest.thigh?.toFixed(1), unit: 'cm' },
+                ].map(item => (
+                  <div key={item.label} className={styles.measurementItem}>
+                    <div className={styles.measurementLabel}>{item.label}</div>
+                    <div className={styles.measurementValue}>
+                      {item.value || '--'} <span className={styles.unit}>{item.unit}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-
-            {/* Chart đơn giản (có thể nâng cấp sau) */}
-            <div className={styles.chartWrapper}>
-              <svg viewBox="0 0 500 150" className={styles.lineChart}>
-                <polyline
-                  points="0,100 100,90 200,80 300,70 400,60 500,50"
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="4"
-                />
-                <text x="250" y="80" textAnchor="middle" fill="#10b981" fontWeight="bold">
-                  ↓ Giảm cân đều đặn
-                </text>
-              </svg>
-              <div className={styles.chartLabels}>
-                <span>Tuần trước</span>
-                <span>Hôm nay</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
+      )}
 
-        {/* Cột phải - giữ nguyên phần calories nếu cần */}
-        <div className={styles.rightColumn}>
-          {/* Có thể thêm chart calo ở đây sau */}
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Mẹo nhỏ</h3>
-            </div>
-            <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-              Cập nhật số đo thường xuyên để theo dõi tiến độ chính xác nhất!
-            </p>
-          </div>
+      {activeTab === 'weight' && (
+        <div className={styles.card}>
+          <h3 className={styles.chartTitle}>Weight Tracking</h3>
+          <p className={styles.emptyState}>Weight tracking chart will display here</p>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'photos' && (
+        <div className={styles.card}>
+          <h3 className={styles.chartTitle}>Progress Photos</h3>
+          <p className={styles.emptyState}>Upload your progress photos here</p>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -18,7 +18,7 @@ const steps = [
     StepBasicInfo,
     StepBodyStats,
     StepGoalSelection,
-    StepBodyMeasurements,        
+    StepBodyMeasurements,
     StepActivityPreferences
 ];
 
@@ -27,32 +27,32 @@ export default function OnboardingNew() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
-    name: "",
-    gender: "",
-    age: "",
-    weight: "",
-    height: "",
-    goalWeight: "",
-    
-    // THÊM CÁC TRƯỜNG MỚI
-    neck: "",
-    waist: "",
-    hip: "",
-    biceps: "",
-    thigh: "",
-    activityLevel: "moderate", // mặc định
-    exercisePreferences: {
-        yoga: false,
-        gym: true,
-        running: false,
-        home: false,
-        swimming: false,
-    },
+        name: "",
+        gender: "",
+        age: "",
+        weight: "",
+        height: "",
+        goalWeight: "",
 
-    tdee: 0,
-    recommendedCalories: 0,
-    goalType: "maintain",
-});
+        // THÊM CÁC TRƯỜNG MỚI
+        neck: "",
+        waist: "",
+        hip: "",
+        biceps: "",
+        thigh: "",
+        activityLevel: "moderate", // mặc định
+        exercisePreferences: {
+            yoga: false,
+            gym: true,
+            running: false,
+            home: false,
+            swimming: false,
+        },
+
+        tdee: 0,
+        recommendedCalories: 0,
+        goalType: "maintain",
+    });
 
     const navigate = useNavigate();
     const { refreshUser } = useAuth();
@@ -60,6 +60,8 @@ export default function OnboardingNew() {
 
     const saveOnboardingData = async (data: typeof formData) => {
         const goalWeightValue = Number(data.goalWeight) || 0;
+
+        // Lưu vào bảng User
         await api.updateCurrentUser({
             name: data.name || undefined,
             age: parseInt(data.age.toString()) || undefined,
@@ -67,14 +69,26 @@ export default function OnboardingNew() {
             height_cm: parseFloat(data.height.toString()) || undefined,
             weight_kg: parseFloat(data.weight.toString()) || undefined,
             goal: formatGoalWeight(goalWeightValue),
-            neckCm: data.neck ? parseFloat(data.neck.toString()) : undefined,
-            waistCm: data.waist ? parseFloat(data.waist.toString()) : undefined,
-            hipCm: data.hip ? parseFloat(data.hip.toString()) : undefined,
-            bicepsCm: data.biceps ? parseFloat(data.biceps.toString()) : undefined,
-            thighCm: data.thigh ? parseFloat(data.thigh.toString()) : undefined,
-            activityLevel: data.activityLevel,
-            exercisePreferences: data.exercisePreferences,
+            neck_cm: data.neck ? parseFloat(data.neck.toString()) : undefined,
+            waist_cm: data.waist ? parseFloat(data.waist.toString()) : undefined,
+            hip_cm: data.hip ? parseFloat(data.hip.toString()) : undefined,
+            biceps_cm: data.biceps ? parseFloat(data.biceps.toString()) : undefined,
+            thigh_cm: data.thigh ? parseFloat(data.thigh.toString()) : undefined,
+            activity_level: data.activityLevel,
+            exercise_preferences: data.exercisePreferences,
         });
+
+        // Tạo bản ghi BodyMeasurement với số đo ban đầu
+        if (data.weight) {
+            await api.createOrUpdateBodyMeasurement({
+                weight_kg: parseFloat(data.weight.toString()),
+                neck_cm: data.neck ? parseFloat(data.neck.toString()) : undefined,
+                waist_cm: data.waist ? parseFloat(data.waist.toString()) : undefined,
+                hip_cm: data.hip ? parseFloat(data.hip.toString()) : undefined,
+                biceps_cm: data.biceps ? parseFloat(data.biceps.toString()) : undefined,
+                thigh_cm: data.thigh ? parseFloat(data.thigh.toString()) : undefined,
+            });
+        }
 
         // Refresh user profile in auth context
         const updatedUser = await refreshUser();

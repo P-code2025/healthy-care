@@ -52,6 +52,7 @@ model User {
   chatMessages         ChatMessage[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
+  bodyMeasurement      BodyMeasurement[]
 }
 
 model CalendarEvent {
@@ -184,4 +185,23 @@ model ChatMessage {
   createdAt     DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+
+model BodyMeasurement {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  measuredAt  DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date // chỉ lưu ngày, không giờ
+  weightKg    Float
+  neckCm      Float?
+  waistCm     Float?
+  hipCm       Float?
+  bicepsCm    Float?
+  thighCm     Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, measuredAt])
+  @@index([userId, measuredAt])
 }

@@ -25,6 +25,19 @@ export interface User {
   } | null;
 }
 
+export interface BodyMeasurement {
+  id: number;
+  user_id: number;
+  measured_at: string; 
+  weight_kg: number;
+  neck_cm?: number;
+  waist_cm?: number;
+  hip_cm?: number;
+  biceps_cm?: number;
+  thigh_cm?: number;
+  created_at: string;
+}
+
 export interface FoodLog {
   log_id: number;
   user_id: number;
@@ -157,4 +170,19 @@ export const api = {
     http.request(`/api/statistics/daily?date=${date}`),
   getWeeklyStatistics: (startDate: string, endDate: string): Promise<DailyStatistics[]> =>
     http.request(`/api/statistics/weekly?startDate=${startDate}&endDate=${endDate}`),
+  getBodyMeasurements: (): Promise<BodyMeasurement[]> =>
+  http.request("/api/body-measurements"),
+
+createOrUpdateBodyMeasurement: (data: {
+  weight_kg: number;
+  neck_cm?: number;
+  waist_cm?: number;
+  hip_cm?: number;
+  biceps_cm?: number;
+  thigh_cm?: number;
+}): Promise<any> =>
+  http.request("/api/body-measurements", {
+    method: "POST",
+    json: data,
+  }),
 };
