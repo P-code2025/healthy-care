@@ -1,3 +1,4 @@
+# Cache buster: v2
 [build]
 builder = "nixpacks"
 buildCommand = "npm install --production"
