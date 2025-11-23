@@ -1,10 +1,86 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import styles from './DashboardNew.module.css';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday, startOfMonth, endOfMonth } from 'date-fns';
+import { api, type User } from '../../services/api';
+import weightIcon from '../../assets/weight-svgrepo-com.svg';
+import bmiIcon from '../../assets/watch-svgrepo-com.svg';
+import calorieIcon from '../../assets/carrot-svgrepo-com.svg';
+import exerciseIcon from '../../assets/sneakers-svgrepo-com.svg';
+import morningIcon from '../../assets/sun-svgrepo-com.svg';
+import afternoonIcon from '../../assets/sun-behind-cloud-svgrepo-com.svg';
+import eveningIcon from '../../assets/moon-stars-svgrepo-com.svg';
+import snackIcon from '../../assets/muesli-svgrepo-com.svg';
+import { Plus } from 'lucide-react';
+
+interface CalendarWidgetProps {
+  selectedDate: string;
+  onDateChange: (date: string) => void;
+}
+
+const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedDate, onDateChange }) => {
+  const [viewDate, setViewDate] = useState(new Date());
+
+  const goPrevMonth = () => setViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
+  const goNextMonth = () => setViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1));
+
+  const monthStart = startOfMonth(viewDate);
+  const monthEnd = endOfMonth(viewDate);
+  const startDate = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
+
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+
+  return (
+    <div className={styles.calendarWidget}>
+      <div className={styles.calendarHeader}>
+        <h3>{format(viewDate, 'MMMM yyyy')}</h3>
+        <div className={styles.calendarNav}>
+          <button onClick={goPrevMonth}>‹</button>
+          <button onClick={goNextMonth}>›</button>
+        </div>
+      </div>
+
+      <div className={styles.calendarGrid}>
+        <div className={styles.weekdays}>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+            <div key={index} className={styles.weekday}>{day}</div>
+          ))}
+        </div>
+
+        <div className={styles.calendarDays}>
+          {days.map(date => {
+            const dateStr = format(date, 'yyyy-MM-dd');
+            const isCurrentMonth = date.getMonth() === viewDate.getMonth();
+            const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
+            const isSelected = dateStr === selectedDate;
+
+            return (
+              <div
+                key={dateStr}
+                className={`${styles.calendarDay}
+                  ${!isCurrentMonth ? styles.notCurrentMonth : ''}
+                  ${isToday ? styles.today : ''}
+                  ${isSelected ? styles.selected : ''}
+                `}
+                onClick={() => isCurrentMonth && onDateChange(dateStr)}
+                style={{ cursor: isCurrentMonth ? 'pointer' : 'default' }}
+              >
+                {isCurrentMonth ? date.getDate() : ''}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 interface MealItem {
   id: string;
   name: string;
-  image: string;
+  image?: string;
+  imageAttribution?: string;
   calories: number;
   protein: number;
   carbs: number;
@@ -13,498 +89,455 @@ interface MealItem {
   status: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner';
 }
 
-interface Exercise {
-  id: string;
-  name: string;
-  icon: string;
+interface DailyStats {
+  date: string;
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fat: number;
+  calories_burned: number;
+}
+
+interface FoodLog {
+  log_id: number;
+  food_name: string;
   calories: number;
-  duration: string;
-  status: 'Beginner' | 'Intermediate' | 'Advanced';
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  meal_type: string;
+  eaten_at: string;
+  imageUrl?: string;
 }
 
-interface Activity {
-  id: string;
-  time: string;
-  text: string;
-  user: string;
-  type: 'achievement' | 'update' | 'meal';
+interface WorkoutLog {
+  log_id: number;
+  exercise_name: string;
+  calories_burned_estimated: number;
+  completed_at: string;
 }
-
-const TODAYS_MEALS: MealItem[] = [
-  {
-    id: '1',
-    name: 'Scrambled Eggs with Spinach & Whole Grain Toast',
-    image: '/images/meal-plan/scrambled-eggs.jpg',
-    calories: 300,
-    protein: 25,
-    carbs: 30,
-    fat: 12,
-    time: '8:00 AM',
-    status: 'Breakfast'
-  },
-  {
-    id: '2',
-    name: 'Grilled Chicken Salad with Avocado and Quinoa',
-    image: '/images/meal-plan/grilled-salmon.jpg',
-    calories: 450,
-    protein: 35,
-    carbs: 25,
-    fat: 20,
-    time: '1:00 PM',
-    status: 'Lunch'
-  },
-  {
-    id: '3',
-    name: 'Greek Yogurt with Mixed Berries and Almonds',
-    image: '/images/grocery/greek-yogurt.jpg',
-    calories: 200,
-    protein: 15,
-    carbs: 18,
-    fat: 8,
-    time: '4:00 PM',
-    status: 'Snack'
-  },
-  {
-    id: '4',
-    name: 'Grilled Salmon with Sweet Potato and Green Beans',
-    image: '/images/meal-plan/grilled-salmon.jpg',
-    calories: 500,
-    protein: 40,
-    carbs: 35,
-    fat: 18,
-    time: '7:00 PM',
-    status: 'Dinner'
-  }
-];
-
-const RECOMMENDED_MENU: MealItem[] = [
-  {
-    id: '5',
-    name: 'Oatmeal with Almond Butter and Berries',
-    image: '/images/meal-plan/oatmeal.jpg',
-    calories: 280,
-    protein: 12,
-    carbs: 40,
-    fat: 10,
-    time: '',
-    status: 'Breakfast'
-  },
-  {
-    id: '6',
-    name: 'Grilled Chicken Wrap with Avocado and Spinach',
-    image: '/images/meal-plan/chicken-wrap.jpg',
-    calories: 420,
-    protein: 35,
-    carbs: 30,
-    fat: 18,
-    time: '',
-    status: 'Lunch'
-  }
-];
-
-const RECOMMENDED_EXERCISES: Exercise[] = [
-  {
-    id: '1',
-    name: 'Brisk Walking',
-    icon: '🚶',
-    calories: 200,
-    duration: '30min',
-    status: 'Beginner'
-  },
-  {
-    id: '2',
-    name: 'Bodyweight Squats',
-    icon: '🏋️',
-    calories: 150,
-    duration: '20 min',
-    status: 'Intermediate'
-  },
-  {
-    id: '3',
-    name: 'Dumbbell Squat',
-    icon: '💪',
-    calories: 180,
-    duration: '25 min',
-    status: 'Advanced'
-  }
-];
-
-const RECENT_ACTIVITIES: Activity[] = [
-  {
-    id: '1',
-    time: '10 AM',
-    text: 'Notification sent: Congratulations! You\'ve reached 75% of your cardio endurance goal.',
-    user: 'System',
-    type: 'achievement'
-  },
-  {
-    id: '2',
-    time: '9 AM',
-    text: 'Liesha Matthew completed her 3rd stretching routine in flexibility endurance training.',
-    user: 'Liesha Matthew',
-    type: 'update'
-  },
-  {
-    id: '3',
-    time: '8 AM',
-    text: 'Carllo gramps updated - "I\'ll km morning! Ready to start the day with an endurance improvement."',
-    user: 'Carllo Gramps',
-    type: 'update'
-  },
-  {
-    id: '4',
-    time: '7 AM',
-    text: 'Liesha Matthew logged her lunch meal: Grilled Chicken Wrap with Avocado and Spinach - 420 kcal.',
-    user: 'Liesha Matthew',
-    type: 'meal'
-  }
-];
 
 export default function DashboardNew() {
-  const [currentDate] = useState(new Date());
-  const currentMonth = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const [user, setUser] = useState<User | null>(null);
+  const [todayStats, setTodayStats] = useState<DailyStats | null>(null);
+  const [todayMeals, setTodayMeals] = useState<MealItem[]>([]);
+  const [recentWorkouts, setRecentWorkouts] = useState<WorkoutLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Calendar data
-  const getDaysInMonth = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    const days = [];
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i);
-    }
-    return days;
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const now = new Date();
+
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const startDate = startOfWeek(firstDayOfMonth, { weekStartsOn: 0 });
+  const endDate = endOfWeek(lastDayOfMonth, { weekStartsOn: 0 });
+
+  const days = eachDayOfInterval({ start: startDate, end: endDate })
+    .map(date => {
+      const day = date.getDate();
+      const month = date.getMonth();
+      return month === now.getMonth() ? day : null;
+    });
+
+  const SafeMealImage = ({ src, alt }: { src?: string; alt: string }) => {
+
+
+    return (
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        className={styles.menuImageImg}
+      />
+    );
   };
 
-  const days = getDaysInMonth();
-  const today = currentDate.getDate();
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const [userRes, statsRes, mealsRes, workoutRes] = await Promise.all([
+          api.getCurrentUser(),
+          api.getDailyStatistics(selectedDate),
+          api.getFoodLog().then((logs: FoodLog[]) =>
+            logs.filter(log => format(new Date(log.eaten_at), 'yyyy-MM-dd') === selectedDate)
+          ),
+          api.getWorkoutLog().then((allLogs: WorkoutLog[]) => {
+            const logsForDate = allLogs
+              .filter(log => {
+                const logDate = format(new Date(log.completed_at), 'yyyy-MM-dd');
+                return logDate === selectedDate;
+              })
+              .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
+              .slice(0, 5);
+            return logsForDate;
+          }),
+        ]);
+
+        setUser(userRes);
+        setTodayStats(statsRes);
+        setRecentWorkouts(workoutRes);
+
+        const mappedMeals: MealItem[] = mealsRes.map(log => ({
+          id: String(log.log_id),
+          name: log.food_name,
+          image: log.imageUrl || '/images/meal/default-meal.jpg',
+          calories: log.calories,
+          protein: Math.round(log.protein_g),
+          carbs: Math.round(log.carbs_g),
+          fat: Math.round(log.fat_g),
+          time: format(new Date(log.eaten_at), 'h:mm a'),
+          status: log.meal_type as any,
+        }));
+
+        mappedMeals.sort((a, b) => a.time.localeCompare(b.time));
+        setTodayMeals(mappedMeals);
+      } catch (err) {
+        console.error('Lỗi load dữ liệu:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [selectedDate]);
+
+  const bmi = user?.weight_kg && user?.height_cm
+    ? Number((user.weight_kg / ((user.height_cm / 100) ** 2)).toFixed(1))
+    : 0;
+
+  const tdee = useMemo(() => {
+    if (!user?.weight_kg || !user?.height_cm || !user?.age || !user?.gender) return 2500;
+
+    const weight = user.weight_kg;
+    const height = user.height_cm;
+    const age = user.age || 25;
+    const gender = user.gender || 'male';
+
+    const bmr = gender === 'male'
+      ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
+      : 447.593 + (9.247 * weight) + (3.098 * height) - (4.33 * age);
+
+    return Math.round(bmr * 1.55);
+  }, [user]);
+
+  const calorieIntakePercent = todayStats?.total_calories
+    ? Math.min(100, Math.round((todayStats.total_calories / tdee) * 100))
+    : 0;
+
+  const macroCalories = {
+    protein: (todayStats?.total_protein || 0) * 4,
+    carbs: (todayStats?.total_carbs || 0) * 4,
+    fat: (todayStats?.total_fat || 0) * 9,
+  };
+  const totalEatenCalories = macroCalories.protein + macroCalories.carbs + macroCalories.fat;
+
+  const proteinPct = totalEatenCalories ? (macroCalories.protein / totalEatenCalories) * 100 : 0;
+  const carbsPct = totalEatenCalories ? (macroCalories.carbs / totalEatenCalories) * 100 : 0;
+  const fatPct = totalEatenCalories ? (macroCalories.fat / totalEatenCalories) * 100 : 0;
+
+  const circumference = 2 * Math.PI * 80;
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-xl">Đang tải dữ liệu cá nhân...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.mainContent}>
-
-        {/* Stats Overview */}
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
-            <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
-              ⚖️
+            <div
+              className={styles.statIcon}
+            >
+              <img className={styles.statIcon} src={weightIcon} alt="weight" />
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statLabel}>Weight</div>
-              <div className={styles.statValue}>78 kg</div>
+              <div className={styles.statLabel}>Weight </div>
+              <div className={styles.statValue}>{user?.weight_kg || '--'} kg</div>
             </div>
             <div className={styles.miniChart}>
-              {[40, 60, 30, 80, 50, 70, 60].map((height, i) => (
-                <div key={i} className={styles.miniBar} style={{ height: `${height}%` }}></div>
+              {[60, 70, 65, 78, 76, 78, 77].map((h, i) => (
+                <div key={i} className={styles.miniBar} style={{ height: `${h}%` }}></div>
               ))}
             </div>
           </div>
 
           <div className={styles.statCard}>
-            <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFE5B4 0%, #FFD89B 100%)' }}>
-              👣
+            <div className={styles.statIcon}>
+              <img className={styles.statIcon} src={bmiIcon} alt="bmi" />
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statLabel}>Steps</div>
-              <div className={styles.statValue}>8,000</div>
-            </div>
-            <div className={styles.miniChart}>
-              {[50, 70, 40, 90, 60, 80, 70].map((height, i) => (
-                <div key={i} className={styles.miniBar} style={{ height: `${height}%`, background: '#FFD89B' }}></div>
-              ))}
+              <div className={styles.statLabel}>BMI</div>
+              <div className={styles.statValue}>{bmi || '--'}</div>
             </div>
           </div>
 
           <div className={styles.statCard}>
-            <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)' }}>
-              😴
+            <div className={styles.statIcon}>
+              <img className={styles.statIcon} src={calorieIcon} alt="calories" />
             </div>
             <div className={styles.statContent}>
-              <div className={styles.statLabel}>Sleep</div>
-              <div className={styles.statValue}>6.5 hrs</div>
+              <div className={styles.statLabel}>Calories Today</div>
+              <div className={styles.statValue}>{todayStats?.total_calories || 0}</div>
             </div>
-            <div className={styles.miniChart}>
-              {[60, 50, 70, 80, 60, 90, 75].map((height, i) => (
-                <div key={i} className={styles.miniBar} style={{ height: `${height}%`, background: '#BAE6FD' }}></div>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.statCard}>
-            <div className={styles.statIcon} style={{ background: 'linear-gradient(135deg, #FFD4A3 0%, #FFB84D 100%)' }}>
-              💧
-            </div>
-            <div className={styles.statContent}>
-              <div className={styles.statLabel}>Water Intake</div>
-              <div className={styles.statValue}>1.5 L</div>
-            </div>
-            <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{ width: '75%', background: '#FFB84D' }}></div>
-            </div>
-            <div className={styles.progressLabel}>1,312 mL</div>
           </div>
         </div>
 
-        {/* Charts Row */}
         <div className={styles.chartsRow}>
-          {/* Weight Data */}
           <div className={styles.chartCard}>
             <div className={styles.cardHeader}>
-              <h3>Weight Data</h3>
-              <button className={styles.menuBtn}>⋯</button>
+              <h3>Weight Progress</h3>
             </div>
             <div className={styles.donutChartContainer}>
               <svg viewBox="0 0 200 200" className={styles.donutChart}>
-                <circle cx="100" cy="100" r="70" fill="none" stroke="#FFE5B4" strokeWidth="28"/>
-                <circle cx="100" cy="100" r="70" fill="none" stroke="#FFB84D" strokeWidth="28" 
-                  strokeDasharray="308 440" strokeDashoffset="0" transform="rotate(-90 100 100)"/>
-                <text x="100" y="95" textAnchor="middle" fontSize="36" fontWeight="700" fill="#1a1a1a">78</text>
+                <circle cx="100" cy="100" r="70" fill="none" stroke="#F3F4F6" strokeWidth="28" />
+                <circle cx="100" cy="100" r="70" fill="none" stroke="#10b981" strokeWidth="28"
+                  strokeDasharray={`${(user?.weight_kg || 80) * 4.4} 440`}
+                  transform="rotate(-90 100 100)" />
+                <text x="100" y="95" textAnchor="middle" fontSize="36" fontWeight="700" fill="#1a1a1a">
+                  {user?.weight_kg || '--'}
+                </text>
                 <text x="100" y="115" textAnchor="middle" fontSize="14" fill="#6B7280">kg</text>
               </svg>
-              <div className={styles.donutLegend}>
-                <div className={styles.legendItem}>
-                  <span className={styles.legendDot} style={{ background: '#FFB84D' }}></span>
-                  <span>Progress</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <span className={styles.legendDot} style={{ background: '#FFE5B4' }}></span>
-                  <span>85 kg left</span>
-                </div>
-              </div>
             </div>
             <p className={styles.chartNote}>
-              Progress is progress, no matter how slow. Keep going, you're getting closer to your goal every day.
+              {user?.goal === 'lose_weight' ? 'You are on a weight loss journey. Keep it up!' : 'Never give up! Keep going!'}
             </p>
           </div>
 
-          {/* Calories Intake */}
           <div className={styles.chartCard}>
             <div className={styles.cardHeader}>
-              <h3>Calories Intake</h3>
-              <button className={styles.menuBtn}>⋯</button>
+              <h3>Nutrition Distribution Today</h3>
+              <div className="text-sm text-gray-500">
+                TDEE: <strong>{tdee}</strong> kcal
+              </div>
             </div>
+
             <div className={styles.caloriesChart}>
               <div className={styles.caloriesDonut}>
-                <svg viewBox="0 0 200 200">
-                  <circle cx="100" cy="100" r="80" fill="none" stroke="#F3F4F6" strokeWidth="24"/>
-                  <circle cx="100" cy="100" r="80" fill="none" stroke="#FFB84D" strokeWidth="24"
-                    strokeDasharray="377 503" strokeDashoffset="0" transform="rotate(-90 100 100)"/>
-                  <text x="100" y="95" textAnchor="middle" fontSize="32" fontWeight="700" fill="#1a1a1a">1240</text>
-                  <text x="100" y="115" textAnchor="middle" fontSize="14" fill="#6B7280">kcal</text>
+                <svg viewBox="0 0 200 200" className={styles.macroDonut}>
+                  <circle cx="100" cy="100" r="80" fill="none" stroke="#F3F4F6" strokeWidth="36" />
+
+                  <circle
+                    cx="100" cy="100" r="80"
+                    fill="none" stroke="#FCA5A5" strokeWidth="36"
+                    strokeDasharray={`${(fatPct / 100) * circumference} ${circumference}`}
+                    strokeDashoffset={0}
+                    transform="rotate(-90 100 100)"
+                    className={styles.macroRing}
+                  />
+
+                  <circle
+                    cx="100" cy="100" r="80"
+                    fill="none" stroke="#FFB84D" strokeWidth="36"
+                    strokeDasharray={`${(carbsPct / 100) * circumference} ${circumference}`}
+                    strokeDashoffset={-(fatPct / 100) * circumference}
+                    transform="rotate(-90 100 100)"
+                    className={styles.macroRing}
+                  />
+
+                  <circle
+                    cx="100" cy="100" r="80"
+                    fill="none" stroke="#10b981" strokeWidth="36"
+                    strokeDasharray={`${(proteinPct / 100) * circumference} ${circumference}`}
+                    strokeDashoffset={-((fatPct + carbsPct) / 100) * circumference}
+                    transform="rotate(-90 100 100)"
+                    className={styles.macroRing}
+                  />
+
+                  <text x="100" y="85" textAnchor="middle" fontSize="32" fontWeight="700" fill="#1a1a1a">
+                    {todayStats?.total_calories || 0}
+                  </text>
+                  <text x="100" y="110" textAnchor="middle" fontSize="13" fill="#6B7280">
+                    {calorieIntakePercent}% of TDEE
+                  </text>
                 </svg>
               </div>
+
               <div className={styles.caloriesBreakdown}>
                 <div className={styles.breakdownItem}>
                   <div className={styles.breakdownLabel}>
+                    <span className={styles.breakdownDot} style={{ background: '#10b981' }}></span>
+                    <span>Protein</span>
+                  </div>
+                  <div className={styles.breakdownBar}>
+                    <div className={styles.breakdownFill} style={{ width: `${Math.min(100, (todayStats?.total_protein || 0) / 2)}%`, background: '#10b981' }}></div>
+                  </div>
+                  <span className={styles.breakdownValue}>{Math.round(todayStats?.total_protein || 0)}g</span>
+                </div>
+
+                <div className={styles.breakdownItem}>
+                  <div className={styles.breakdownLabel}>
                     <span className={styles.breakdownDot} style={{ background: '#FFB84D' }}></span>
-                    <span>Carbohydrates</span>
+                    <span>Carbs</span>
                   </div>
                   <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ width: '37%', background: '#FFB84D' }}></div>
+                    <div className={styles.breakdownFill} style={{ width: `${Math.min(100, (todayStats?.total_carbs || 0) / 4)}%`, background: '#FFB84D' }}></div>
                   </div>
-                  <span className={styles.breakdownValue}>120 mg</span>
-                  <span className={styles.breakdownPercent}>37%</span>
+                  <span className={styles.breakdownValue}>{Math.round(todayStats?.total_carbs || 0)}g</span>
                 </div>
+
                 <div className={styles.breakdownItem}>
                   <div className={styles.breakdownLabel}>
-                    <span className={styles.breakdownDot} style={{ background: '#A7E9AF' }}></span>
-                    <span>Proteins</span>
+                    <span className={styles.breakdownDot} style={{ background: '#FCA5A5' }}></span>
+                    <span>Fat</span>
                   </div>
                   <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ width: '53%', background: '#A7E9AF' }}></div>
+                    <div className={styles.breakdownFill} style={{ width: `${Math.min(100, (todayStats?.total_fat || 0) / 1)}%`, background: '#FCA5A5' }}></div>
                   </div>
-                  <span className={styles.breakdownValue}>70 mg</span>
-                  <span className={styles.breakdownPercent}>53%</span>
-                </div>
-                <div className={styles.breakdownItem}>
-                  <div className={styles.breakdownLabel}>
-                    <span className={styles.breakdownDot} style={{ background: '#FFD89B' }}></span>
-                    <span>Fats</span>
-                  </div>
-                  <div className={styles.breakdownBar}>
-                    <div className={styles.breakdownFill} style={{ width: '45%', background: '#FFD89B' }}></div>
-                  </div>
-                  <span className={styles.breakdownValue}>20 mg</span>
-                  <span className={styles.breakdownPercent}>45%</span>
+                  <span className={styles.breakdownValue}>{Math.round(todayStats?.total_fat || 0)}g </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Workout Progress */}
         <div className={styles.workoutSection}>
           <div className={styles.sectionHeader}>
-            <h3>Workout Progress</h3>
-            <button className={styles.viewAllBtn}>This Week ›</button>
+            <h3>Recent Workouts</h3>
           </div>
           <div className={styles.workoutGrid}>
-            <div className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
-              <div className={styles.workoutIcon}>🏃</div>
-              <div className={styles.workoutInfo}>
-                <div className={styles.workoutName}>Running 5 km</div>
-                <div className={styles.workoutStats}>75% Unit • Cardio</div>
+            {recentWorkouts.length > 0 ? (
+              recentWorkouts.map(w => (
+                <div key={w.log_id} className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
+                  <img className={styles.statIcon} src={exerciseIcon} alt="exercise" />
+                  <div className={styles.workoutInfo}>
+                    <div className={styles.workoutName}>{w.exercise_name}</div>
+                    <div className={styles.workoutStats}>Burn {w.calories_burned_estimated} kcal</div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className={styles.emptyStateCard}>
+                <p className="text-lg font-medium text-gray-700 mt-4">No exercises today</p>
+                <p className="text-sm text-gray-500 mb-6">Start your workout journey now!</p>
+                <a href="/exercises" className={styles.primaryButton}>
+                  <Plus className="w-5 h-5" />
+                  Add your first exercise
+                </a>
               </div>
-            </div>
-            <div className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #FFE5B4 0%, #FFD89B 100%)' }}>
-              <div className={styles.workoutIcon}>🚴</div>
-              <div className={styles.workoutInfo}>
-                <div className={styles.workoutName}>Squatting 10kg</div>
-                <div className={styles.workoutStats}>60% Unit • Strength</div>
-              </div>
-            </div>
-            <div className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #FFD4A3 0%, #FFB84D 100%)' }}>
-              <div className={styles.workoutIcon}>🤸</div>
-              <div className={styles.workoutInfo}>
-                <div className={styles.workoutName}>Stretching 10 hads</div>
-                <div className={styles.workoutStats}>50% Unit • Flexibility</div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Recommended Menu */}
         <div className={styles.recommendedSection}>
           <div className={styles.sectionHeader}>
-            <h3>Recommended Menu</h3>
-            <button className={styles.viewAllBtn}>See All ›</button>
+            <h3>Today's Meals</h3>
           </div>
-          <div className={styles.menuGrid}>
-            {RECOMMENDED_MENU.map(meal => (
-              <div key={meal.id} className={styles.menuCard}>
-                <div className={styles.menuImage}>
-                  <img src={meal.image} alt={meal.name} />
-                  <span className={styles.menuBadge} style={{
-                    background: meal.status === 'Breakfast' ? '#D4F4DD' : '#FFE5B4'
-                  }}>
-                    {meal.status}
-                  </span>
-                </div>
-                <div className={styles.menuContent}>
-                  <div className={styles.menuCalories}>
-                    <span className={styles.caloriesIcon}>🔥</span>
-                    {meal.calories} kcal
+          <div className={styles.mealsGrid}>
+            {todayMeals.length > 0 ? (
+              todayMeals.map((meal) => (
+                <div key={meal.id} className={styles.mealCardModern}>
+                  <div className={styles.mealCardHeader}>
+                    <div className={styles.mealTypeBadge} data-type={meal.status}>
+                      <span>
+                        {meal.status === 'Breakfast' && <img className={styles.mealIcon} src={morningIcon} alt="Breakfast" />}
+                        {meal.status === 'Lunch' && <img className={styles.mealIcon} src={afternoonIcon} alt="Lunch" />}
+                        {meal.status === 'Snack' && <img className={styles.mealIcon} src={snackIcon} alt="Snack" />}
+                        {meal.status === 'Dinner' && <img className={styles.mealIcon} src={eveningIcon} alt="Dinner" />}
+                      </span>
+                      <span>{meal.status}</span>
+                    </div>
+                    <div className={styles.mealTime}>{meal.time}</div>
                   </div>
-                  <h4 className={styles.menuTitle}>{meal.name}</h4>
-                  <div className={styles.menuMacros}>
-                    High in fiber and antioxidants, promoting digestive health and reducing inflammation...
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Recommended Exercises */}
-        <div className={styles.recommendedSection}>
-          <div className={styles.sectionHeader}>
-            <h3>Recommended Exercises</h3>
-            <button className={styles.viewAllBtn}>See All ›</button>
-          </div>
-          <div className={styles.exercisesGrid}>
-            {RECOMMENDED_EXERCISES.map(exercise => (
-              <div key={exercise.id} className={styles.exerciseCard}>
-                <div className={styles.exerciseIcon}>{exercise.icon}</div>
-                <div className={styles.exerciseContent}>
-                  <h4 className={styles.exerciseName}>{exercise.name}</h4>
-                  <div className={styles.exerciseStats}>
-                    <span>🔥 {exercise.calories} kcal</span>
-                    <span>⏱️ {exercise.duration}</span>
+                  <div className={styles.mealCardBody}>
+                    <h4 className={styles.mealName}>{meal.name}</h4>
+                    <div className={styles.mealCaloriesBig}>
+                      {meal.calories.toLocaleString()} kcal
+                    </div>
                   </div>
-                  <span className={`${styles.exerciseBadge} ${styles[exercise.status.toLowerCase()]}`}>
-                    {exercise.status}
-                  </span>
+
+                  <div className={styles.mealMacrosGrid}>
+                    <div className={styles.macroItem}>
+                      <span className={styles.macroLabel}>Protein</span>
+                      <span className={styles.macroValueProtein}>{meal.protein}g</span>
+                    </div>
+                    <div className={styles.macroItem}>
+                      <span className={styles.macroLabel}>Carbs</span>
+                      <span className={styles.macroValueCarbs}>{meal.carbs}g</span>
+                    </div>
+                    <div className={styles.macroItem}>
+                      <span className={styles.macroLabel}>Fat</span>
+                      <span className={styles.macroValueFat}>{meal.fat}g</span>
+                    </div>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className={styles.emptyStateCard}>
+                <p className="text-lg font-medium text-gray-700 mt-4">No exercises today</p>
+                <p className="text-sm text-gray-500 mb-6">Track your nutrition to reach your goals faster!</p>
+                <a href="/food-diary" className={styles.primaryButton}>
+                  <Plus className="w-5 h-5" />
+                  Log your first meal
+                </a>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
       </div>
 
-      {/* Right Sidebar */}
       <div className={styles.rightSidebar}>
-        {/* Calendar Widget */}
-        <div className={styles.calendarWidget}>
-          <div className={styles.calendarHeader}>
-            <h3>{currentMonth}</h3>
-            <div className={styles.calendarNav}>
-              <button>‹</button>
-              <button>›</button>
-            </div>
-          </div>
-          <div className={styles.calendarGrid}>
-            <div className={styles.weekdays}>
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                <div key={i} className={styles.weekday}>{day}</div>
-              ))}
-            </div>
-            <div className={styles.calendarDays}>
-              {days.map((day, i) => (
-                <div 
-                  key={i} 
-                  className={`${styles.calendarDay} ${day === today ? styles.today : ''} ${day === 5 ? styles.selected : ''}`}
-                >
-                  {day || ''}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <CalendarWidget selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
-        {/* Today's Meals */}
         <div className={styles.sidebarSection}>
-          <h3 className={styles.sidebarTitle}>September 2025</h3>
-          <div className={styles.mealsList}>
-            {TODAYS_MEALS.map(meal => (
-              <div key={meal.id} className={styles.mealItem}>
-                <div className={styles.mealImage}>
-                  <img src={meal.image} alt={meal.name} />
-                </div>
-                <div className={styles.mealInfo}>
-                  <span className={styles.mealBadge} style={{
-                    background: meal.status === 'Breakfast' ? '#D4F4DD' :
-                              meal.status === 'Lunch' ? '#FFE5B4' :
-                              meal.status === 'Snack' ? '#FFD4A3' : '#BAE6FD'
-                  }}>
-                    {meal.status}
-                  </span>
-                  <span className={styles.mealCalories}>🔥 {meal.calories} kcal</span>
-                  <h4 className={styles.mealName}>{meal.name}</h4>
-                  <div className={styles.mealMacros}>
-                    {meal.protein}g Protein • {meal.carbs}g Carbs • {meal.fat}g Fat
+          <h3 className={styles.sidebarTitle}>Today's Meals</h3>
+          <div className={styles.mealsListModern}>
+            {todayMeals.length > 0 ? (
+              todayMeals.map((meal) => (
+                <div key={meal.id} className={styles.mealItemModern}>
+                  <div data-type={meal.status}>
+                    {meal.status === 'Breakfast' && <img className={styles.mealIconSmall} src={morningIcon} alt="Breakfast" />}
+                    {meal.status === 'Lunch' && <img className={styles.mealIconSmall} src={afternoonIcon} alt="Lunch" />}
+                    {meal.status === 'Snack' && <img className={styles.mealIconSmall} src={snackIcon} alt="Snack" />}
+                    {meal.status === 'Dinner' && <img className={styles.mealIconSmall} src={eveningIcon} alt="Dinner" />}
+                  </div>
+                  <div className={styles.mealInfoCompact}>
+                    <div className={styles.mealHeaderLine}>
+                      <span className={styles.mealNameCompact}>{meal.name}</span>
+                      <span className={styles.mealTimeSmall}>{meal.time}</span>
+                    </div>
+                    <div className={styles.mealMacrosCompact}>
+                      <span>P {meal.protein}g</span>
+                      <span>C {meal.carbs}g</span>
+                      <span>F {meal.fat}g</span>
+                      <span className={styles.caloriesSmall}>• {meal.calories} kcal</span>
+                    </div>
                   </div>
                 </div>
-                <button className={styles.expandBtn}>›</button>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-8 text-sm">No meals yet today</p>
+            )}
           </div>
         </div>
 
-        {/* Recent Activity */}
         <div className={styles.sidebarSection}>
           <div className={styles.sectionHeader}>
             <h3 className={styles.sidebarTitle}>Recent Activity</h3>
-            <button className={styles.menuBtn}>⋯</button>
           </div>
           <div className={styles.activityList}>
-            {RECENT_ACTIVITIES.map(activity => (
-              <div key={activity.id} className={styles.activityItem}>
-                <div className={styles.activityIcon} style={{
-                  background: activity.type === 'achievement' ? '#D4F4DD' :
-                            activity.type === 'meal' ? '#FFE5B4' : '#E0F2FE'
-                }}>
-                  {activity.type === 'achievement' ? '✓' :
-                   activity.type === 'meal' ? '🍽️' : '👤'}
-                </div>
+            {recentWorkouts.map(w => (
+              <div key={w.log_id} className={styles.activityItem}>
+                <div className={styles.activityIcon} style={{ background: '#D4F4DD' }}>✓</div>
                 <div className={styles.activityContent}>
-                  <div className={styles.activityTime}>{activity.time}</div>
-                  <div className={styles.activityText}>{activity.text}</div>
+                  <div className={styles.activityTime}>
+                    {format(new Date(w.completed_at), 'h:mm a')}
+                  </div>
+                  <div className={styles.activityText}>
+                    Completed: {w.exercise_name} – burned {w.calories_burned_estimated} kcal
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,0 +1,133 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+}
+
+.container.compact {
+    padding: 40px 20px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.iconWrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--bg-green-light) 0%, var(--gray-100) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.compact .iconWrapper {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 16px;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.icon {
+    font-size: 36px;
+    filter: grayscale(0.3);
+}
+
+.compact .icon {
+    font-size: 28px;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.compact .title {
+    font-size: 18px;
+}
+
+.description {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin: 0 0 24px 0;
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+.compact .description {
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+.actionBtn {
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-hover) 100%);
+    color: var(--white);
+    border: none;
+    padding: 12px 28px;
+    border-radius: var(--radius-lg);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: 0 4px 12px rgba(143, 209, 79, 0.3);
+}
+
+.actionBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(143, 209, 79, 0.4);
+}
+
+.actionBtn:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding: 40px 16px;
+    }
+
+    .iconWrapper {
+        width: 64px;
+        height: 64px;
+    }
+
+    .icon {
+        font-size: 28px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+
+    .description {
+        font-size: 14px;
+    }
+}

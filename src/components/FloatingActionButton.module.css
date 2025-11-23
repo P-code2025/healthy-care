@@ -1,0 +1,180 @@
+.fabContainer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 999;
+}
+
+.backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(2px);
+    z-index: -1;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.actionsList {
+    position: absolute;
+    bottom: 80px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.actionBtn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--white);
+    border: none;
+    border-radius: var(--radius-full);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    white-space: nowrap;
+    animation: actionSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+@keyframes actionSlide {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.actionBtn:hover {
+    transform: translateX(-4px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.actionIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.actionLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding-right: 4px;
+}
+
+.fab {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);
+    border: none;
+    box-shadow: 0 8px 24px rgba(143, 209, 79, 0.4);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 32px rgba(143, 209, 79, 0.5);
+}
+
+.fab:active {
+    transform: scale(0.95);
+}
+
+.fab.expanded {
+    transform: rotate(45deg);
+}
+
+.fab.expanded:hover {
+    transform: rotate(45deg) scale(1.1);
+}
+
+.fabIcon {
+    font-size: 28px;
+    color: var(--white);
+    font-weight: 300;
+    transition: transform var(--transition-base);
+}
+
+/* Hide on small screens when keyboard is visible */
+@media (max-height: 500px) {
+    .fabContainer {
+        display: none;
+    }
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+    .fabContainer {
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .fab {
+        width: 56px;
+        height: 56px;
+    }
+
+    .fabIcon {
+        font-size: 24px;
+    }
+
+    .actionsList {
+        bottom: 72px;
+    }
+
+    .actionBtn {
+        padding: 10px 14px;
+    }
+
+    .actionIcon {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .actionLabel {
+        font-size: 13px;
+    }
+}

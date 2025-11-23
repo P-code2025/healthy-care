@@ -1,20 +1,41 @@
 // src/services/api.ts
 
+import { http } from "./http";
+
 export interface User {
   user_id: number;
   email: string;
   password_hash: string;
-  age: number;
-  gender: string;
-  height_cm: number;
-  weight_kg: number;
-  goal: string;
-  activity_level: string;
+  name: string | null;           // thêm null
+  age: number | null;
+  gender: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  neck_cm: number | null;        // THÊM
+  waist_cm: number | null;       // THÊM
+  hip_cm: number | null;         // THÊM
+  biceps_cm: number | null;      // THÊM
+  thigh_cm: number | null;       // THÊM
+  goal: string | null;
+  activity_level: string | null;
   exercise_preferences: {
     yoga: boolean;
     gym: boolean;
     [key: string]: boolean;
-  };
+  } | null;
+}
+
+export interface BodyMeasurement {
+  id: number;
+  user_id: number;
+  measured_at: string;
+  weight_kg: number;
+  neck_cm?: number;
+  waist_cm?: number;
+  hip_cm?: number;
+  biceps_cm?: number;
+  thigh_cm?: number;
+  created_at: string;
 }
 
 export interface FoodLog {
@@ -50,19 +71,136 @@ export interface AiSuggestion {
   content_details: any;
 }
 
-const BASE_URL = "http://localhost:4000";
-
-async function fetchData<T>(endpoint: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}/${endpoint}`);
-  if (!res.ok) throw new Error("API error");
-  return res.json();
+export interface DailyStatistics {
+  date: string;
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fat: number;
+  calories_burned: number;
+  exercise_duration: number;
+  meals_count: number;
+  workouts_count: number;
 }
 
-export const api = {
-  getUsers: (): Promise<User[]> => fetchData<User[]>("users"),
-  getFoodLog: (): Promise<FoodLog[]> => fetchData<FoodLog[]>("food_log"),
-  getWorkoutLog: (): Promise<WorkoutLog[]> =>
-    fetchData<WorkoutLog[]>("workout_log"),
-  getAiSuggestions: (): Promise<AiSuggestion[]> =>
-    fetchData<AiSuggestion[]>("ai_suggestions"),
+type UserUpdatePayload = Partial<
+  Omit<User, "user_id" | "email" | "password_hash">
+> & {
+  name?: string;
+  age?: number;
+  gender?: string;
+  goal?: string;
+  heightCm?: number;
+  weightKg?: number;
+  neckCm?: number;
+  waistCm?: number;
+  hipCm?: number;
+  bicepsCm?: number;
+  thighCm?: number;
+  activityLevel?: string;
+  exercisePreferences?: User["exercise_preferences"];
+  tdee?: number;
+  recommendedCalories?: number;
+  goalType?: string;
 };
+
+const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {
+  const payload: Record<string, unknown> = {};
+
+  // Helper to handle both camelCase and snake_case variants
+  const assignField = (
+    camelKey: keyof UserUpdatePayload,
+    snakeKey: string
+  ) => {
+    if (
+      Object.prototype.hasOwnProperty.call(data, camelKey) ||
+      Object.prototype.hasOwnProperty.call(data, snakeKey)
+    ) {
+      const value =
+        Object.prototype.hasOwnProperty.call(data, camelKey) &&
+          data[camelKey] !== undefined
+          ? data[camelKey]
+          : (data as any)[snakeKey];
+      payload[camelKey as string] = value;
+    }
+  };
+
+  // Simple fields (no snake_case variants)
+  if (Object.prototype.hasOwnProperty.call(data, "name")) {
+    payload.name = data.name;
+  }
+  if (Object.prototype.hasOwnProperty.call(data, "age")) {
+    payload.age = data.age;
+  }
+  if (Object.prototype.hasOwnProperty.call(data, "gender")) {
+    payload.gender = data.gender;
+  }
+  if (Object.prototype.hasOwnProperty.call(data, "goal")) {
+    payload.goal = data.goal;
+  }
+
+  // Fields with camelCase/snake_case variants
+  assignField("heightCm", "height_cm");
+  assignField("weightKg", "weight_kg");
+  assignField("neckCm", "neck_cm");
+  assignField("waistCm", "waist_cm");
+  assignField("hipCm", "hip_cm");
+  assignField("bicepsCm", "biceps_cm");
+  assignField("thighCm", "thigh_cm");
+  assignField("activityLevel", "activity_level");
+  assignField("exercisePreferences", "exercise_preferences");
+
+  return payload;
+};
+
+export const api = {
+  getUsers: (): Promise<User[]> => http.request("/api/users"),
+  getCurrentUser: (): Promise<User> => http.request("/api/users/me"),
+  updateCurrentUser: (data: UserUpdatePayload): Promise<User> =>
+    http.request("/api/users/me", {
+      method: "PUT",
+      json: normalizeUserUpdatePayload(data),
+    }),
+  getFoodLog: (): Promise<FoodLog[]> => http.request("/api/food-log"),
+  getWorkoutLog: (params?: { start?: string; end?: string }): Promise<WorkoutLog[]> =>
+    http.request("/api/workout-log", { params }),
+  getAiSuggestions: (): Promise<AiSuggestion[]> =>
+    http.request("/api/ai-suggestions"),
+  getDailyStatistics: (date: string): Promise<DailyStatistics> =>
+    http.request(`/api/statistics/daily?date=${date}`),
+  getWeeklyStatistics: (startDate: string, endDate: string): Promise<DailyStatistics[]> =>
+    http.request(`/api/statistics/weekly?startDate=${startDate}&endDate=${endDate}`),
+  getBodyMeasurements: (): Promise<BodyMeasurement[]> =>
+    http.request("/api/body-measurements"),
+
+  createOrUpdateBodyMeasurement: (data: {
+    weight_kg: number;
+    neck_cm?: number;
+    waist_cm?: number;
+    hip_cm?: number;
+    biceps_cm?: number;
+    thigh_cm?: number;
+  }): Promise<any> =>
+    http.request("/api/body-measurements", {
+      method: "POST",
+      json: data,
+    }),
+
+  uploadProgressPhoto: (data: {
+    date: string;
+    view: string;
+    imageBase64: string;
+    note?: string
+  }) =>
+    http.request("/api/progress-photos", {
+      method: "POST",
+      json: data,  
+    }),
+
+  getProgressPhotos: (date?: string) =>
+    http.request("/api/progress-photos", {
+      params: date ? { date } : undefined
+    }),
+};
+
+

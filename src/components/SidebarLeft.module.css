@@ -91,7 +91,7 @@
   font-weight: 600;
 }
 
-/* Dropdown mở nhưng KHÔNG active */
+/* Dropdown is expanded but not active */
 .open {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-sidebar);

@@ -5,7 +5,7 @@ import styles from "./SidebarNew.module.css";
 const menuItems = [
   { name: "Dashboard", icon: "📊", path: "/", badge: null },
   { name: "Calendar", icon: "📅", path: "/calendar", badge: null },
-  { name: "Messages", icon: "💬", path: '/messages', badge: null },
+  { name: "AI Chat", icon: "💬", path: '/messages', badge: null },
   { name: "Healthy Menu", icon: "🥗", path: "/healthy-menu", badge: null },
   { name: "Meal Plan", icon: "📝", path: "/meal-plan", badge: null },
   { name: "Food Diary", icon: "📔", path: "/food-diary", badge: null },

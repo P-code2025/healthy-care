@@ -1,47 +1,131 @@
-// src/context/AuthContext.tsx
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
+import { api } from "../services/api";
+import type { User } from "../services/api";
+import { http } from "../services/http";
 
-interface AuthState {
+export interface AuthContextValue {
+  user: User | null;
   isLoggedIn: boolean;
   isOnboarded: boolean;
-  user?: any;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (payload: Record<string, any>) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
-interface AuthContextValue extends AuthState {
-  login: () => void;
-  logout: () => void;
-  finishOnboarding: () => void;
-}
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const mapAuthResponse = (data: any): User | null => {
+  if (data?.accessToken && data?.refreshToken) {
+    http.setTokens(data.accessToken, data.refreshToken);
+  }
+  const user = data?.user as User | undefined;
+  return user ?? null;
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // ĐỌC TRỰC TIẾP TỪ localStorage KHI KHỞI TẠO
-  const [state, setState] = useState<AuthState>(() => {
-    const logged = localStorage.getItem("isLoggedIn") === "true";
-    const onboarded = localStorage.getItem("isOnboarded") === "true";
-    return { isLoggedIn: logged, isOnboarded: onboarded };
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = () => {
-    localStorage.setItem("isLoggedIn", "true");
-    setState((s) => ({ ...s, isLoggedIn: true }));
-  };
+  useEffect(() => {
+    let isMounted = true;
+    const unsubscribe = http.onUnauthorized(() => {
+      if (isMounted) setUser(null);
+    });
 
-  const logout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("isOnboarded");
-    localStorage.removeItem("userProfile");
-    setState({ isLoggedIn: false, isOnboarded: false });
-  };
+    const bootstrap = async () => {
+      if (!http.getAccessToken()) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+      try {
+        const profile = await api.getCurrentUser();
+        // Check token still exists after async operation to prevent race condition
+        // If user logged out while getCurrentUser was pending, don't set user
+        if (isMounted && http.getAccessToken()) {
+          setUser(profile);
+        }
+      } catch (error) {
+        http.clearTokens();
+        if (isMounted) setUser(null);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
 
-  const finishOnboarding = () => {
-    localStorage.setItem("isOnboarded", "true");
-    setState((s) => ({ ...s, isOnboarded: true }));
-  };
+    bootstrap();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const data = await http.request("/api/auth/login", {
+      method: "POST",
+      json: { email, password },
+      skipAuth: true,
+    });
+    const profile = mapAuthResponse(data);
+    setUser(profile);
+  }, []);
+
+  const register = useCallback(async (payload: Record<string, any>) => {
+    const data = await http.request("/api/auth/register", {
+      method: "POST",
+      json: payload,
+      skipAuth: true,
+    });
+    const profile = mapAuthResponse(data);
+    setUser(profile);
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await http.request("/api/auth/logout", { method: "POST" });
+    } catch {
+    } finally {
+      http.clearTokens();
+      setUser(null);
+    }
+  }, []);
+
+  const refreshUser = useCallback(async (): Promise<User | null> => {
+    try {
+      const profile = await api.getCurrentUser();
+      setUser(profile);
+      return profile;
+    } catch (error) {
+      console.error("Failed to refresh user:", error);
+      return null;
+    }
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isLoggedIn: Boolean(user),
+      isOnboarded: Boolean(user?.weight_kg && user?.height_cm),
+      loading,
+      login,
+      register,
+      logout,
+      refreshUser,
+    }),
+    [user, loading, login, register, logout, refreshUser]
+  );
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, finishOnboarding }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,0 +1,125 @@
+.confidenceMeter {
+    width: 100%;
+}
+
+.label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.labelText {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.percentage {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.percentage.high {
+    color: #10b981;
+}
+
+.percentage.medium {
+    color: #f59e0b;
+}
+
+.percentage.low {
+    color: #ef4444;
+}
+
+.barContainer {
+    position: relative;
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.bar {
+    position: relative;
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.bar.high {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.bar.medium {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.bar.low {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.barShine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.3) 50%,
+            transparent 100%);
+    animation: shine 2s ease-in-out infinite;
+}
+
+@keyframes shine {
+    to {
+        left: 100%;
+    }
+}
+
+.levelIndicator {
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+/* Size variants */
+.small {
+    font-size: 12px;
+}
+
+.small .barContainer {
+    height: 6px;
+}
+
+.large .barContainer {
+    height: 10px;
+}
+
+/* Badge variant */
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.badge.high {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge.medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge.low {
+    background: #fee2e2;
+    color: #991b1b;
+}

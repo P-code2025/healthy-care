@@ -18,14 +18,13 @@ export interface ClovaCompletionRequest {
 }
 
 export class ClovaXClient {
-  private apiKey: string;
   private appId: string;
   private endpoint: string;
 
   constructor(appId: string) {
     this.appId = appId;
-    this.apiKey = import.meta.env.VITE_NCP_API_KEY || "";
-    this.endpoint = "/api/clova/v3/chat-completions/HCX-005";
+    // Use backend proxy instead of direct CLOVA API
+    this.endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/clova-proxy/chat-completions/${appId}`;
   }
 
   createRequest(messages: ClovaMessage[]): ClovaCompletionRequest {
@@ -34,7 +33,7 @@ export class ClovaXClient {
       topP: 0.8,
       temperature: 0.5,
       repetitionPenalty: 1.1,
-      maxTokens: 4091, // TỐI ĐA CLOVA X
+      maxTokens: 4091, // Maximum tokens supported by CLOVA X
       includeAiFilters: true,
       stop: [],
       seed: 0,
@@ -43,22 +42,17 @@ export class ClovaXClient {
 
   async createChatCompletion(request: ClovaCompletionRequest) {
     const requestId = uuidv4();
-    const url = `/api/clova/v3/chat-completions/${this.appId}`;
 
-    console.log("URL:", url);
-    console.log("Headers:", {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
-      'X-NCP-CLOVASTUDIO-REQUEST-ID': requestId
-    });
-    console.log("Body length:", JSON.stringify(request).length);
-    console.log("Body (first 500 chars):", JSON.stringify(request).slice(0, 500));
+    if (import.meta.env.DEV) {
+      console.log("CLOVA Request URL:", this.endpoint);
+      console.log("Request ID:", requestId);
+      console.log("Body length:", JSON.stringify(request).length);
+    }
 
-    const response = await fetch(url, {
+    const response = await fetch(this.endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
         'X-NCP-CLOVASTUDIO-REQUEST-ID': requestId,
       },
       body: JSON.stringify(request),

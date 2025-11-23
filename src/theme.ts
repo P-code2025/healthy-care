@@ -4,7 +4,7 @@ import { createTheme } from "@mui/material/styles";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#22c55e", // xanh lá
+      main: "#22c55e", // primary accent green
       contrastText: "#ffffff",
     },
     background: {
@@ -22,7 +22,7 @@ const theme = createTheme({
             fontWeight: 600,
           },
           "&.Mui-selected:hover": {
-            backgroundColor: "#f0fdf4", // hover nhẹ xanh lá nhạt
+            backgroundColor: "#f0fdf4", // light green hover effect
           },
         },
       },

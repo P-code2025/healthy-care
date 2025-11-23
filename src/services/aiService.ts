@@ -1,13 +1,57 @@
-// CLOVA Studio API Service for Food Recognition
-// Using HCX-005 Vision Model
+import { http } from './http';
+import { foodDiaryApi, mapFoodLogToEntry, type FoodEntryInput} from "./foodDiaryApi";
 
-const CLOVA_API_KEY = 'nv-4d279739705c404bb355aaefef76c60cvHMd';
-const CLOVA_API_URL = 'https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005';
+// Type definitions (inline to avoid import issues)
+interface FoodEntry {
+  date: string;
+  time: string;
+  mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack";
+  foodName: string;
+  amount: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  sugar: number;
+  status: string;
+  thoughts?: string;
+  imageUrl?: string;
+  imageAttribution?: string;
+}
+
+
+// CLOVA credentials
+const CLOVA_API_KEY = import.meta.env.VITE_CLOVA_API_KEY;
+const CLOVA_API_URL = import.meta.env.VITE_CLOVA_API_URL || 'https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-005';
+
+// Validate API key is configured
+if (!CLOVA_API_KEY && !import.meta.env.DEV) {
+  console.warn('⚠️ CLOVA_API_KEY is not configured. AI food recognition will use demo mode.');
+}
 
 // Configuration
-const DEMO_MODE = true; // CLOVA API có vấn đề với format, tạm dùng mock data
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'; // Use env variable to control demo mode
 const USE_PROXY = true;  // Must be true when calling from browser
-const PROXY_URL = 'http://localhost:3001'; // Backend proxy server
+const PROXY_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'; // Backend proxy server
+
+// Constants
+const MAX_IMAGE_SIZE_MB = 5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const AI_SIMULATION_MIN_DELAY = 1500;
+const AI_SIMULATION_MAX_DELAY = 2500;
+
+const getMealTypeForDate = (date: Date): FoodEntry["mealType"] => {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 11) return "Breakfast";
+  if (hour >= 11 && hour < 15) return "Lunch";
+  if (hour >= 18 && hour < 22) return "Dinner";
+  return "Snack";
+};
+
+const formatLocalTime = (date: Date) =>
+  date
+    .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+    .replace(".", ":");
 
 export interface FoodRecognitionResult {
   foodName: string;
@@ -18,18 +62,6 @@ export interface FoodRecognitionResult {
   portionSize: string;
   confidence: number; // 0-1
 }
-
-// Mock food database for demo
-const MOCK_FOODS = [
-  { foodName: 'Phở bò', calories: 180, protein: 12.5, carbs: 25, fats: 3.2, confidence: 0.88 },
-  { foodName: 'Cơm tấm sườn', calories: 420, protein: 28, carbs: 52, fats: 12, confidence: 0.92 },
-  { foodName: 'Bánh mì thịt', calories: 360, protein: 18, carbs: 45, fats: 14, confidence: 0.85 },
-  { foodName: 'Bún chả', calories: 310, protein: 22, carbs: 38, fats: 8.5, confidence: 0.80 },
-  { foodName: 'Gỏi cuốn tôm', calories: 95, protein: 8, carbs: 12, fats: 2.5, confidence: 0.87 },
-  { foodName: 'Cơm gà xối mỡ', calories: 385, protein: 31, carbs: 42, fats: 10, confidence: 0.90 },
-  { foodName: 'Salad rau trộn', calories: 65, protein: 3, carbs: 8, fats: 2.8, confidence: 0.75 },
-  { foodName: 'Bún bò Huế', calories: 330, protein: 20, carbs: 40, fats: 9, confidence: 0.83 },
-]
 
 export interface APIError {
   status: number;
@@ -65,25 +97,20 @@ export const recognizeFoodFromImage = async (
       throw new Error('File phải là ảnh (JPG, PNG, etc.)');
     }
 
-    // Max 5MB
-    if (imageFile.size > 5 * 1024 * 1024) {
-      throw new Error('Kích thước ảnh không được vượt quá 5MB');
+    // Validate file size
+    if (imageFile.size > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error(`Kích thước ảnh không được vượt quá ${MAX_IMAGE_SIZE_MB}MB`);
     }
 
     // DEMO MODE: Return mock data for testing
     if (DEMO_MODE) {
-      console.log('🤖 [DEMO MODE] Simulating AI food recognition...');
-      
+      if (import.meta.env.DEV) {
+        console.log('🤖 [DEMO MODE] Simulating AI food recognition...');
+      }
+
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
-      
-      // Random food from mock database
-      const randomFood = MOCK_FOODS[Math.floor(Math.random() * MOCK_FOODS.length)];
-      
-      return {
-        ...randomFood,
-        portionSize: '100g',
-      };
+      const delay = AI_SIMULATION_MIN_DELAY + Math.random() * (AI_SIMULATION_MAX_DELAY - AI_SIMULATION_MIN_DELAY);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
 
     // Convert to base64 (without data URL prefix)
@@ -91,8 +118,10 @@ export const recognizeFoodFromImage = async (
 
     // Use proxy server to avoid CORS issues
     if (USE_PROXY) {
-      console.log('🔄 Calling backend proxy for AI recognition...');
-      
+      if (import.meta.env.DEV) {
+        console.log('🔄 Calling backend proxy for AI recognition...');
+      }
+
       const response = await fetch(`${PROXY_URL}/api/recognize-food`, {
         method: 'POST',
         headers: {
@@ -109,8 +138,10 @@ export const recognizeFoodFromImage = async (
       }
 
       const result = await response.json();
-      console.log('✅ Food recognized:', result.data.foodName);
-      
+      if (import.meta.env.DEV) {
+        console.log('✅ Food recognized:', result.data.foodName);
+      }
+
       return result.data;
     }
 
@@ -182,10 +213,10 @@ Example:
     }
 
     const data = await response.json();
-    
+
     // Parse AI response
     const content = data.result?.message?.content || '';
-    
+
     // Try to extract JSON from response
     let nutritionData;
     try {
@@ -213,7 +244,7 @@ Example:
     };
   } catch (error: any) {
     console.error('Food recognition error:', error);
-    
+
     if (error.status) {
       // API error
       const apiError = error as APIError;
@@ -226,7 +257,7 @@ Example:
       }
       throw new Error(apiError.message);
     }
-    
+
     // Other errors
     throw error;
   }
@@ -240,7 +271,7 @@ export const calculateNutrition = (
   grams: number
 ): FoodRecognitionResult => {
   const multiplier = grams / 100; // Base is per 100g
-  
+
   return {
     ...baseNutrition,
     calories: Math.round(baseNutrition.calories * multiplier),
@@ -256,7 +287,7 @@ export const calculateNutrition = (
  */
 export const formatNutritionInfo = (nutrition: FoodRecognitionResult): string => {
   const confidencePercent = Math.round(nutrition.confidence * 100);
-  
+
   return `🍽️ **${nutrition.foodName}**
 
 📊 Thông tin dinh dưỡng (${nutrition.portionSize}):
@@ -276,39 +307,64 @@ export const saveFoodLog = async (
   imageUrl?: string
 ): Promise<void> => {
   try {
-    // TODO: Implement actual API call to save food log
-    const foodLog = {
-      date: new Date().toISOString(),
-      food_name: nutrition.foodName,
-      calories: nutrition.calories,
-      protein: nutrition.protein,
-      carbs: nutrition.carbs,
-      fats: nutrition.fats,
-      portion_size: nutrition.portionSize,
-      image_url: imageUrl,
-      confidence: nutrition.confidence,
-      created_at: new Date().toISOString(),
+    const now = new Date();
+    const entry: FoodEntryInput = {
+      date: now.toISOString().split("T")[0],
+      time: formatLocalTime(now),
+      mealType: getMealTypeForDate(now),
+      foodName: nutrition.foodName || "Recognized meal",
+      amount: nutrition.portionSize || "100g",
+      calories: Math.round(nutrition.calories),
+      protein: Math.round(nutrition.protein),
+      carbs: Math.round(nutrition.carbs),
+      fat: Math.round(nutrition.fats),
+      sugar: 0,
+      status: "Satisfied",
+      thoughts: imageUrl ? "Captured via AI vision" : "",
+      imageUrl: imageUrl || undefined,
+      imageAttribution: imageUrl ? "AI capture" : undefined,
     };
 
-    console.log('Saving food log:', foodLog);
-    
-    // For now, just store in localStorage
-    const logs = JSON.parse(localStorage.getItem('foodLogs') || '[]');
-    logs.push(foodLog);
-    localStorage.setItem('foodLogs', JSON.stringify(logs));
+    await foodDiaryApi.create(entry);
   } catch (error) {
     console.error('Error saving food log:', error);
-    throw new Error('Không thể lưu thông tin món ăn');
+    throw new Error('Unable to save meal information');
   }
 };
 
 /**
  * Get food logs history
  */
-export const getFoodLogsHistory = (): any[] => {
+export const getFoodLogsHistory = async (): Promise<FoodEntry[]> => {
   try {
-    return JSON.parse(localStorage.getItem('foodLogs') || '[]');
-  } catch {
+    const logs = await foodDiaryApi.list();
+    return logs.map(mapFoodLogToEntry);
+  } catch (error) {
+    console.error('Failed to fetch food logs history', error);
     return [];
   }
 };
+
+/**
+ * Chat with CLOVA AI for general conversations
+ * Used as fallback when intent-based handlers cannot handle the query
+ */
+export async function chatWithClova(
+  userMessage: string,
+  chatHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+  userProfile?: any
+): Promise<string> {
+  try {
+    const response = await http.post<{ reply: string }>('/api/chat-clova', {
+      message: userMessage,
+      history: chatHistory,
+      userProfile,
+    });
+
+    return response.reply;
+  } catch (error: any) {
+    console.error('Error calling CLOVA chat:', error);
+    throw new Error(error.message || 'Failed to get AI response');
+  }
+}
+

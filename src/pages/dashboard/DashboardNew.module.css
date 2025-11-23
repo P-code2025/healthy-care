@@ -11,18 +11,21 @@
 }
 
 /* Header */
-.dashboardHeader {
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 24px;
 }
 
-.greeting {
+.pageTitle {
   font-size: 32px;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0 0 4px 0;
 }
 
-.subtitle {
+.pageSubtitle {
   font-size: 15px;
   color: #6B7280;
   margin: 0;
@@ -31,7 +34,7 @@
 /* Stats Grid */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -122,9 +125,21 @@
 /* Charts Row */
 .chartsRow {
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
+  grid-template-columns: 2fr 1fr;
   gap: 20px;
   margin-bottom: 24px;
+  height: 400px;
+}
+
+.chartSection {
+  height: 100%;
+  min-width: 0;
+  /* Prevent overflow */
+}
+
+.goalsSection {
+  height: 100%;
+  min-width: 0;
 }
 
 .chartCard {
@@ -564,9 +579,12 @@
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }
@@ -855,6 +873,254 @@
   color: #374151;
   line-height: 1.5;
 }
+
+.macroDonut circle {
+  transition: stroke-dasharray 1.2s ease-in-out, stroke-dashoffset 1.2s ease-in-out;
+}
+
+.macroRing {
+  animation: drawRing 1.5s ease-out forwards;
+}
+
+.mealIcon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.mealsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.mealCardModern {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 1px solid #f1f1f1;
+}
+
+.mealCardModern:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.mealCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.mealTypeBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.mealTypeBadge[data-type="Breakfast"] { background: #FEF3C7; }
+.mealTypeBadge[data-type="Lunch"]     { background: #D4F4DD; }
+.mealTypeBadge[data-type="Snack"]     { background: #FED7AA; }
+.mealTypeBadge[data-type="Dinner"]    { background: #BAE6FD; }
+
+.mealTime {
+  font-size: 13px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.mealCardBody h4 {
+  margin: 0 0 8px 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.mealCaloriesBig {
+  font-size: 20px;
+  font-weight: 700;
+  color: #FF6B35;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mealMacrosGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.macroItem {
+  text-align: center;
+  padding: 10px;
+  background: #F9FAFB;
+  border-radius: 10px;
+}
+
+.macroLabel {
+  display: block;
+  font-size: 12px;
+  color: #6B7280;
+  margin-bottom: 4px;
+}
+
+.macroValueProtein { font-size: 18px; font-weight: 700; color: #10b981; }
+.macroValueCarbs   { font-size: 18px; font-weight: 700; color: #f97316; }
+.macroValueFat     { font-size: 18px; font-weight: 700; color: #ef4444; }
+
+.emptyMeals {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: #9CA3AF;
+}
+
+.emptyMeals p {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.emptyMeals span {
+  font-size: 14px;
+}
+
+/* === Sidebar - Compact Meal List === */
+.mealsListModern {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mealItemModern {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.mealItemModern:hover {
+  background: #F9FAFB;
+}
+
+.mealIconSmall {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.mealIconSmall[data-type="Breakfast"] { background: #FFFBEB; }
+.mealIconSmall[data-type="Lunch"]     { background: #F0FDF4; }
+.mealIconSmall[data-type="Snack"]     { background: #FFF7ED; }
+.mealIconSmall[data-type="Dinner"]    { background: #EFF6FF; }
+
+.mealInfoCompact {
+  flex: 1;
+  min-width: 0;
+}
+
+.mealHeaderLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.mealNameCompact {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.mealTimeSmall {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.mealMacrosCompact {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.mealMacrosCompact span {
+  background: #F3F4F6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.caloriesSmall {
+  color: #FF6B35 !important;
+  font-weight: 600 !important;
+}
+
+.emptyStateCard {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 2rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 1rem;
+  border: 2px dashed #cbd5e1;
+}
+
+.emptyIcon {
+  margin-bottom: 1rem;
+}
+
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.primaryButton:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+}
+
+@keyframes drawRing {
+  from {
+    stroke-dasharray: 0 502;
+  }
+}
+
+/* Đảm bảo vòng tròn chồng lên đúng thứ tự */
+.macroDonut circle:nth-child(2) { /* Fat */   z-index: 3; }
+.macroDonut circle:nth-child(3) { /* Carbs */ z-index: 4; }
+.macroDonut circle:nth-child(4) { /* Protein */ z-index: 5; }
 
 /* Responsive */
 @media (max-width: 1400px) {

@@ -1,0 +1,207 @@
+.container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.toast {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    min-width: 320px;
+    max-width: 420px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    pointer-events: auto;
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.toast.exiting {
+    animation: slideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(calc(100% + 20px));
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(calc(100% + 20px));
+        opacity: 0;
+    }
+}
+
+.icon {
+    flex-shrink: 0;
+}
+
+.iconCircle {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Success variant */
+.toast.success {
+    border-left: 4px solid var(--primary-green);
+}
+
+.toast.success .iconCircle {
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);
+    color: var(--white);
+}
+
+.toast.success .progressFill {
+    background: var(--primary-green);
+}
+
+/* Error variant */
+.toast.error {
+    border-left: 4px solid var(--error);
+}
+
+.toast.error .iconCircle {
+    background: linear-gradient(135deg, var(--error) 0%, #d32f2f 100%);
+    color: var(--white);
+}
+
+.toast.error .progressFill {
+    background: var(--error);
+}
+
+/* Warning variant */
+.toast.warning {
+    border-left: 4px solid #FFA726;
+}
+
+.toast.warning .iconCircle {
+    background: linear-gradient(135deg, #FFA726 0%, #FB8C00 100%);
+    color: var(--white);
+}
+
+.toast.warning .progressFill {
+    background: #FFA726;
+}
+
+/* Info variant */
+.toast.info {
+    border-left: 4px solid #29B6F6;
+}
+
+.toast.info .iconCircle {
+    background: linear-gradient(135deg, #29B6F6 0%, #039BE5 100%);
+    color: var(--white);
+}
+
+.toast.info .progressFill {
+    background: #29B6F6;
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 8px;
+}
+
+.message {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.actionBtn {
+    align-self: flex-start;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.actionBtn:hover {
+    background: var(--gray-100);
+    border-color: var(--border-dark);
+}
+
+.closeBtn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.closeBtn:hover {
+    background: var(--gray-100);
+    color: var(--text-primary);
+}
+
+.progressBar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gray-200);
+}
+
+.progressFill {
+    height: 100%;
+    transition: width 10ms linear;
+}
+
+@media (max-width: 640px) {
+    .container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+    }
+
+    .toast {
+        min-width: auto;
+        max-width: none;
+    }
+}

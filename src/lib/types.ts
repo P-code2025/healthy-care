@@ -106,16 +106,6 @@ export interface NewsArticle {
 }
 
 
-export interface UserProfile {
-  age?: number;
-  gender?: "male" | "female";
-  weight?: number;
-  height?: number;
-  goal?: "lose" | "maintain" | "gain";
-  activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active";
-  workoutPreference?: ("yoga" | "gym" | "cardio")[];
-}
-
 export interface FoodItem {
   name: string;
   grams?: number;
@@ -134,8 +124,7 @@ export interface AnalysisResult {
   carbs: number;
   fat: number;
   sugar: number;
-
-  // THÊM: Giá trị chuẩn trên 100g/ml
+  // Standardized values per 100g/ml
   base100g?: {
     calories: number;
     protein: number;
@@ -143,9 +132,8 @@ export interface AnalysisResult {
     fat: number;
     sugar: number;
   };
-  baseAmount?: number; // Khối lượng gốc (g hoặc ml)
+  baseAmount?: number; // Base amount (g or ml)
 }
-
 
 export interface FoodEntry {
   id: string;
@@ -161,4 +149,6 @@ export interface FoodEntry {
   sugar: number;
   status: 'Energized' | 'Quite Satisfied' | 'Satisfied' | 'Guilty' | 'Uncomfortable';
   thoughts?: string;
+  imageUrl?: string;
+  imageAttribution?: string;
 }

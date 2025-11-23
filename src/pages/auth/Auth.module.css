@@ -1,81 +1,309 @@
 .authContainer {
   min-height: 100vh;
-  background: #000;
+  background: linear-gradient(135deg, #F7F9FB 0%, #E8F5E9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative background elements */
+.authContainer::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(143, 209, 79, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.authContainer::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -5%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(168, 224, 99, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
 }
 
 .authCard {
-  background: #111;
-  padding: 40px 30px;
-  border-radius: 16px;
+  background: var(--white);
+  padding: 48px 40px;
+  border-radius: var(--radius-xl);
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   text-align: center;
-  color: white;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(143, 209, 79, 0.1);
 }
 
 .authCard h1 {
-  font-size: 28px;
+  font-size: 32px;
   margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--gray-700) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .authCard p {
-  color: #aaa;
-  margin-bottom: 32px;
+  color: var(--text-secondary);
+  margin-bottom: 36px;
   font-size: 15px;
+  line-height: 1.6;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .input {
-  background: #222;
-  border: none;
-  padding: 14px 16px;
-  border-radius: 12px;
-  color: white;
-  font-size: 16px;
+  background: var(--gray-50);
+  border: 2px solid var(--border-light);
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 15px;
+  transition: all var(--transition-base);
+  width: 100%;
 }
 
 .input::placeholder {
-  color: #888;
+  color: var(--text-muted);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary-green);
+  background: var(--white);
+  box-shadow: 0 0 0 4px rgba(143, 209, 79, 0.1);
+}
+
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .submitBtn {
-  background: #a0d468;
-  color: #000;
+  background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-hover) 100%);
+  color: var(--white);
   font-weight: 600;
-  padding: 14px;
+  padding: 16px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-size: 16px;
   cursor: pointer;
   margin-top: 8px;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 12px rgba(143, 209, 79, 0.3);
+  position: relative;
+  overflow: hidden;
 }
 
-.submitBtn:hover {
-  background: #8bc34a;
+.submitBtn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.submitBtn:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(143, 209, 79, 0.4);
+}
+
+.submitBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .switchText {
-  margin-top: 24px;
-  color: #aaa;
+  margin-top: 28px;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .switchText a {
-  color: #a0d468;
+  color: var(--primary-green);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
+  transition: color var(--transition-fast);
+  position: relative;
 }
 
-.switchText a:hover {
-  text-decoration: underline;
+.switchText a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary-green);
+  transition: width var(--transition-base);
+}
+
+.switchText a:hover::after {
+  width: 100%;
+}
+
+.error {
+  color: var(--error);
+  text-align: left;
+  font-size: 14px;
+  padding: 14px 16px;
+  background: rgba(244, 67, 54, 0.08);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--error);
+  line-height: 1.5;
+  animation: slideIn 0.3s ease;
+}
+
+.fieldError {
+  color: var(--error);
+  font-size: 13px;
+  text-align: left;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: slideIn 0.3s ease;
+}
+
+.fieldError::before {
+  content: '⚠';
+  font-size: 12px;
+}
+
+.inputError {
+  border-color: var(--error) !important;
+  background: rgba(244, 67, 54, 0.03) !important;
+}
+
+.inputError:focus {
+  box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.1) !important;
+}
+
+.passwordStrength {
+  margin-top: 10px;
+  text-align: left;
+}
+
+.strengthLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.strengthLabel strong {
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.strengthBar {
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.strengthProgress {
+  height: 100%;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-full);
+  position: relative;
+}
+
+.strengthProgress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+.strengthProgress.weak {
+  width: 33%;
+  background: linear-gradient(90deg, #F44336, #E53935);
+}
+
+.strengthProgress.medium {
+  width: 66%;
+  background: linear-gradient(90deg, #FF9800, #FB8C00);
+}
+
+.strengthProgress.strong {
+  width: 100%;
+  background: linear-gradient(90deg, var(--primary-green), var(--primary-green-hover));
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+
+  0%,
+  100% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(100%);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .authCard {
+    padding: 36px 24px;
+  }
+
+  .authCard h1 {
+    font-size: 28px;
+  }
+
+  .form {
+    gap: 16px;
+  }
 }
