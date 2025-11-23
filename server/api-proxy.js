@@ -2051,7 +2051,11 @@ app.post("/api/body-measurements", requireAuth, async (req, res) => {
   try {
     const today = new Date();
     const todayDateOnly = new Date(
-  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" })
+  Date.UTC(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    new Date().getDate()
+  )
 );
 
     const data = {
