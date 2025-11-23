@@ -1540,6 +1540,55 @@
   font-size: 0.9375rem;
 }
 
+.emptyStateBanner,
+.warningStateBanner {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: linear-gradient(135deg, #fff7ed 0%, #fff4e6 100%);
+  border-radius: 1.5rem;
+  border: 2px dashed #fdba74;
+  margin: 2rem 0;
+}
+
+.warningStateBanner {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+}
+
+.emptyIconLarge img {
+  filter: grayscale(30%) opacity(70%);
+}
+
+.primaryActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f97316;
+  color: white;
+  font-weight: 600;
+  padding: 0.9rem 2rem;
+  border-radius: 1rem;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  transition: all 0.3s;
+  text-decoration: none;
+}
+
+.primaryActionBtn:hover {
+  background: #ea580c;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(249, 115, 22, 0.4);
+}
+
+.secondaryActionBtn {
+  background: white;
+  color: #f97316;
+  border: 2px solid #f97316;
+  padding: 0.9rem 2rem;
+  border-radius: 1rem;
+  font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .filtersSection {

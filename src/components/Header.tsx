@@ -17,10 +17,6 @@ export default function Header({ children }: HeaderProps) {
         <h2>Hello, {userName}! Welcome</h2>
         <p>Keep up the good work and stay healthy today.</p>
       </div>
-
-      <div className={styles.actions}>
-        <button className={styles.iconBtn}>🔔</button>
-      </div>
     </header>
   );
 }

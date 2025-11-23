@@ -14,17 +14,6 @@ interface Article {
   excerpt?: string;
 }
 
-interface Video {
-  id: string;
-  category: string;
-  categoryColor: string;
-  title: string;
-  date: string;
-  image: string;
-  author: string;
-  authorAvatar: string;
-}
-
 interface Author {
   id: string;
   name: string;
@@ -119,19 +108,6 @@ const RECOMMENDED_ARTICLES: Article[] = [
     image: '/images/health-insights/stretching-flexibility.jpg',
     author: 'Coach Adam Moss',
     authorAvatar: '🤸'
-  }
-];
-
-const RECOMMENDED_VIDEOS: Video[] = [
-  {
-    id: '7',
-    category: 'Nutrition Insights',
-    categoryColor: '#FFE5B4',
-    title: 'Quick & Healthy Breakfast Ideas for Busy Mornings',
-    date: 'Aug 28, 2026',
-    image: '/images/health-insights/healthy-breakfast.jpg',
-    author: 'Jane Murray',
-    authorAvatar: '👩‍🍳'
   }
 ];
 
@@ -283,31 +259,6 @@ export default function HealthInsightsNew() {
                     </span>
                     <h3 className={styles.recommendedTitle}>{article.title}</h3>
                     <div className={styles.articleDate}>{article.date}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recommended Videos */}
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>Recommended Video</h2>
-              <button className={styles.seeAllBtn}>See All</button>
-            </div>
-            <div className={styles.recommendedGrid}>
-              {RECOMMENDED_VIDEOS.map(video => (
-                <div key={video.id} className={styles.recommendedCard}>
-                  <div className={styles.recommendedImage}>
-                    <img src={video.image} alt={video.title} />
-                    <div className={styles.playButton}>▶</div>
-                  </div>
-                  <div className={styles.recommendedContent}>
-                    <span className={styles.categoryBadge} style={{ backgroundColor: video.categoryColor }}>
-                      {video.category}
-                    </span>
-                    <h3 className={styles.recommendedTitle}>{video.title}</h3>
-                    <div className={styles.articleDate}>{video.date}</div>
                   </div>
                 </div>
               ))}

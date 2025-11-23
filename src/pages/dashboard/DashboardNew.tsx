@@ -10,6 +10,7 @@ import morningIcon from '../../assets/sun-svgrepo-com.svg';
 import afternoonIcon from '../../assets/sun-behind-cloud-svgrepo-com.svg';
 import eveningIcon from '../../assets/moon-stars-svgrepo-com.svg';
 import snackIcon from '../../assets/muesli-svgrepo-com.svg';
+import { Plus } from 'lucide-react';
 
 interface CalendarWidgetProps {
   selectedDate: string;
@@ -130,7 +131,7 @@ export default function DashboardNew() {
 
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const startDate = startOfWeek(firstDayOfMonth, { weekStartsOn: 0 }); 
+  const startDate = startOfWeek(firstDayOfMonth, { weekStartsOn: 0 });
   const endDate = endOfWeek(lastDayOfMonth, { weekStartsOn: 0 });
 
   const days = eachDayOfInterval({ start: startDate, end: endDate })
@@ -405,16 +406,25 @@ export default function DashboardNew() {
             <h3>Recent Workouts</h3>
           </div>
           <div className={styles.workoutGrid}>
-            {recentWorkouts.length > 0 ? recentWorkouts.map(w => (
-              <div key={w.log_id} className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
-                <img className={styles.statIcon} src={exerciseIcon} alt="exercise" />
-                <div className={styles.workoutInfo}>
-                  <div className={styles.workoutName}>{w.exercise_name}</div>
-                  <div className={styles.workoutStats}>Burn {w.calories_burned_estimated} kcal</div>
+            {recentWorkouts.length > 0 ? (
+              recentWorkouts.map(w => (
+                <div key={w.log_id} className={styles.workoutCard} style={{ background: 'linear-gradient(135deg, #D4F4DD 0%, #A7E9AF 100%)' }}>
+                  <img className={styles.statIcon} src={exerciseIcon} alt="exercise" />
+                  <div className={styles.workoutInfo}>
+                    <div className={styles.workoutName}>{w.exercise_name}</div>
+                    <div className={styles.workoutStats}>Burn {w.calories_burned_estimated} kcal</div>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className={styles.emptyStateCard}>
+                <p className="text-lg font-medium text-gray-700 mt-4">No exercises today</p>
+                <p className="text-sm text-gray-500 mb-6">Start your workout journey now!</p>
+                <a href="/exercises" className={styles.primaryButton}>
+                  <Plus className="w-5 h-5" />
+                  Add your first exercise
+                </a>
               </div>
-            )) : (
-              <p className="col-span-3 text-center text-gray-500 py-8">No workouts yet</p>
             )}
           </div>
         </div>
@@ -435,7 +445,6 @@ export default function DashboardNew() {
                         {meal.status === 'Snack' && <img className={styles.mealIcon} src={snackIcon} alt="Snack" />}
                         {meal.status === 'Dinner' && <img className={styles.mealIcon} src={eveningIcon} alt="Dinner" />}
                       </span>
-
                       <span>{meal.status}</span>
                     </div>
                     <div className={styles.mealTime}>{meal.time}</div>
@@ -465,9 +474,13 @@ export default function DashboardNew() {
                 </div>
               ))
             ) : (
-              <div className={styles.emptyMeals}>
-                <p>No meals yet today</p>
-                <span>Add your first meal!</span>
+              <div className={styles.emptyStateCard}>
+                <p className="text-lg font-medium text-gray-700 mt-4">No exercises today</p>
+                <p className="text-sm text-gray-500 mb-6">Track your nutrition to reach your goals faster!</p>
+                <a href="/food-diary" className={styles.primaryButton}>
+                  <Plus className="w-5 h-5" />
+                  Log your first meal
+                </a>
               </div>
             )}
           </div>

@@ -1,5 +1,6 @@
 import { ClovaXClient } from "../api/clovax/client";
 import type { ClovaMessage as ClientClovaMessage } from "../api/clovax/client";
+import type { WorkoutPlan } from "../pages/exercies/workoutPlans";
 import { http } from "./http";
 
 export interface AIExercisePlan {
@@ -149,16 +150,69 @@ const summarizeFeedback = (
     }`;
 };
 
-const matchPlanName = (name: string, availablePlans: string[]) => {
-  if (!name) return "";
-  const lower = name.toLowerCase();
-  const exact = availablePlans.find((plan) => plan.toLowerCase() === lower);
+const workoutTitleToKeywords: Record<string, string[]> = {
+  "20 Min HIIT Fat Loss - No Repeat Workout": ["hiit", "fat loss", "no repeat", "20 min"],
+  "Full Body Strength - Week 1": ["full body", "strength", "squat", "push up", "deadlift"],
+  "Morning Yoga Flow": ["yoga", "morning", "flow", "flexibility"],
+  "HIIT Fat Burn": ["hiit", "fat burn", "burpee"],
+  "Upper Body Power": ["upper body", "push", "row", "press"],
+  "Core & Abs Crusher": ["core", "abs", "plank", "crunch"],
+};
+
+// Hàm mới cực mạnh
+export const findBestMatchingPlan = (exerciseName: string, availablePlans: WorkoutPlan[]): WorkoutPlan | null => {
+  const lower = exerciseName.toLowerCase().trim();
+
+  // 1. Exact match trước
+  const exact = availablePlans.find(p => p.title.toLowerCase() === lower);
   if (exact) return exact;
-  const fuzzy = availablePlans.find(
-    (plan) =>
-      plan.toLowerCase().includes(lower) || lower.includes(plan.toLowerCase())
+
+  // 2. Fuzzy contains
+  const contains = availablePlans.find(p =>
+    p.title.toLowerCase().includes(lower) || lower.includes(p.title.toLowerCase())
   );
-  return fuzzy || name;
+  if (contains) return contains;
+
+  // 3. Keyword matching (rất hiệu quả)
+  for (const plan of availablePlans) {
+    const keywords = workoutTitleToKeywords[plan.title] || [];
+    if (keywords.some(k => lower.includes(k)) || lower.includes("strength") && plan.goal === "Strength") {
+      return plan;
+    }
+  }
+
+  // 4. Mặc định theo mục tiêu (nếu user đang giảm mỡ → ưu tiên HIIT)
+  if (lower.includes("hiit") || lower.includes("cardio") || lower.includes("fat")) {
+    return availablePlans.find(p => p.title.includes("HIIT")) || availablePlans[0];
+  }
+  if (lower.includes("yoga") || lower.includes("flow") || lower.includes("stretch")) {
+    return availablePlans.find(p => p.title.includes("Yoga")) || availablePlans[0];
+  }
+  if (lower.includes("strength") || lower.includes("squat") || lower.includes("push")) {
+    return availablePlans.find(p => p.goal === "Strength") || availablePlans[0];
+  }
+
+  return null; // sẽ fallback sau
+};
+
+const titleToPlanMap = (titles: string[]): WorkoutPlan[] => {
+  return titles.map(title => ({
+    id: title,
+    title,
+    duration: 20,
+    calories: 300,
+    difficulty: "Intermediate" as const,
+    goal: "Fat Loss" as const,
+    thumbnail: "",
+    isSaved: false,
+    exercises: []
+  } as WorkoutPlan));
+};
+
+const matchPlanName = (exerciseName: string, availablePlanTitles: string[]): string => {
+  const fakePlans: WorkoutPlan[] = titleToPlanMap(availablePlanTitles);
+  const best = findBestMatchingPlan(exerciseName, fakePlans);
+  return best?.title || exerciseName.trim();
 };
 
 const clampCaloriesEstimate = (value: string): number => {

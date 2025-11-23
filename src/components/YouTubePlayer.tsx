@@ -35,7 +35,6 @@ const YouTubePlayer = forwardRef<YouTubePlayerRef, YouTubePlayerProps>(
   ) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
-    // Expose functions to parent component
     useImperativeHandle(ref, () => ({
       seekTo: (seconds: number, allowSeekAhead = true) => {
         iframeRef.current?.contentWindow?.postMessage(
@@ -69,7 +68,6 @@ const YouTubePlayer = forwardRef<YouTubePlayerRef, YouTubePlayerProps>(
             onStateChange(data.info);
           }
         } catch {
-          // ignore
         }
       };
       window.addEventListener('message', handleMessage);
