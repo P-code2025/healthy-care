@@ -26,7 +26,7 @@ export async function generateAIMealPlan(
   preferences: string
 ): Promise<AIMealPlanResponse> {
   const userRes = await http.get('/api/users/me');
-  const user = userRes; 
+  const user = userRes;
 
   const payload = {
     allergies,
@@ -36,6 +36,7 @@ export async function generateAIMealPlan(
     heightCm: user.height_cm,
     age: user.age,
     gender: user.gender || "Male",
+    timestamp: Date.now(), // Force new generation each time
   };
 
   try {
