@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: healthy-care-api
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: node server/api-proxy.js
+    envVars:
+      # Add any required env vars here. Example:
+      # CORS_ORIGINS: "https://nutrigo-e73tsb9ys-phamkhanhs-projects-c2663e55.vercel.app"
