@@ -1,4 +1,3 @@
-// Quick Action Buttons Component
 import { Copy, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
@@ -15,7 +14,6 @@ export function QuickActions({ messageId, content, onRegenerate }: QuickActionsP
 
     const handleCopy = async () => {
         try {
-            // Remove markdown formatting for cleaner copy
             const cleanContent = content.replace(/\*\*(.*?)\*\*/g, '$1');
             await navigator.clipboard.writeText(cleanContent);
             toast.success('Copied to clipboard!');
@@ -28,7 +26,6 @@ export function QuickActions({ messageId, content, onRegenerate }: QuickActionsP
         const newFeedback = helpful ? 'helpful' : 'not-helpful';
         setFeedback(newFeedback);
 
-        // Store feedback in localStorage
         const feedbackData = JSON.parse(localStorage.getItem('aiFeedback') || '{}');
         feedbackData[messageId] = { helpful, timestamp: new Date().toISOString() };
         localStorage.setItem('aiFeedback', JSON.stringify(feedbackData));

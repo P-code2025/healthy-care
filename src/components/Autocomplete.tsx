@@ -36,7 +36,6 @@ export default function Autocomplete({
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
@@ -48,12 +47,10 @@ export default function Autocomplete({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Reset selected index when options change
     useEffect(() => {
         setSelectedIndex(-1);
     }, [options]);
 
-    // Auto-open when typing
     useEffect(() => {
         if (value && options.length > 0) {
             setIsOpen(true);
@@ -119,7 +116,6 @@ export default function Autocomplete({
         );
     };
 
-    // Scroll selected item into view
     useEffect(() => {
         if (selectedIndex >= 0 && listRef.current) {
             const selectedElement = listRef.current.children[selectedIndex] as HTMLElement;

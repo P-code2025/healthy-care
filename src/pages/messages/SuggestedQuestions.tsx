@@ -1,4 +1,3 @@
-// Suggested Questions Component
 import { useState } from 'react';
 import styles from './SuggestedQuestions.module.css';
 

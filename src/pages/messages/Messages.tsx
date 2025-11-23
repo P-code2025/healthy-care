@@ -1,5 +1,4 @@
-﻿// src/pages/messages/Messages.tsx
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { Camera, Dumbbell } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -62,10 +61,8 @@ export default function Messages() {
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [diaryEntries, setDiaryEntries] = useState<FoodEntry[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scroll
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-
-  // ĐÚNG: useState nằm trong component
   const [userProfile, setUserProfile] = useState<UserProfile>({
     age: 30,
     weight: 70,
@@ -92,12 +89,10 @@ export default function Messages() {
     }));
   }, [user]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isTyping]);
 
-  // Load chat history from database
   useEffect(() => {
     const loadMessages = async () => {
       try {
@@ -122,7 +117,6 @@ export default function Messages() {
   }, []);
 
 
-  // Load today's diary entries so we can reply with calorie context
   useEffect(() => {
     const todayOnly = new Date().toISOString().split("T")[0];
 
@@ -148,7 +142,6 @@ export default function Messages() {
   const getTodayCalories = () =>
     diaryEntries.reduce((sum, entry) => sum + entry.calories, 0);
 
-  // Clear chat history
   const handleClearChat = async () => {
     if (!window.confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
       return;
@@ -175,7 +168,6 @@ export default function Messages() {
     };
     setChatMessages((prev) => [...prev, outgoing]);
 
-    // Save user message to database
     try {
       await chatMessagesApi.create({
         role: 'user',
@@ -201,7 +193,6 @@ export default function Messages() {
       };
       setChatMessages((prev) => [...prev, reply]);
 
-      // Save AI response to database
       try {
         await chatMessagesApi.create({
           role: 'assistant',
@@ -246,7 +237,7 @@ export default function Messages() {
         gender: userProfile.gender,
         goal: userProfile.goal,
         workoutDays: userProfile.workoutDays,
-        aggressive: false // có thể thêm tùy chọn sau
+        aggressive: false 
       });
       const diff = total - goal;
       const diffText = diff > 0 ? `+${diff}` : `${diff}`;
@@ -339,16 +330,13 @@ export default function Messages() {
       }
     }
 
-    // For all other queries, use CLOVA AI chat for personalized health consulting
     try {
-      // Build chat history from recent messages (last 10 for context)
       const recentMessages = chatMessages.slice(-10);
       const history = recentMessages.map(msg => ({
         role: msg.isUser ? 'user' as const : 'assistant' as const,
         content: msg.content
       }));
 
-      // Call CLOVA with user profile context
       const aiReply = await chatWithClova(
         query,
         history,
@@ -365,7 +353,6 @@ export default function Messages() {
       return { content: aiReply, intent: 'general_chat' };
     } catch (error) {
       console.error('CLOVA chat failed:', error);
-      // Fallback to English message if CLOVA fails
       return {
         content: 'Sorry, I encountered a technical issue. Please try again. 🙏\n\nYou can:\n- Ask about today\'s calories\n- Request a workout plan\n- Take a photo of food for analysis',
         intent: 'error'
@@ -392,7 +379,6 @@ export default function Messages() {
       try {
         const { analysis, error } = await analyzeFood(dataUri);
 
-        // Validate analysis result before saving
         const isValidAnalysis =
           analysis.foodName &&
           analysis.foodName !== 'Không xác định' &&
@@ -400,7 +386,6 @@ export default function Messages() {
           analysis.calories > 0;
 
         if (!isValidAnalysis || error) {
-          // Show error message instead of saving invalid data
           const errorMessage: ChatMessage = {
             id: Date.now().toString(),
             content: `❌ **${i18nMessages.aiChat.analysisFailed || 'Không thể nhận diện đồ ăn'}**\n\n${error || 'Hình ảnh không rõ hoặc không phải đồ ăn. Vui lòng thử lại với ảnh rõ hơn.'
@@ -416,7 +401,6 @@ export default function Messages() {
           return;
         }
 
-        // Valid analysis - proceed with saving
         const now = new Date();
         const hour = now.getHours();
         const mealType =
@@ -459,7 +443,6 @@ export default function Messages() {
         );
         toast.success(i18nMessages.aiChat.diarySaveSuccess);
 
-        // Save image analysis result to database
         try {
           await chatMessagesApi.create({
             role: 'assistant',

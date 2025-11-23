@@ -26,7 +26,6 @@ export default function MealPlanNew() {
   const [allergies, setAllergies] = useState("");
   const [preferences, setPreferences] = useState("");
 
-  // Tạo tuần tự động
   const generateWeekDates = () => {
     const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
     return Array.from({ length: 7 }, (_, i) => {

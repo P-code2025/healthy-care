@@ -1,4 +1,3 @@
-// src/pages/onboarding/steps/StepBodyStats.tsx
 import { useState, useEffect } from 'react';
 import styles from '../OnboardingNew.module.css';
 import { calculateBMI, getBMICategory } from '../../../utils/healthCalculations';

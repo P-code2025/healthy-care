@@ -21,8 +21,8 @@ type EventCategory = "meal" | "activity" | "appointment";
 interface CalendarEvent {
   id: string;
   title: string;
-  date: string; // ISO date
-  time: string; // HH:mm
+  date: string; 
+  time: string;
   category: EventCategory;
   location?: string;
   note?: string;

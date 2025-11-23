@@ -1,4 +1,3 @@
-// utils/barcodeUtils.ts
 import Quagga from '@ericblade/quagga2';
 
 export const detectBarcodeWithQuagga = async (base64: string): Promise<string | null> => {
@@ -14,7 +13,7 @@ export const detectBarcodeWithQuagga = async (base64: string): Promise<string | 
           readers: ['ean_reader', 'ean_8_reader', 'upc_reader', 'code_128_reader'],
         },
         locate: true,
-        src: base64, // Use base64 directly — no DOM element needed
+        src: base64, 
         numOfWorkers: 0,
         inputStream: {
           size: 1600,

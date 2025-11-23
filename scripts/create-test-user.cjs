@@ -9,7 +9,6 @@ async function createTestUser() {
     const passwordHash = await bcrypt.hash(password, 10);
 
     try {
-        // Check if user exists
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) {
             console.log(`✅ Test user already exists: ${email}`);
@@ -18,7 +17,6 @@ async function createTestUser() {
             return;
         }
 
-        // Create new user
         const user = await prisma.user.create({
             data: {
                 email,

@@ -1,13 +1,9 @@
-// Meal Plan Intent Handler - Handles meal planning conversations
 import type { IntentHandler, HandlerContext, HandlerResponse } from './base';
 import type { DetectedIntent } from '../intentDetector';
 import { getToolRegistry } from '../tools/registry';
 import type { ToolContext } from '../tools/base';
 
-/**
- * Meal Plan Handler
- * Handles meal plan generation and modification requests
- */
+
 export class MealPlanHandler implements IntentHandler {
     readonly intent = 'meal_plan_request' as const;
     category = 'meal_plan_request' as const;
@@ -26,10 +22,8 @@ export class MealPlanHandler implements IntentHandler {
             const registry = getToolRegistry();
 
             if (intent.category === 'meal_plan_request') {
-                // Generate new meal plan
                 return await this.handleMealPlanGeneration(query, context, registry);
             } else if (intent.category === 'meal_plan_modification') {
-                // Modify existing meal
                 return await this.handleMealModification(query, context, registry);
             }
 
@@ -49,7 +43,6 @@ export class MealPlanHandler implements IntentHandler {
         context: HandlerContext | undefined,
         registry: any
     ): Promise<HandlerResponse> {
-        // Extract preferences from query
         const preferences = this.extractPreferences(query);
         const allergies = this.extractAllergies(query);
 
@@ -88,7 +81,6 @@ export class MealPlanHandler implements IntentHandler {
         context: HandlerContext | undefined,
         registry: any
     ): Promise<HandlerResponse> {
-        // Extract modification parameters
         const params = this.extractModificationParams(query);
 
         if (!params.day || !params.mealType) {
@@ -164,7 +156,6 @@ export class MealPlanHandler implements IntentHandler {
         const normalized = query.toLowerCase();
         const params: any = {};
 
-        // Extract day of week
         const dayPatterns = {
             monday: /mon|thu 2|thứ 2|t2/,
             tuesday: /tue|thu 3|thứ 3|t3/,
@@ -182,7 +173,6 @@ export class MealPlanHandler implements IntentHandler {
             }
         }
 
-        // Extract meal type
         if (normalized.match(/breakfast|bua sang|bữa sáng|sang|sáng/)) {
             params.mealType = 'breakfast';
         } else if (normalized.match(/lunch|bua trua|bữa trưa|trua|trưa/)) {
@@ -193,13 +183,11 @@ export class MealPlanHandler implements IntentHandler {
             params.mealType = 'snack';
         }
 
-        // Extract excluded foods (items user doesn't like)
         const excludeMatch = normalized.match(/khong thich|không thích|don't like|hate|dislike\s+([^,\.]+)/);
         if (excludeMatch) {
             params.exclude = excludeMatch[1].trim();
         }
 
-        // Extract preferences for replacement
         params.preferences = this.extractPreferences(query);
 
         return params;

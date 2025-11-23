@@ -1,4 +1,3 @@
-// src/api/clovax/client.ts
 import { v4 as uuidv4 } from 'uuid';
 
 export interface ClovaMessage {
@@ -23,7 +22,6 @@ export class ClovaXClient {
 
   constructor(appId: string) {
     this.appId = appId;
-    // Use backend proxy instead of direct CLOVA API
     this.endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/clova-proxy/chat-completions/${appId}`;
   }
 
@@ -33,7 +31,7 @@ export class ClovaXClient {
       topP: 0.8,
       temperature: 0.5,
       repetitionPenalty: 1.1,
-      maxTokens: 4091, // Maximum tokens supported by CLOVA X
+      maxTokens: 4091, 
       includeAiFilters: true,
       stop: [],
       seed: 0,

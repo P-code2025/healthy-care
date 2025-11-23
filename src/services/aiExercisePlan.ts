@@ -159,21 +159,17 @@ const workoutTitleToKeywords: Record<string, string[]> = {
   "Core & Abs Crusher": ["core", "abs", "plank", "crunch"],
 };
 
-// Hàm mới cực mạnh
 export const findBestMatchingPlan = (exerciseName: string, availablePlans: WorkoutPlan[]): WorkoutPlan | null => {
   const lower = exerciseName.toLowerCase().trim();
 
-  // 1. Exact match trước
   const exact = availablePlans.find(p => p.title.toLowerCase() === lower);
   if (exact) return exact;
 
-  // 2. Fuzzy contains
   const contains = availablePlans.find(p =>
     p.title.toLowerCase().includes(lower) || lower.includes(p.title.toLowerCase())
   );
   if (contains) return contains;
 
-  // 3. Keyword matching (rất hiệu quả)
   for (const plan of availablePlans) {
     const keywords = workoutTitleToKeywords[plan.title] || [];
     if (keywords.some(k => lower.includes(k)) || lower.includes("strength") && plan.goal === "Strength") {
@@ -181,7 +177,6 @@ export const findBestMatchingPlan = (exerciseName: string, availablePlans: Worko
     }
   }
 
-  // 4. Mặc định theo mục tiêu (nếu user đang giảm mỡ → ưu tiên HIIT)
   if (lower.includes("hiit") || lower.includes("cardio") || lower.includes("fat")) {
     return availablePlans.find(p => p.title.includes("HIIT")) || availablePlans[0];
   }
@@ -192,7 +187,7 @@ export const findBestMatchingPlan = (exerciseName: string, availablePlans: Worko
     return availablePlans.find(p => p.goal === "Strength") || availablePlans[0];
   }
 
-  return null; // sẽ fallback sau
+  return null; 
 };
 
 const titleToPlanMap = (titles: string[]): WorkoutPlan[] => {

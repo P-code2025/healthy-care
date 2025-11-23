@@ -1,12 +1,11 @@
-// src/data/workoutPlans.ts
 export interface ExerciseInPlan {
   exerciseId: string;
   sets: number;
   name: string;
-  reps: string; // "12 reps" | "30s"
-  rest: string; // "60s"
+  reps: string; 
+  rest: string; 
   videoUrl: string;
-  duration?: number; // tính từ reps
+  duration?: number; 
 }
 
 export interface WorkoutPlan {
@@ -24,13 +23,12 @@ export interface WorkoutPlan {
   tags?: string[];
 }
 
-// === SAMPLE DATA ===
 export const SAMPLE_WORKOUT_PLANS: WorkoutPlan[] = [
     {
     id: "hiit-video",
     title: "20 Min HIIT Fat Loss - No Repeat Workout",
     duration: 20,
-    calories: 350, // ước tính cho HIIT 20p
+    calories: 350, 
     difficulty: "Advanced",
     goal: "Fat Loss",
     thumbnail: "https://img.youtube.com/vi/Pv6NrM7fqHY/maxresdefault.jpg",
@@ -41,7 +39,7 @@ export const SAMPLE_WORKOUT_PLANS: WorkoutPlan[] = [
       { exerciseId: "round2", name: "Round 2: Burpees + Mountain Climbers", sets: 1, reps: "210s", rest: "30s", videoUrl: "https://www.youtube.com/watch?v=Pv6NrM7fqHY" },
       { exerciseId: "round3", name: "Round 3: Lunges + Jumping Jacks", sets: 1, reps: "210s", rest: "30s", videoUrl: "https://www.youtube.com/watch?v=Pv6NrM7fqHY" },
       { exerciseId: "round4", name: "Round 4: Push Ups + Plank Jacks", sets: 1, reps: "210s", rest: "30s", videoUrl: "https://www.youtube.com/watch?v=Pv6NrM7fqHY" },
-      { exerciseId: "round5", name: "Round 5: Full Circuit Burn", sets: 1, reps: "210s", rest: "0s", videoUrl: "https://www.youtube.com/watch?v=Pv6NrM7fqHY" }, // không rest cuối
+      { exerciseId: "round5", name: "Round 5: Full Circuit Burn", sets: 1, reps: "210s", rest: "0s", videoUrl: "https://www.youtube.com/watch?v=Pv6NrM7fqHY" }, 
     ]
   },
   {

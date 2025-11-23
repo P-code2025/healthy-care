@@ -1,11 +1,6 @@
-// Meal Plan Tools - AI-powered meal plan generation and modification
 import { BaseTool, type ToolParameter, type ToolContext, type ToolResult } from './base';
 import { generateAIMealPlan, type AIMealPlanResponse, type DayPlan } from '../aiMealPlan';
 
-/**
- * Tool: Generate Weekly Meal Plan
- * Generates a 7-day meal plan using CLOVA AI based on user profile
- */
 export class GenerateWeeklyMealPlanTool extends BaseTool {
     name = 'generate_weekly_meal_plan';
     description = 'Generate a complete 7-day meal plan based on user preferences and nutritional goals';
@@ -37,7 +32,6 @@ export class GenerateWeeklyMealPlanTool extends BaseTool {
 
             const mealPlan = await generateAIMealPlan(allergies, preferences);
 
-            // Format response with meal details
             const planSummary = this.formatMealPlanSummary(mealPlan);
 
             return this.success(
@@ -68,10 +62,7 @@ export class GenerateWeeklyMealPlanTool extends BaseTool {
     }
 }
 
-/**
- * Tool: Modify Meal Plan Item
- * Replace a specific meal in the weekly plan with a new suggestion
- */
+
 export class ModifyMealPlanItemTool extends BaseTool {
     name = 'modify_meal_plan_item';
     description = 'Replace a specific meal in the meal plan with a new suggestion';
@@ -117,7 +108,6 @@ export class ModifyMealPlanItemTool extends BaseTool {
                 ? args.exclude.split(',').map((e: string) => e.trim()).filter(Boolean)
                 : [];
 
-            // Call backend to get a replacement meal
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/meal-plan/modify`,
                 {
@@ -174,10 +164,6 @@ export class ModifyMealPlanItemTool extends BaseTool {
     }
 }
 
-/**
- * Tool: Get Current Meal Plan
- * Retrieve the active meal plan from context
- */
 export class GetCurrentMealPlanTool extends BaseTool {
     name = 'get_current_meal_plan';
     description = 'Retrieve the currently active meal plan';
@@ -194,7 +180,6 @@ export class GetCurrentMealPlanTool extends BaseTool {
 
     async execute(args: Record<string, any>, context: ToolContext): Promise<ToolResult> {
         try {
-            // Get meal plan from context (extended with metadata)
             const mealPlan = (context as any).metadata?.currentMealPlan as AIMealPlanResponse | undefined;
 
             if (!mealPlan) {
@@ -205,7 +190,6 @@ export class GetCurrentMealPlanTool extends BaseTool {
             }
 
             if (args.day) {
-                // Return specific day
                 const dayPlan = mealPlan.days.find(
                     d => d.day.toLowerCase() === args.day.toLowerCase()
                 );
@@ -221,7 +205,6 @@ export class GetCurrentMealPlanTool extends BaseTool {
                 );
             }
 
-            // Return full plan summary
             const summary = mealPlan.days.map(day =>
                 `**${day.day}** (${day.date}): ${this.getTotalCalories(day)} kcal`
             ).join('\n');

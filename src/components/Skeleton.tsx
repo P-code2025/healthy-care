@@ -31,7 +31,6 @@ export default function Skeleton({
     );
 }
 
-// Composite skeleton components for common patterns
 export function SkeletonCard() {
     return (
         <div className={styles.skeletonCard}>
