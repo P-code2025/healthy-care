@@ -1,14 +1,13 @@
-// src/services/progressTracker.ts
 import { http } from './http';
 
 export interface WorkoutLog {
     id: string;
-    date: string; // YYYY-MM-DD
+    date: string; 
     workoutName: string;
-    duration: number; // minutes
+    duration: number;
     caloriesBurned: number;
-    exercises: string[]; // List of exercises completed
-    completedAt: string; // ISO timestamp
+    exercises: string[]; 
+    completedAt: string; 
 }
 
 export interface ProgressStats {
@@ -33,23 +32,17 @@ export interface Milestone {
     value: number;
 }
 
-/**
- * Save workout log to database via API
- */
 export const saveWorkoutLog = async (workout: Omit<WorkoutLog, 'id' | 'completedAt'>): Promise<void> => {
     await http.post('/api/workout-log', {
-        exerciseName: workout.workoutName,                // ← sửa
-        caloriesBurnedEstimated: workout.caloriesBurned, // ← sửa
-        durationMinutes: workout.duration,               // ← sửa
-        completedAt: new Date().toISOString(),          // ← sửa
-        isAiSuggested: false, // hoặc true nếu là AI plan
+        exerciseName: workout.workoutName,                
+        caloriesBurnedEstimated: workout.caloriesBurned,
+        durationMinutes: workout.duration,              
+        completedAt: new Date().toISOString(),         
+        isAiSuggested: false, 
     });
 };
 
 
-/**
- * Get progress stats from API
- */
 export const getProgressStats = async (): Promise<ProgressStats> => {
     try {
         const stats = await http.request<ProgressStats>('/api/workouts/stats', {
@@ -58,7 +51,6 @@ export const getProgressStats = async (): Promise<ProgressStats> => {
         return stats;
     } catch (error) {
         console.error('Failed to get progress stats:', error);
-        // Return default stats on error
         return {
             currentStreak: 0,
             longestStreak: 0,

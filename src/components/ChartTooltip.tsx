@@ -29,22 +29,18 @@ export default function ChartTooltip({ data, position }: ChartTooltipProps) {
         let x = position.x;
         let y = position.y;
 
-        // Adjust if tooltip goes off right edge
         if (x + rect.width + padding > window.innerWidth) {
             x = position.x - rect.width - padding;
         }
 
-        // Adjust if tooltip goes off bottom edge
         if (y + rect.height + padding > window.innerHeight) {
             y = position.y - rect.height - padding;
         }
 
-        // Adjust if tooltip goes off left edge
         if (x < padding) {
             x = padding;
         }
 
-        // Adjust if tooltip goes off top edge
         if (y < padding) {
             y = padding;
         }

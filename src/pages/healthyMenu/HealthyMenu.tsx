@@ -26,7 +26,6 @@ interface Recipe {
 const CATEGORIES = ['All', 'Breakfast', 'Lunch', 'Snack', 'Dinner'];
 
 const RECIPES: Recipe[] = [
-  // ==================== BREAKFAST (8 món) ====================
   {
     id: 'breakfast-1',
     name: 'Oatmeal with Almond Butter, Banana & Chia Seeds',
@@ -255,7 +254,6 @@ const RECIPES: Recipe[] = [
     ]
   },
 
-  // ==================== LUNCH (8 món) ====================
   {
     id: 'lunch-1',
     name: 'Grilled Turkey Breast with Quinoa & Roasted Veggies',
@@ -486,7 +484,6 @@ const RECIPES: Recipe[] = [
     ]
   },
 
-  // ==================== SNACK (8 món) ====================
   {
     id: 'snack-1',
     name: 'Apple with Almond Butter',
@@ -686,7 +683,6 @@ const RECIPES: Recipe[] = [
     ]
   },
 
-  // ==================== DINNER (8 món) ====================
   {
     id: 'dinner-1',
     name: 'Baked Cod with Sweet Potato & Green Beans',

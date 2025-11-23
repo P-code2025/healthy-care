@@ -1,4 +1,3 @@
-// src/pages/onboarding/steps/StepBasicInfo.tsx
 import { useState } from 'react';
 import styles from '../OnboardingNew.module.css';
 

@@ -1,4 +1,3 @@
-// src/pages/onboarding/steps/StepGoalSelection.tsx
 import { useState, useEffect } from 'react';
 import styles from '../OnboardingNew.module.css';
 import { calculateTDEE, calculateCalorieGoal, determineGoalType } from '../../../utils/healthCalculations';
@@ -22,7 +21,7 @@ export default function StepGoalSelection({ data, onNext }: Props) {
         height: parseFloat(data.height),
         age: parseInt(data.age || '30'),
         gender: data.gender === 'Nam' ? 'Male' as const : 'Female' as const,
-        workoutDays: 3, // bạn có thể cho người dùng chọn sau, tạm để 3 = tập đều
+        workoutDays: 3,
     };
 
     const tdee = calculateTDEE(profileForTDEE);
@@ -34,11 +33,11 @@ export default function StepGoalSelection({ data, onNext }: Props) {
     const recommendedCalories = calculateCalorieGoal({
         ...profileForTDEE,
         goal: goalType,
-        aggressive: false, // hoặc thêm nút chọn "giảm nhanh"
+        aggressive: false, 
     });
 
     const weightDiff = targetWeight - currentWeight;
-    const weeksToGoal = Math.abs(weightDiff) / 0.5; // Assuming 0.5kg per week
+    const weeksToGoal = Math.abs(weightDiff) / 0.5; 
 
     useEffect(() => {
         setShowResults(isValid);

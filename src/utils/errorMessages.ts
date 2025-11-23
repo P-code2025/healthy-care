@@ -1,6 +1,3 @@
-// src/utils/errorMessages.ts
-// Centralized error message handling with user-friendly messages and retry actions
-
 interface ErrorMessageConfig {
     title: string;
     message: string;
@@ -9,7 +6,6 @@ interface ErrorMessageConfig {
 }
 
 const ERROR_MESSAGES: Record<string, ErrorMessageConfig> = {
-    // Network errors
     NETWORK_ERROR: {
         title: "Connection Issue",
         message: "Please check your internet connection and try again.",
@@ -23,7 +19,6 @@ const ERROR_MESSAGES: Record<string, ErrorMessageConfig> = {
         retryable: true,
     },
 
-    // Auth errors
     INVALID_CREDENTIALS: {
         title: "Login Failed",
         message: "The email or password you entered is incorrect. Please try again.",
@@ -47,7 +42,6 @@ const ERROR_MESSAGES: Record<string, ErrorMessageConfig> = {
         message: "Please enter a valid email address.",
     },
 
-    // Onboarding errors
     ONBOARDING_SAVE_ERROR: {
         title: "Unable to Save",
         message: "We couldn't save your information. Please check your connection and try again.",
@@ -59,7 +53,6 @@ const ERROR_MESSAGES: Record<string, ErrorMessageConfig> = {
         message: "We couldn't verify your onboarding data. Please complete all steps and try again.",
     },
 
-    // Profile errors
     PROFILE_UPDATE_ERROR: {
         title: "Update Failed",
         message: "We couldn't update your profile. Please try again.",
@@ -67,7 +60,6 @@ const ERROR_MESSAGES: Record<string, ErrorMessageConfig> = {
         retryable: true,
     },
 
-    // Data errors
     INVALID_INPUT: {
         title: "Invalid Input",
         message: "Please check your input and try again.",
@@ -77,7 +69,6 @@ const ERROR_MESSAGES: Record<string, ErrorMessageConfig> = {
         message: "Please fill in all required fields.",
     },
 
-    // Generic errors
     UNKNOWN_ERROR: {
         title: "Something Went Wrong",
         message: "An unexpected error occurred. Please try again or contact support if the problem persists.",
@@ -87,11 +78,9 @@ const ERROR_MESSAGES: Record<string, ErrorMessageConfig> = {
 };
 
 export const getErrorMessage = (error: unknown): ErrorMessageConfig => {
-    // Handle Error objects
     if (error instanceof Error) {
         const message = error.message.toLowerCase();
 
-        // Check for specific error patterns
         if (message.includes("network") || message.includes("failed to fetch")) {
             return ERROR_MESSAGES.NETWORK_ERROR;
         }
@@ -108,7 +97,6 @@ export const getErrorMessage = (error: unknown): ErrorMessageConfig => {
             return ERROR_MESSAGES.WEAK_PASSWORD;
         }
 
-        // Return error message as-is if it seems user-friendly
         if (error.message.length < 100 && !error.message.includes("Error:")) {
             return {
                 title: "Error",
@@ -117,7 +105,6 @@ export const getErrorMessage = (error: unknown): ErrorMessageConfig => {
         }
     }
 
-    // Handle string errors
     if (typeof error === "string") {
         const errorKey = error.toUpperCase().replace(/\s+/g, "_");
         if (ERROR_MESSAGES[errorKey]) {
@@ -125,7 +112,6 @@ export const getErrorMessage = (error: unknown): ErrorMessageConfig => {
         }
     }
 
-    // Default fallback
     return ERROR_MESSAGES.UNKNOWN_ERROR;
 };
 
@@ -135,7 +121,6 @@ export const formatErrorForDisplay = (
 ): ErrorMessageConfig => {
     const errorConfig = getErrorMessage(error);
 
-    // Add context if provided
     if (context) {
         return {
             ...errorConfig,
@@ -146,7 +131,6 @@ export const formatErrorForDisplay = (
     return errorConfig;
 };
 
-// Validation helpers
 export const validateEmail = (email: string): string | null => {
     if (!email) return "Email is required";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -177,12 +161,10 @@ export const getPasswordStrength = (password: string): {
     let score = 0;
     if (!password) return { strength: "weak", score: 0 };
 
-    // Length check
     if (password.length >= 6) score += 1;
     if (password.length >= 10) score += 1;
     if (password.length >= 14) score += 1;
 
-    // Character variety
     if (/[a-z]/.test(password)) score += 1;
     if (/[A-Z]/.test(password)) score += 1;
     if (/[0-9]/.test(password)) score += 1;

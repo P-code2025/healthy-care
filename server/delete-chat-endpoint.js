@@ -1,5 +1,4 @@
 
-// DELETE /api/chat-messages - Clear all chat messages
 app.delete("/api/chat-messages", requireAuth, async (req, res) => {
     try {
         const userId = req.userId;

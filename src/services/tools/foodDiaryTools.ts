@@ -1,11 +1,7 @@
-// Food Diary Tools - Automated food logging
 import { BaseTool, type ToolParameter, type ToolContext, type ToolResult } from './base';
 import { foodDiaryApi, type FoodEntryInput } from '../foodDiaryApi';
 
-/**
- * Tool: Add Food Diary Entry
- * Automatically adds food to the user's food diary
- */
+
 export class AddFoodDiaryEntryTool extends BaseTool {
     name = 'add_food_diary_entry';
     description = 'Add a food item to the food diary';
@@ -67,7 +63,6 @@ export class AddFoodDiaryEntryTool extends BaseTool {
         try {
             this.validateParameters(args);
 
-            // Auto-detect meal type based on current time if not provided
             const mealType = args.mealType || this.detectMealType();
 
             const now = new Date();
@@ -121,10 +116,6 @@ export class AddFoodDiaryEntryTool extends BaseTool {
     }
 }
 
-/**
- * Tool: Get Today's Nutrition
- * Retrieves total nutrition for today
- */
 export class GetTodayNutritionTool extends BaseTool {
     name = 'get_today_nutrition';
     description = 'Get total calories and macros consumed today';
@@ -146,7 +137,6 @@ export class GetTodayNutritionTool extends BaseTool {
                 );
             }
 
-            // Map FoodLogDto properties correctly
             const totals = entries.reduce((acc, entry) => ({
                 calories: acc.calories + entry.calories,
                 protein: acc.protein + (entry.protein_g || 0),

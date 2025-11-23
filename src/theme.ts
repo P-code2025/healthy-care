@@ -1,10 +1,9 @@
-// src/theme.ts
 import { createTheme } from "@mui/material/styles";
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#22c55e", // primary accent green
+      main: "#22c55e",
       contrastText: "#ffffff",
     },
     background: {
@@ -22,7 +21,7 @@ const theme = createTheme({
             fontWeight: 600,
           },
           "&.Mui-selected:hover": {
-            backgroundColor: "#f0fdf4", // light green hover effect
+            backgroundColor: "#f0fdf4", 
           },
         },
       },

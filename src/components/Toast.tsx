@@ -22,7 +22,7 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
     useEffect(() => {
         if (!toast.duration || toast.duration <= 0) return;
 
-        const interval = 10; // Update every 10ms
+        const interval = 10;
         const decrement = (100 * interval) / toast.duration;
 
         const timer = setInterval(() => {
@@ -37,7 +37,7 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
 
     const handleClose = () => {
         setIsExiting(true);
-        setTimeout(onClose, 300); // Match animation duration
+        setTimeout(onClose, 300); 
     };
 
     return (

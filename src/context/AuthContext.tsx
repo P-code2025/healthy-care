@@ -49,8 +49,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       try {
         const profile = await api.getCurrentUser();
-        // Check token still exists after async operation to prevent race condition
-        // If user logged out while getCurrentUser was pending, don't set user
         if (isMounted && http.getAccessToken()) {
           setUser(profile);
         }

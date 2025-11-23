@@ -1,4 +1,3 @@
-// src/services/aiMealPlan.ts
 import { http } from './http';
 
 export interface Meal {
@@ -26,9 +25,8 @@ export async function generateAIMealPlan(
   allergies: string[],
   preferences: string
 ): Promise<AIMealPlanResponse> {
-  // Lấy thông tin user từ API /api/users/me (đã có token rồi)
   const userRes = await http.get('/api/users/me');
-  const user = userRes; // đã mapUser ở backend
+  const user = userRes; 
 
   const payload = {
     allergies,

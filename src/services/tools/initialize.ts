@@ -1,4 +1,3 @@
-// Tool Initializer - Register all tools at startup
 import { getToolRegistry } from './registry';
 import {
     AddCalendarEventTool,
@@ -18,26 +17,17 @@ import {
     GetCurrentMealPlanTool,
 } from './mealPlanTools';
 
-/**
- * Initialize and register all tools
- * Call this once at app startup
- */
+
 export function initializeTools(): void {
     const registry = getToolRegistry();
 
-    // Calendar tools
     registry.register(new AddCalendarEventTool());
     registry.register(new ListCalendarEventsTool());
     registry.register(new RemoveCalendarEventTool());
-
-    // Food diary tools
     registry.register(new AddFoodDiaryEntryTool());
     registry.register(new GetTodayNutritionTool());
-
-    // Workout tools
     registry.register(new SaveWorkoutLogTool());
 
-    // Meal plan tools
     registry.register(new GenerateWeeklyMealPlanTool());
     registry.register(new ModifyMealPlanItemTool());
     registry.register(new GetCurrentMealPlanTool());
@@ -46,9 +36,7 @@ export function initializeTools(): void {
     console.log(`📋 Available tools: ${registry.listToolNames().join(', ')}`);
 }
 
-/**
- * Get a summary of all available tools
- */
+
 export function getToolsSummary(): string {
     const registry = getToolRegistry();
     const tools = registry.getAllTools();

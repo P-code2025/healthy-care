@@ -1,5 +1,3 @@
-// Unknown Intent Handler
-// Handles queries that don't match any specific health/fitness category
 import type { IntentHandler, HandlerContext, HandlerResponse } from './base';
 import type { DetectedIntent } from '../intentDetector';
 
@@ -7,7 +5,7 @@ import { chatWithClova } from '../aiService';
 
 export class UnknownHandler implements IntentHandler {
     readonly intent = 'unknown' as const;
-    category = 'unknown' as const;  // Keep for backward compatibility
+    category = 'unknown' as const; 
 
     canHandle(intent: DetectedIntent, _context: HandlerContext): boolean {
         return intent.category === 'unknown' || intent.confidence < 0.2;
@@ -19,7 +17,6 @@ export class UnknownHandler implements IntentHandler {
         context?: HandlerContext
     ): Promise<HandlerResponse> {
         try {
-            // Extract user profile from context
             const userProfile = context?.userProfile ? {
                 age: context.userProfile.age || 0,
                 weight: context.userProfile.weight || 0,
@@ -29,7 +26,6 @@ export class UnknownHandler implements IntentHandler {
                 workoutDays: context.userProfile.workoutDays || 3
             } : undefined;
 
-            // Call CLOVA AI for fallback with chat history and user profile
             const aiResponse = await chatWithClova(
                 query,
                 context?.chatHistory || [],
@@ -40,7 +36,6 @@ export class UnknownHandler implements IntentHandler {
             };
         } catch (error) {
             console.error('Fallback AI failed:', error);
-            // Fallback to static message if AI fails
             return {
                 content: `Hello! I'm your **AI Health Consultant Expert** 🏥✨
 

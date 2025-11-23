@@ -33,7 +33,6 @@ export default function EmptyState({
     );
 }
 
-// Pre-configured empty states for common scenarios
 export function EmptyMeals({ onAdd }: { onAdd: () => void }) {
     return (
         <EmptyState

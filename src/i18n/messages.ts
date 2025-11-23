@@ -70,7 +70,7 @@ export const messages = {
     noResults: "No meals match your search.",
     weekLabel: "Select week",
     promoTitle: "Start your health journey",
-    promoSubtitle: "Enjoy a FREE 1-month access to Nutrigo",
+    promoSubtitle: "Enjoy a FREE 1-month access to NutriAI",
     claimCta: "Claim now",
     checkButton: "Cook",
     promoBadge: "VEG",
