@@ -1,0 +1,6 @@
+# Ignore everything except server folder
+/*
+!/server
+!Procfile
+!railway.toml
+!nixpacks.toml
