@@ -1,8 +1,13 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd server && npm install"
+buildCommand = "npm ci --only=production"
 
 [deploy]
-startCommand = "node server/api-proxy.js"
+startCommand = "node api-proxy.js"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
+
+# Tell Railway to use the server folder as the root
+# This prevents it from detecting the frontend Vite project
+[service]
+rootDirectory = "/server"
