@@ -39,8 +39,10 @@ export type FoodEntryInput = Omit<FoodEntry, "id">;
 
 const toIsoDateTime = (entry: FoodEntryInput) => {
   if (entry.date && entry.time) {
+    // Parse date and time components explicitly to avoid timezone issues
     const [year, month, day] = entry.date.split('-').map(Number);
     const [hour, minute] = entry.time.split(':').map(Number);
+    // Create date in local timezone
     const localDate = new Date(year, month - 1, day, hour, minute);
     return localDate.toISOString();
   }

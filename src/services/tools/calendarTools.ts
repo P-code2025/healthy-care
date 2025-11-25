@@ -1,7 +1,11 @@
+// Calendar Tools - Automated calendar event management
 import { BaseTool, type ToolParameter, type ToolContext, type ToolResult } from './base';
 import { calendarApi } from '../calendarApi';
 
-
+/**
+ * Tool: Add Calendar Event
+ * Adds a new event to user's calendar
+ */
 export class AddCalendarEventTool extends BaseTool {
     name = 'add_calendar_event';
     description = 'Add a new event to the calendar (workout, meal, appointment)';
@@ -90,7 +94,10 @@ export class AddCalendarEventTool extends BaseTool {
     }
 }
 
-
+/**
+ * Tool: List Calendar Events
+ * Retrieves upcoming calendar events
+ */
 export class ListCalendarEventsTool extends BaseTool {
     name = 'list_calendar_events';
     description = 'Get a list of upcoming calendar events';
@@ -164,7 +171,10 @@ export class ListCalendarEventsTool extends BaseTool {
     }
 }
 
-
+/**
+ * Tool: Remove Calendar Event
+ * Deletes a calendar event by ID or title
+ */
 export class RemoveCalendarEventTool extends BaseTool {
     name = 'remove_calendar_event';
     description = 'Remove an event from the calendar';
@@ -201,11 +211,13 @@ export class RemoveCalendarEventTool extends BaseTool {
                 return this.error('Either eventId or title must be provided');
             }
 
+            // If eventId is provided, remove directly
             if (args.eventId) {
                 await calendarApi.remove(args.eventId, context.userId);
                 return this.success(`✅ Calendar event removed successfully!`);
             }
 
+            // Otherwise, find by title and date
             const events = await calendarApi.list(context.userId, {
                 start: args.date || new Date().toISOString().split('T')[0],
                 end: args.date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

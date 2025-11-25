@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
@@ -14,7 +15,6 @@ import ProgressNew from "./pages/progress/ProgressNew";
 import MealPlanNew from "./pages/mealPlan/MealPlanNew";
 import Messages from "./pages/messages/Messages";
 import HealthyMenu from "./pages/healthyMenu/HealthyMenu";
-import ExercisesNew from "./pages/exercises/ExercisesNew";
 import HealthInsightsNew from "./pages/healthInsights/HealthInsightsNew";
 import HealthInsightDetail from "./pages/healthInsights/HealthInsightDetail";
 import Settings from "./pages/settings/Settings";
@@ -26,8 +26,10 @@ import OnboardingNew from "./pages/onboarding/OnboardingNew";
 import { ToastContainer as ReactToastify } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { initializeToolSystem } from "./services/toolSystemInit";
+import ExercisesNew from "./pages/exercies/ExercisesNew";
 
 function App() {
+  // Initialize tool calling system once at app startup
   useEffect(() => {
     initializeToolSystem();
   }, []);
@@ -39,10 +41,13 @@ function App() {
           <ReactToastify position="top-right" />
           <ToastContainer />
           <Routes>
+            {/* ---------- PUBLIC ---------- */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
+            {/* ---------- PROTECTED ---------- */}
             <Route element={<ProtectedRoute />}>
+              {/* ---------- ONBOARDING ---------- */}
               <Route path="/onboarding" element={<OnboardingNew />} />
 
               <Route element={<Layout />}>
@@ -60,6 +65,7 @@ function App() {
               </Route>
             </Route>
 
+            {/* fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ToastProvider>

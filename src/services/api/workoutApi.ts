@@ -1,13 +1,14 @@
+// src/services/api/workoutApi.ts
 import { http } from '../http';
 
 export interface WorkoutLog {
     id: string;
-    date: string;
+    date: string; // YYYY-MM-DD
     workoutName: string;
-    duration: number;
+    duration: number; // minutes
     caloriesBurned: number;
-    exercises: string[];
-    completedAt: string;
+    exercises: string[]; // List of exercises
+    completedAt: string; // ISO timestamp
 }
 
 export interface ProgressStats {
@@ -34,12 +35,17 @@ export interface Milestone {
 
 
 
+/**
+ * Get workout progress stats
+ */
 export const getWorkoutStats = async (): Promise<ProgressStats> => {
     const response = await http.get('/api/workouts/stats');
     return response.data;
 };
 
-
+/**
+ * Get all workout logs
+ */
 export const getWorkoutLogs = async (): Promise<any[]> => {
     const response = await http.get('/api/workout-log');
     return response.data;

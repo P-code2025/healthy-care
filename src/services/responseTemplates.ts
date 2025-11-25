@@ -1,3 +1,4 @@
+// Response Template System for AI Health Advisor Chatbot
 
 import type { IntentCategoryName } from './intentDetector';
 
@@ -14,6 +15,10 @@ export interface TemplateData {
     [key: string]: string | number | boolean | undefined;
 }
 
+/**
+ * Template Manager
+ * Stores and renders response templates with variable substitution
+ */
 export class TemplateManager {
     private templates: Map<string, ResponseTemplate> = new Map();
 
@@ -21,8 +26,11 @@ export class TemplateManager {
         this.registerDefaultTemplates();
     }
 
-
+    /**
+     * Register default response templates
+     */
     private registerDefaultTemplates(): void {
+        // General Health Templates
         this.register({
             id: 'water_intake',
             intent: 'general_health',
@@ -47,6 +55,7 @@ export class TemplateManager {
             description: 'Best workout timing'
         });
 
+        // Motivation Templates
         this.register({
             id: 'encouragement_general',
             intent: 'motivation',
@@ -71,6 +80,7 @@ export class TemplateManager {
             description: 'Celebrate achievement'
         });
 
+        // Nutrition Templates
         this.register({
             id: 'protein_sources',
             intent: 'nutrition_advice',
@@ -87,6 +97,7 @@ export class TemplateManager {
             description: 'Meal timing advice'
         });
 
+        // Progress Templates
         this.register({
             id: 'on_track',
             intent: 'progress_check',
@@ -103,6 +114,7 @@ export class TemplateManager {
             description: 'Plateau advice'
         });
 
+        // Unknown Intent - Better fallback
         this.register({
             id: 'fallback',
             intent: 'unknown',
@@ -112,21 +124,35 @@ export class TemplateManager {
         });
     }
 
+    /**
+     * Register a new template
+     */
     register(template: ResponseTemplate): void {
         this.templates.set(template.id, template);
     }
 
+    /**
+     * Get template by ID
+     */
     getTemplate(id: string): ResponseTemplate | undefined {
         return this.templates.get(id);
     }
 
-
+    /**
+     * Get all templates for an intent
+     */
     getTemplatesForIntent(intent: IntentCategoryName): ResponseTemplate[] {
         return Array.from(this.templates.values()).filter(t => t.intent === intent);
     }
 
-    render(template: ResponseTemplate, data: TemplateData): string {
+    /**
+     * Render template with data
+     */
+    render(p0: string, p1: string, p2: {}, template: ResponseTemplate, data: TemplateData): string {
         let result = template.template;
+
+        // Replace variables
+        // Replace variables
         if (template.variables && Array.isArray(template.variables)) {
             for (const variable of template.variables) {
                 const value = data[variable];
@@ -140,33 +166,45 @@ export class TemplateManager {
         return result;
     }
 
+    /**
+     * Render template by ID
+     */
     renderById(templateId: string, data: TemplateData): string | null {
         const template = this.getTemplate(templateId);
         if (!template) return null;
         return this.render(template, data);
     }
 
-
+    /**
+     * Get a random template for an intent
+     */
     getRandomTemplate(intent: IntentCategoryName): ResponseTemplate | undefined {
         const templates = this.getTemplatesForIntent(intent);
         if (templates.length === 0) return undefined;
         return templates[Math.floor(Math.random() * templates.length)];
     }
 
+    /**
+     * Check if template has all required variables
+     */
     validateData(template: ResponseTemplate, data: TemplateData): boolean {
         return template.variables.every(variable => data[variable] !== undefined);
     }
 
-
-
+    /**
+     * Get all registered templates
+     */
     getAllTemplates(): ResponseTemplate[] {
         return Array.from(this.templates.values());
     }
 }
 
+// Singleton instance
 let templateManagerInstance: TemplateManager | null = null;
 
-
+/**
+ * Get or create the global template manager
+ */
 export function getTemplateManager(): TemplateManager {
     if (!templateManagerInstance) {
         templateManagerInstance = new TemplateManager();
@@ -174,7 +212,9 @@ export function getTemplateManager(): TemplateManager {
     return templateManagerInstance;
 }
 
-
+/**
+ * Reset the global template manager (for testing)
+ */
 export function resetTemplateManager(): void {
     templateManagerInstance = null;
 }

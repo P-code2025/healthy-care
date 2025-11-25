@@ -1,8 +1,12 @@
+// Exercise Modification Handler - Handles exercise plan adjustments
 import type { IntentHandler, HandlerContext, HandlerResponse } from './base';
 import type { DetectedIntent } from '../intentDetector';
 import { http } from '../http';
 
-
+/**
+ * Exercise Modification Handler
+ * Handles exercise plan modifications based on user conditions and preferences
+ */
 export class ExerciseModificationHandler implements IntentHandler {
     readonly intent = 'exercise_modification' as const;
     category = 'exercise_modification' as const;
@@ -17,16 +21,20 @@ export class ExerciseModificationHandler implements IntentHandler {
         _context?: HandlerContext
     ): Promise<HandlerResponse> {
         try {
+            // Extract modification constraints
             const constraints = this.extractConstraints(query);
 
+            // Get current daily calorie intake for personalization
             const dailyIntake = await this.getDailyCalorieIntake();
 
+            // Call backend to regenerate exercise plan with constraints
             const response = await http.post<any>('/api/exercise-plan/modify', {
                 constraints,
                 dailyIntake,
                 userQuery: query,
             });
 
+            // Format response
             return {
                 content: this.formatExercisePlan(response, constraints),
             };
@@ -46,12 +54,14 @@ export class ExerciseModificationHandler implements IntentHandler {
         const normalized = query.toLowerCase();
         const constraints: any = { userQuery: query };
 
+        // Extract intensity
         if (normalized.match(/nhe|nhẹ|light|easy|easier|gentle/)) {
             constraints.intensity = 'light';
         } else if (normalized.match(/nang|nặng|hard|harder|intense|difficult/)) {
             constraints.intensity = 'intense';
         }
 
+        // Extract pain/injury constraints
         const excludeTypes: string[] = [];
 
         if (normalized.match(/dau chan|đau chân|leg pain|sore legs/)) {
@@ -90,6 +100,7 @@ export class ExerciseModificationHandler implements IntentHandler {
 
     private async getDailyCalorieIntake(): Promise<number> {
         try {
+            // Get today's food logs
             const today = new Date().toISOString().split('T')[0];
             const response = await http.get<any>(`/api/food-log?date=${today}`);
 
@@ -101,7 +112,7 @@ export class ExerciseModificationHandler implements IntentHandler {
             return totalCalories;
         } catch (error) {
             console.error('Failed to get daily calorie intake:', error);
-            return 0; 
+            return 0; // Default to 0 if can't fetch
         }
     }
 

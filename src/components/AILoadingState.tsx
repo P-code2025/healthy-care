@@ -35,6 +35,7 @@ export function AILoadingState({ type, message }: AILoadingStateProps) {
     );
 }
 
+// Compact version for inline use
 export function AILoadingInline({ type }: { type: AILoadingType }) {
     return (
         <div className={styles.aiLoadingInline}>

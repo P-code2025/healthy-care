@@ -1,3 +1,4 @@
+// src/components/Header.tsx
 import styles from "./Header.module.css";
 import { useAuth } from "../context/AuthContext";
 

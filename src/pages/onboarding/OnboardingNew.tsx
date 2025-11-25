@@ -1,3 +1,4 @@
+// src/pages/onboarding/OnboardingNew.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -32,12 +33,14 @@ export default function OnboardingNew() {
         weight: "",
         height: "",
         goalWeight: "",
+
+        // THÊM CÁC TRƯỜNG MỚI
         neck: "",
         waist: "",
         hip: "",
         biceps: "",
         thigh: "",
-        activityLevel: "moderate", 
+        activityLevel: "moderate", // mặc định
         exercisePreferences: {
             yoga: false,
             gym: true,
@@ -58,6 +61,7 @@ export default function OnboardingNew() {
     const saveOnboardingData = async (data: typeof formData) => {
         const goalWeightValue = Number(data.goalWeight) || 0;
 
+        // Lưu vào bảng User
         await api.updateCurrentUser({
             name: data.name || undefined,
             age: parseInt(data.age.toString()) || undefined,
@@ -74,6 +78,7 @@ export default function OnboardingNew() {
             exercise_preferences: data.exercisePreferences,
         });
 
+        // Tạo bản ghi BodyMeasurement với số đo ban đầu
         if (data.weight) {
             await api.createOrUpdateBodyMeasurement({
                 weight_kg: parseFloat(data.weight.toString()),
@@ -85,8 +90,10 @@ export default function OnboardingNew() {
             });
         }
 
+        // Refresh user profile in auth context
         const updatedUser = await refreshUser();
 
+        // Verify user is properly onboarded before navigating
         if (!updatedUser?.weight_kg || !updatedUser?.height_cm) {
             throw new Error(messages.onboarding.verificationError);
         }
@@ -102,6 +109,7 @@ export default function OnboardingNew() {
         if (step < steps.length - 1) {
             setStep(step + 1);
         } else {
+            // Final step - save data
             setIsSubmitting(true);
             try {
                 await saveOnboardingData(newData);
@@ -125,7 +133,7 @@ export default function OnboardingNew() {
 
     const retry = () => {
         setError(null);
-        next({}); 
+        next({}); // Retry with current form data
     };
 
     return (

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+﻿﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import styles from './FoodDiaryNew.module.css';
 import { analyzeFood } from '../../services/analyzeFood';
 import type { AnalysisResult, FoodEntry } from '../../lib/types';
@@ -97,7 +97,7 @@ export default function FoodDiaryNew() {
   const [entriesError, setEntriesError] = useState<string | null>(null);
   const [savingEntry, setSavingEntry] = useState(false);
   const [deletingEntries, setDeletingEntries] = useState(false);
-  const [isDirty, setIsDirty] = useState(false); 
+  const [isDirty, setIsDirty] = useState(false); // Has the food name/amount changed?
   const [lastAnalyzedImage, setLastAnalyzedImage] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMealType, setSelectedMealType] = useState<FoodEntry['mealType']>('Breakfast');
@@ -164,8 +164,13 @@ export default function FoodDiaryNew() {
   const filteredEntries = useMemo(() => {
     return foodEntries
       .filter(entry => {
+        // 1. Period filter
         const inPeriod = entry.date >= periodStart && entry.date <= periodEnd;
+
+        // 2. Search
         const matchesSearch = entry.foodName.toLowerCase().includes(searchQuery.toLowerCase());
+
+        // 3. Advanced filters
         const matchesMeal = !filterMealType || entry.mealType === filterMealType;
         const matchesCal = entry.calories >= filterCalorieRange[0] && entry.calories <= filterCalorieRange[1];
         const matchesCarbs = entry.carbs >= filterCarbsRange[0] && entry.carbs <= filterCarbsRange[1];
@@ -192,6 +197,7 @@ export default function FoodDiaryNew() {
 
   const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
 
+  // Aggregate totals for the selected period
   const totals = useMemo(() => {
     return filteredEntries.reduce(
       (acc, entry) => ({
@@ -250,9 +256,9 @@ export default function FoodDiaryNew() {
         setError('Failed to analyze again');
       } finally {
         setLoading(false);
-        setIsDirty(false); 
+        setIsDirty(false); // Reset
       }
-    }, 800);
+    }, 800); // debounce 800ms
 
     return () => clearTimeout(timeoutId);
     if (showModal) {
@@ -261,6 +267,7 @@ export default function FoodDiaryNew() {
     }
   }, [analysisResult, selectedImage, isDirty, lastAnalyzedImage, showModal]);
 
+  // Fetch product data from OpenFoodFacts
   const fetchBarcodeInfo = async (barcode: string) => {
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
@@ -270,6 +277,7 @@ export default function FoodDiaryNew() {
       const p = data.product;
       const n = p.nutriments || {};
 
+      // Resolve nutrition data priority: serving -> 100g -> fallback
       const getNutrient = (keys: string[], defaultVal = 0) => {
         for (const key of keys) {
           if (n[key] !== undefined && n[key] !== null) return Number(n[key]);
@@ -283,6 +291,7 @@ export default function FoodDiaryNew() {
       const factor = size / 100;
 
 
+      // Prioritize: serving -> 100g -> base
       const calories = Math.round(
         getNutrient(['energy-kcal_serving']) ||
         getNutrient(['energy-kcal_100g']) * factor ||
@@ -343,6 +352,7 @@ export default function FoodDiaryNew() {
     }
   };
 
+  // Image processing
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -357,6 +367,7 @@ export default function FoodDiaryNew() {
       const toastId = toast.info('Scanning barcode...', { autoClose: false });
 
       try {
+        // STEP 1: scan barcode (using base64 directly)
         const barcode = await detectBarcodeWithQuagga(originalBase64);
 
         if (barcode) {
@@ -383,6 +394,7 @@ export default function FoodDiaryNew() {
           toast.update(toastId, { render: 'Analyzing with AI...', type: 'info' });
         }
 
+        // STEP 2: use AI
         const compressed = await compressImage(originalBase64, 900, 0.8);
         const result = await analyzeFood(compressed);
 
@@ -403,6 +415,7 @@ export default function FoodDiaryNew() {
 
     reader.readAsDataURL(file);
   };
+  // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (savingEntry) return;
@@ -647,10 +660,12 @@ export default function FoodDiaryNew() {
                         if (isNaN(value)) return;
 
                         setAnalysisResult(prev => {
+                          // If base100g is missing just update the value
                           if (!prev.base100g) {
                             return { ...prev, [key]: value };
                           }
 
+                          // Special cases
                           if (key === 'calories') {
                             const ratio = prev.calories === 0 ? 1 : value / prev.calories;
                             return {
@@ -675,6 +690,7 @@ export default function FoodDiaryNew() {
                             };
                           }
 
+                          // Remaining macros (protein, fat, sugar) only update
                           return { ...prev, [key]: value };
                         });
                       }}

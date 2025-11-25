@@ -25,6 +25,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
     const { logout } = useAuth();
     const navigate = useNavigate();
 
+    // Prevent body scroll when menu is open
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -42,6 +43,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         navigate('/login');
     };
 
+    // Close menu on escape key
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape' && isOpen) {
@@ -69,7 +71,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 <div className={styles.header}>
                     <div className={styles.logo}>
                         <div className={styles.logoIcon}>🍃</div>
-                        <span className={styles.logoText}>NutriAI</span>
+                        <span className={styles.logoText}>Nutrigo</span>
                     </div>
                     <button
                         onClick={onClose}
@@ -107,6 +109,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
     );
 }
 
+// Hamburger button component
 export function HamburgerButton({ onClick }: { onClick: () => void }) {
     return (
         <button

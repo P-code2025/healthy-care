@@ -35,6 +35,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
         setToasts((prev) => [...prev, newToast]);
 
+        // Auto-dismiss
         if (newToast.duration && newToast.duration > 0) {
             setTimeout(() => {
                 hideToast(id);
@@ -61,6 +62,7 @@ export function useToast() {
     return context;
 }
 
+// Convenience methods
 export function useToastHelpers() {
     const { showToast } = useToast();
 

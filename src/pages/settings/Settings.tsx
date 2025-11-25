@@ -45,6 +45,7 @@ export default function Settings() {
     pushNotifications: true
   });
 
+  // Load profile data from the API on mount
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -60,6 +61,7 @@ export default function Settings() {
         });
       } catch (error) {
         console.error('Failed to load profile:', error);
+        // Fallback to localStorage
         const saved = localStorage.getItem("userProfile");
         if (saved) {
           const data = JSON.parse(saved);
@@ -70,12 +72,14 @@ export default function Settings() {
     fetchProfile();
   }, []);
 
+  // Keep a localStorage copy in sync for offline fallback
   const handleProfileUpdate = (field: keyof UserProfile, value: any) => {
     const updated = { ...profile, [field]: value };
     setProfile(updated);
     localStorage.setItem("userProfile", JSON.stringify(updated));
   };
 
+  // Persist profile data through the API
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -88,6 +92,7 @@ export default function Settings() {
         goal: formatGoalWeight(profile.goalWeight),
       });
       toast.success(messages.settings.saveSuccess);
+      // Refresh the user context so the greeting updates immediately
       await refreshUser();
     } catch (error) {
       console.error('Failed to save profile:', error);

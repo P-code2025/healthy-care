@@ -1,3 +1,4 @@
+// Chat Messages API Client
 import { http } from '../services/http';
 
 export interface ChatMessage {

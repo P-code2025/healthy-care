@@ -1,21 +1,23 @@
+// ClovaX API Types based on Chat Completions V3
+
 export type MessageContent = string | ContentPart[];
 
 export interface ContentPart {
   type: "text" | "image_url";
-  text?: string; 
+  text?: string; // Required if type is "text"
   imageUrl?: {
-    url: string;
+    url: string; // Public URL of the image
   };
   dataUri?: {
-    data: string;
+    data: string; // Base64-encoded image string
   };
 }
 
 export interface ClovaMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: MessageContent;
-  toolCallId?: string; 
-  toolCalls?: ToolCall[]; 
+  toolCallId?: string; // For tool role messages
+  toolCalls?: ToolCall[]; // For assistant messages with tool calls
 }
 
 export interface ToolCall {
@@ -23,7 +25,7 @@ export interface ToolCall {
   type: "function";
   function: {
     name: string;
-    arguments: Record<string, any>;
+    arguments: Record<string, any>; // JSON object (not stringified)
   };
 }
 
@@ -70,7 +72,7 @@ export interface ClovaCompletionResponse {
   };
   result: {
     message: ClovaMessage;
-    finishReason: "stop" | "length" | "tool_calls";
+    finishReason: "stop" | "length" | "tool_calls"; // Changed from stopReason
     created: number;
     seed: number;
     usage: {
@@ -122,6 +124,7 @@ export interface AnalysisResult {
   carbs: number;
   fat: number;
   sugar: number;
+  // Standardized values per 100g/ml
   base100g?: {
     calories: number;
     protein: number;
@@ -129,7 +132,7 @@ export interface AnalysisResult {
     fat: number;
     sugar: number;
   };
-  baseAmount?: number;
+  baseAmount?: number; // Base amount (g or ml)
 }
 
 export interface FoodEntry {
