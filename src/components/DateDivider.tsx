@@ -1,3 +1,4 @@
+// Date Divider Component
 import styles from './DateDivider.module.css';
 
 interface DateDividerProps {

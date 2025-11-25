@@ -28,7 +28,7 @@ export default function SidebarNew() {
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
         <div className={styles.logoIcon}>🍃</div>
-        <span className={styles.logoText}>NutriAI</span>
+        <span className={styles.logoText}>Nutrigo</span>
       </div>
 
       <nav className={styles.nav}>
@@ -55,7 +55,7 @@ export default function SidebarNew() {
         </div>
         <h3 className={styles.promoTitle}>Start your health journey</h3>
         <p className={styles.promoSubtitle}>
-          with a <strong>FREE 1-month</strong> access to NutriAI
+          with a <strong>FREE 1-month</strong> access to Nutrigo
         </p>
         <button className={styles.promoBtn}>Claim Now!</button>
       </div>

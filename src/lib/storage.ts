@@ -1,5 +1,6 @@
 import type { FoodEntry } from "./types";
 
+// src/lib/storage.ts
 export const STORAGE_KEYS = {
   FOOD_ENTRIES: 'foodDiary_entries_v2',
   DAILY_CALORIES: 'daily_calories',

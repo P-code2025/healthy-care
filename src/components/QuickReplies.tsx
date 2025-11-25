@@ -1,3 +1,4 @@
+// Quick Reply Suggestions Component
 import type { IntentCategoryName } from '../services/intentDetector';
 import styles from './QuickReplies.module.css';
 
@@ -15,12 +16,10 @@ const REPLY_SUGGESTIONS: Record<IntentCategoryName, string[]> = {
     calorie_query: ['Daily goal?', 'Meal breakdown?', 'Adjust target'],
     progress_check: ['Weekly summary', 'Set new goal', 'Compare trends'],
     food_analysis: ['Another meal', 'Healthier options?', 'Portion size'],
-    unknown: ['Create workout', 'Analyze food', 'Health tips'],
-    meal_plan_request: [],
-    meal_plan_modification: [],
-    exercise_modification: []
+    unknown: ['Create workout', 'Analyze food', 'Health tips']
 };
 
+// Context-specific suggestions based on last query
 const CONTEXTUAL_SUGGESTIONS: Record<string, string[]> = {
     water: ['How much sleep?', 'Best workout time?', 'Rest days?'],
     rest: ['Sleep quality tips?', 'Recovery meals?', 'Stretching routine?'],
@@ -30,8 +29,10 @@ const CONTEXTUAL_SUGGESTIONS: Record<string, string[]> = {
 };
 
 export function QuickReplies({ intent, lastQuery, onReplyClick }: QuickRepliesProps) {
+    // Try to find contextual suggestions first
     let suggestions = REPLY_SUGGESTIONS[intent] || REPLY_SUGGESTIONS.unknown;
 
+    // Check for context-specific overrides
     if (lastQuery) {
         const lowerQuery = lastQuery.toLowerCase();
         for (const [key, contextSuggestions] of Object.entries(CONTEXTUAL_SUGGESTIONS)) {

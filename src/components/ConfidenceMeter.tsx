@@ -1,7 +1,7 @@
 import styles from './ConfidenceMeter.module.css';
 
 interface ConfidenceMeterProps {
-    value: number;
+    value: number; // 0-1
     showPercentage?: boolean;
     size?: 'small' | 'medium' | 'large';
 }
@@ -13,6 +13,7 @@ export function ConfidenceMeter({
 }: ConfidenceMeterProps) {
     const percentage = Math.round(value * 100);
 
+    // Determine confidence level
     const getConfidenceLevel = () => {
         if (value >= 0.8) return 'high';
         if (value >= 0.6) return 'medium';
@@ -48,6 +49,7 @@ export function ConfidenceMeter({
     );
 }
 
+// Compact version
 export function ConfidenceBadge({ value }: { value: number }) {
     const percentage = Math.round(value * 100);
     const level = value >= 0.8 ? 'high' : value >= 0.6 ? 'medium' : 'low';

@@ -1,3 +1,5 @@
+// AI Error Handling System
+
 export type AIErrorType = 'network' | 'timeout' | 'invalid_input' | 'api_limit' | 'server_error' | 'unknown';
 
 export class AIError extends Error {
@@ -25,8 +27,11 @@ export interface ErrorAction {
     retryable: boolean;
 }
 
-
+/**
+ * Handle AI errors and return user-friendly messages
+ */
 export function handleAIError(error: any): ErrorAction {
+    // Handle AIError instances
     if (error instanceof AIError) {
         switch (error.type) {
             case 'network':
@@ -73,6 +78,7 @@ export function handleAIError(error: any): ErrorAction {
         }
     }
 
+    // Handle fetch/network errors
     if (error instanceof TypeError && error.message.includes('fetch')) {
         return {
             message: 'Network error. Please check your connection.',
@@ -81,6 +87,7 @@ export function handleAIError(error: any): ErrorAction {
         };
     }
 
+    // Handle HTTP errors
     if (error.status) {
         if (error.status === 401) {
             return {
@@ -107,6 +114,7 @@ export function handleAIError(error: any): ErrorAction {
         }
     }
 
+    // Generic error
     return {
         message: error.message || 'An unexpected error occurred.',
         action: 'Retry',
@@ -114,7 +122,9 @@ export function handleAIError(error: any): ErrorAction {
     };
 }
 
-
+/**
+ * Wrap AI function calls with error handling
+ */
 export async function withAIErrorHandling<T>(
     fn: () => Promise<T>,
     context: string = 'AI operation'
@@ -126,10 +136,12 @@ export async function withAIErrorHandling<T>(
             console.error(`[AI Error] ${context}:`, error);
         }
 
+        // Re-throw as AIError if not already
         if (error instanceof AIError) {
             throw error;
         }
 
+        // Convert to AIError
         throw new AIError(
             'unknown',
             `Failed to complete ${context}`,
@@ -139,7 +151,9 @@ export async function withAIErrorHandling<T>(
     }
 }
 
-
+/**
+ * Log AI errors for analytics
+ */
 export function logAIError(error: AIError, context: string) {
     if (import.meta.env.DEV) {
         console.error('[AI Error Log]', {
@@ -151,4 +165,6 @@ export function logAIError(error: AIError, context: string) {
         });
     }
 
+    // TODO: Send to analytics service
+    // analytics.track('ai_error', { ... });
 }

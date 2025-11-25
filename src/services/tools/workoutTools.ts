@@ -1,5 +1,8 @@
+// Workout Tools - Automated workout logging
 import { BaseTool, type ToolParameter, type ToolContext, type ToolResult } from './base';
 
+// Note: workoutApi needs to be created similar to calendarApi and foodDiaryApi
+// For now, we'll create a placeholder that can be replaced with actual API later
 
 interface WorkoutLogInput {
     completedAt: string;
@@ -9,8 +12,10 @@ interface WorkoutLogInput {
     isAiSuggested?: boolean;
 }
 
+// Placeholder - replace with actual API
 const workoutApi = {
     async create(userId: number, data: WorkoutLogInput) {
+        // TODO: Implement actual API call
         const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/workout-log`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -21,6 +26,10 @@ const workoutApi = {
     },
 };
 
+/**
+ * Tool: Save Workout Log
+ * Logs a completed workout session
+ */
 export class SaveWorkoutLogTool extends BaseTool {
     name = 'save_workout_log';
     description = 'Log a completed workout session';
@@ -55,6 +64,7 @@ export class SaveWorkoutLogTool extends BaseTool {
                 return this.error('User ID is required to save workout log');
             }
 
+            // Auto-estimate calories if not provided (rough estimate: 5-8 kcal/min based on intensity)
             const estimatedCalories = args.caloriesBurned || this.estimateCalories(
                 args.durationMinutes,
                 args.exerciseName
@@ -65,7 +75,7 @@ export class SaveWorkoutLogTool extends BaseTool {
                 exerciseName: args.exerciseName,
                 durationMinutes: args.durationMinutes,
                 caloriesBurnedEstimated: estimatedCalories,
-                isAiSuggested: true, 
+                isAiSuggested: true, // Mark as AI-suggested since added via chat
             });
 
             return this.success(
@@ -86,16 +96,17 @@ export class SaveWorkoutLogTool extends BaseTool {
 
     private estimateCalories(minutes: number, exerciseName: string): number {
         const name = exerciseName.toLowerCase();
-        let caloriesPerMinute = 6; 
+        let caloriesPerMinute = 6; // Default moderate intensity
 
+        // Adjust based on exercise type
         if (name.includes('run') || name.includes('hiit')) {
-            caloriesPerMinute = 10; 
+            caloriesPerMinute = 10; // High intensity
         } else if (name.includes('walk') || name.includes('yoga')) {
-            caloriesPerMinute = 4; 
+            caloriesPerMinute = 4; // Low intensity
         } else if (name.includes('gym') || name.includes('weight')) {
-            caloriesPerMinute = 7; 
+            caloriesPerMinute = 7; // Moderate-high
         } else if (name.includes('swim') || name.includes('cycle')) {
-            caloriesPerMinute = 8; 
+            caloriesPerMinute = 8; // High intensity
         }
 
         return Math.round(minutes * caloriesPerMinute);

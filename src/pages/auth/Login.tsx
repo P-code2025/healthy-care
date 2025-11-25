@@ -21,6 +21,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate before submit
     const emailValidation = validateEmail(email);
     if (emailValidation) {
       setEmailError(emailValidation);

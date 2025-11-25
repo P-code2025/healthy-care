@@ -44,6 +44,7 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate all fields
     const emailValidation = validateEmail(email);
     const passwordValidation = validatePassword(password);
     const confirmPassValidation = validatePasswordMatch(password, confirmPass);
@@ -59,6 +60,8 @@ export default function Register() {
       setSubmitting(true);
       setError(null);
       await register({ email: email.trim(), password });
+      // Navigate to onboarding for new users instead of dashboard
+      // This prevents a navigation loop since new users haven't completed onboarding
       navigate("/onboarding");
     } catch (err) {
       const errorConfig = getErrorMessage(err);

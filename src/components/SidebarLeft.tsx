@@ -55,7 +55,7 @@ const SidebarLeft: React.FC = () => {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
-        <h1>NutriAI</h1>
+        <h1>Nutrigo</h1>
       </div>
 
       <nav className={styles.nav}>
@@ -122,7 +122,7 @@ const SidebarLeft: React.FC = () => {
       <div className={styles.adCard}>
         <div className={styles.adCardInner}>
           <h4>Start your health journey</h4>
-          <p>with a FREE 1-month access to NutriAI!</p>
+          <p>with a FREE 1-month access to Nutrigo!</p>
           <button className={styles.adButton}>Claim Now!</button>
         </div>
       </div>

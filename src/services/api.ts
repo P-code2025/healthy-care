@@ -1,3 +1,4 @@
+// src/services/api.ts
 
 import { http } from "./http";
 
@@ -5,16 +6,16 @@ export interface User {
   user_id: number;
   email: string;
   password_hash: string;
-  name: string | null;
+  name: string | null;           // thêm null
   age: number | null;
   gender: string | null;
   height_cm: number | null;
   weight_kg: number | null;
-  neck_cm: number | null;
-  waist_cm: number | null; 
-  hip_cm: number | null;         
-  biceps_cm: number | null;      
-  thigh_cm: number | null;       
+  neck_cm: number | null;        // THÊM
+  waist_cm: number | null;       // THÊM
+  hip_cm: number | null;         // THÊM
+  biceps_cm: number | null;      // THÊM
+  thigh_cm: number | null;       // THÊM
   goal: string | null;
   activity_level: string | null;
   exercise_preferences: {
@@ -106,6 +107,7 @@ type UserUpdatePayload = Partial<
 const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {
   const payload: Record<string, unknown> = {};
 
+  // Helper to handle both camelCase and snake_case variants
   const assignField = (
     camelKey: keyof UserUpdatePayload,
     snakeKey: string
@@ -123,6 +125,7 @@ const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {
     }
   };
 
+  // Simple fields (no snake_case variants)
   if (Object.prototype.hasOwnProperty.call(data, "name")) {
     payload.name = data.name;
   }
@@ -136,6 +139,7 @@ const normalizeUserUpdatePayload = (data: UserUpdatePayload) => {
     payload.goal = data.goal;
   }
 
+  // Fields with camelCase/snake_case variants
   assignField("heightCm", "height_cm");
   assignField("weightKg", "weight_kg");
   assignField("neckCm", "neck_cm");

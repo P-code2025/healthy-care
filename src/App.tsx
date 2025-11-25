@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
@@ -28,6 +29,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { initializeToolSystem } from "./services/toolSystemInit";
 
 function App() {
+  // Initialize tool calling system once at app startup
   useEffect(() => {
     initializeToolSystem();
   }, []);
@@ -39,10 +41,13 @@ function App() {
           <ReactToastify position="top-right" />
           <ToastContainer />
           <Routes>
+            {/* ---------- PUBLIC ---------- */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
+            {/* ---------- PROTECTED ---------- */}
             <Route element={<ProtectedRoute />}>
+              {/* ---------- ONBOARDING ---------- */}
               <Route path="/onboarding" element={<OnboardingNew />} />
 
               <Route element={<Layout />}>
@@ -60,6 +65,7 @@ function App() {
               </Route>
             </Route>
 
+            {/* fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ToastProvider>

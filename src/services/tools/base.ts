@@ -1,9 +1,12 @@
+// Tool System Base Interfaces
+// Defines the foundation for AI Chat tool calling system
+
 export interface ToolParameter {
     name: string;
     type: 'string' | 'number' | 'boolean' | 'date';
     description: string;
     required: boolean;
-    enum?: string[]; 
+    enum?: string[]; // For enums like meal type, calendar category
 }
 
 export interface Tool {
@@ -33,7 +36,9 @@ export interface ToolResult {
     error?: string;
 }
 
-
+/**
+ * Base class for tools to extend
+ */
 export abstract class BaseTool implements Tool {
     abstract name: string;
     abstract description: string;
@@ -41,7 +46,9 @@ export abstract class BaseTool implements Tool {
     abstract parameters: ToolParameter[];
     abstract execute(args: Record<string, any>, context: ToolContext): Promise<ToolResult>;
 
-
+    /**
+     * Validate required parameters
+     */
     protected validateParameters(args: Record<string, any>): void {
         for (const param of this.parameters) {
             if (param.required && !(param.name in args)) {
@@ -56,6 +63,9 @@ export abstract class BaseTool implements Tool {
         }
     }
 
+    /**
+     * Create success result
+     */
     protected success(message: string, data?: any): ToolResult {
         return {
             success: true,
@@ -64,7 +74,9 @@ export abstract class BaseTool implements Tool {
         };
     }
 
-
+    /**
+     * Create error result
+     */
     protected error(message: string, error?: any): ToolResult {
         return {
             success: false,

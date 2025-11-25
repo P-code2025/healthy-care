@@ -1,3 +1,4 @@
+// Tools Index - Export all tools
 export * from './base';
 export * from './calendarTools';
 export * from './foodDiaryTools';
