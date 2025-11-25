@@ -1,22 +1,32 @@
 // Workout Handler
-import type { IntentHandler, DetectedIntent, HandlerContext, HandlerResponse } from './base';
+import type { IntentHandler, HandlerContext, HandlerResponse } from './base';
 import { getTemplateManager } from '../responseTemplates';
+import type { DetectedIntent } from '../intentDetector';
+import type { ToolContext } from '../tools/base';
+import type { ResponseTemplate, TemplateData } from '../responseTemplates'; // Thêm import này
 
 export class WorkoutHandler implements IntentHandler {
+    intent = 'workout_plan' as const;
     category = 'workout_plan' as const;
+
+    private templates = getTemplateManager();
+
+    canHandle(intent: DetectedIntent, _context: HandlerContext): boolean {
+        return intent.category === this.category;
+    }
 
     async handle(
         query: string,
         intent: DetectedIntent,
         context?: HandlerContext
     ): Promise<HandlerResponse> {
-        const templates = getTemplateManager();
         const normalized = query.toLowerCase();
 
-        // Register workout templates
-        templates.register('workout_plan', 'beginner_tips', {
+        // === ĐĂNG KÝ TẤT CẢ TEMPLATE (giữ nguyên nội dung của bạn) ===
+        this.templates.register({
             id: 'beginner_tips',
-            template: `🎯 **Beginner Workout Tips**
+            intent: 'workout_plan',
+            template: `**Beginner Workout Tips**
 
 **Week 1-2: Form First**
 - Focus on learning proper form
@@ -36,9 +46,10 @@ export class WorkoutHandler implements IntentHandler {
             variables: []
         });
 
-        templates.register('workout_plan', 'home_workout', {
+        this.templates.register({
             id: 'home_workout',
-            template: `🏠 **Effective Home Workout**
+            intent: 'workout_plan',
+            template: `**Effective Home Workout**
 
 **No equipment needed:**
 
@@ -56,9 +67,10 @@ export class WorkoutHandler implements IntentHandler {
             variables: []
         });
 
-        templates.register('workout_plan', 'gym_routine', {
+        this.templates.register({
             id: 'gym_routine',
-            template: `🏋️ **3-Day Gym Split**
+            intent: 'workout_plan',
+            template: `**3-Day Gym Split**
 
 **Day 1: Push (Chest, Shoulders, Triceps)**
 - Bench press: 4×8
@@ -79,9 +91,10 @@ export class WorkoutHandler implements IntentHandler {
             variables: []
         });
 
-        templates.register('workout_plan', 'cardio_guide', {
+        this.templates.register({
             id: 'cardio_guide',
-            template: `🏃 **Cardio Training Guide**
+            intent: 'workout_plan',
+            template: `**Cardio Training Guide**
 
 **For Fat Loss:**
 - HIIT: 20-30 min, 3×/week
@@ -101,9 +114,10 @@ export class WorkoutHandler implements IntentHandler {
             variables: []
         });
 
-        templates.register('workout_plan', 'recovery', {
+        this.templates.register({
             id: 'recovery',
-            template: `😴 **Recovery is Training Too!**
+            intent: 'workout_plan',
+            template: `**Recovery is Training Too!**
 
 **Active Recovery Days:**
 - Light walking (20-30 min)
@@ -126,9 +140,10 @@ export class WorkoutHandler implements IntentHandler {
             variables: []
         });
 
-        templates.register('workout_plan', 'form_tips', {
+        this.templates.register({
             id: 'form_tips',
-            template: `✅ **Perfect Form Checklist**
+            intent: 'workout_plan',
+            template: `**Perfect Form Checklist**
 
 **Squats:**
 - Feet shoulder-width apart
@@ -152,9 +167,10 @@ export class WorkoutHandler implements IntentHandler {
             variables: []
         });
 
-        templates.register('workout_plan', 'progression', {
+        this.templates.register({
             id: 'progression',
-            template: `📈 **Progressive Overload**
+            intent: 'workout_plan',
+            template: `**Progressive Overload**
 
 **How to progress:**
 1. **Add weight:** +2.5-5kg when you hit target reps
@@ -172,9 +188,10 @@ export class WorkoutHandler implements IntentHandler {
             variables: []
         });
 
-        templates.register('workout_plan', 'quick_workout', {
+        this.templates.register({
             id: 'quick_workout',
-            template: `⚡ **10-Minute Workout**
+            intent: 'workout_plan',
+            template: `**10-Minute Workout**
 
 **When you're short on time:**
 
@@ -192,9 +209,10 @@ Aim for 4-6 rounds.`,
             variables: []
         });
 
-        templates.register('workout_plan', 'workout_tips', {
+        this.templates.register({
             id: 'workout_tips',
-            template: `💪 **Essential Workout Tips**
+            intent: 'workout_plan',
+            template: `**Essential Workout Tips**
 
 **Before Workout:**
 - Warm up 5-10 minutes
@@ -215,40 +233,52 @@ Aim for 4-6 rounds.`,
             variables: []
         });
 
-        // Detect specific workout queries
+        // === HELPER ĐỂ RENDER ĐÚNG 5 THAM SỐ ===
+        const render = (id: string, data: TemplateData = {}): string => {
+            // Lấy template object đã đăng ký
+            const templateObj = this.templates['templates']?.get(id) 
+                ?? Array.from(this.templates['templates']?.values() ?? []).find(t => t.id === id);
+
+            if (!templateObj) {
+                throw new Error(`Template with id "${id}" not found`);
+            }
+
+            return this.templates.render(
+                'workout_plan',   // p0
+                id,               // p1
+                {},               // p2 - variables (có thể mở rộng sau)
+                templateObj,      // p3 - ResponseTemplate object (bắt buộc!)
+                data              // p4 - TemplateData bổ sung
+            );
+        };
+
+        // === XỬ LÝ QUERY ===
         if (normalized.includes('beginner') || normalized.includes('start')) {
-            return { content: templates.render('workout_plan', 'beginner_tips', {}) };
+            return { content: render('beginner_tips') };
         }
-
         if (normalized.includes('home') || normalized.includes('no gym')) {
-            return { content: templates.render('workout_plan', 'home_workout', {}) };
+            return { content: render('home_workout') };
         }
-
         if (normalized.includes('gym') || normalized.includes('split')) {
-            return { content: templates.render('workout_plan', 'gym_routine', {}) };
+            return { content: render('gym_routine') };
         }
-
         if (normalized.includes('cardio') || normalized.includes('running')) {
-            return { content: templates.render('workout_plan', 'cardio_guide', {}) };
+            return { content: render('cardio_guide') };
         }
-
         if (normalized.includes('recovery') || normalized.includes('rest')) {
-            return { content: templates.render('workout_plan', 'recovery', {}) };
+            return { content: render('recovery') };
         }
-
         if (normalized.includes('form') || normalized.includes('technique')) {
-            return { content: templates.render('workout_plan', 'form_tips', {}) };
+            return { content: render('form_tips') };
         }
-
         if (normalized.includes('progress') || normalized.includes('overload')) {
-            return { content: templates.render('workout_plan', 'progression', {}) };
+            return { content: render('progression') };
         }
-
         if (normalized.includes('quick') || normalized.includes('short') || normalized.includes('10 min')) {
-            return { content: templates.render('workout_plan', 'quick_workout', {}) };
+            return { content: render('quick_workout') };
         }
 
-        // Default: workout tips
-        return { content: templates.render('workout_plan', 'workout_tips', {}) };
+        // Default
+        return { content: render('workout_tips') };
     }
 }

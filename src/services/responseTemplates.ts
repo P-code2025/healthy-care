@@ -148,7 +148,7 @@ export class TemplateManager {
     /**
      * Render template with data
      */
-    render(template: ResponseTemplate, data: TemplateData): string {
+    render(p0: string, p1: string, p2: {}, template: ResponseTemplate, data: TemplateData): string {
         let result = template.template;
 
         // Replace variables

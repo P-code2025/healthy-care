@@ -27,8 +27,8 @@ const ExerciseCard: React.FC<Props> = ({
   // [THÊM MỚI] Hàm xử lý nút Bắt đầu (ngăn modal mở)
   const handleStartClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Ngăn sự kiện click nổi bọt lên thẻ cha
-    // TODO: Thêm logic bắt đầu bài tập
-    console.log("Bắt đầu bài tập:", exercise.name);
+    // Mở video modal
+    onPlayVideo(exercise);
   };
 
   return (
@@ -68,9 +68,8 @@ const ExerciseCard: React.FC<Props> = ({
         {/* [UI MỚI] Khu vực nút bấm */}
         <div className={styles.actions}>
           <button
-            className={`${styles.favoriteBtn} ${
-              isFavorite ? styles.favorited : ""
-            }`}
+            className={`${styles.favoriteBtn} ${isFavorite ? styles.favorited : ""
+              }`}
             onClick={handleFavoriteClick} // Click để yêu thích
           >
             <svg
