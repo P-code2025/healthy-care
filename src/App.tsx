@@ -15,7 +15,6 @@ import ProgressNew from "./pages/progress/ProgressNew";
 import MealPlanNew from "./pages/mealPlan/MealPlanNew";
 import Messages from "./pages/messages/Messages";
 import HealthyMenu from "./pages/healthyMenu/HealthyMenu";
-import ExercisesNew from "./pages/exercises/ExercisesNew";
 import HealthInsightsNew from "./pages/healthInsights/HealthInsightsNew";
 import HealthInsightDetail from "./pages/healthInsights/HealthInsightDetail";
 import Settings from "./pages/settings/Settings";
@@ -27,6 +26,7 @@ import OnboardingNew from "./pages/onboarding/OnboardingNew";
 import { ToastContainer as ReactToastify } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { initializeToolSystem } from "./services/toolSystemInit";
+import ExercisesNew from "./pages/exercies/ExercisesNew";
 
 function App() {
   // Initialize tool calling system once at app startup
