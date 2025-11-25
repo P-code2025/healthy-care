@@ -31,7 +31,7 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     description:
       "Một bài tập yoga buổi sáng nhẹ nhàng (20 phút) để khởi động ngày mới, tập trung vào hơi thở và sự linh hoạt.",
     videoUrl: "https://www.youtube.com/watch?v=4TLHLNX65-4",
-    thumbnailUrl: "https://i.ytimg.com/vi/4TLHLNX65-4/maxresdefault.jpg",
+    thumbnailUrl: "https://i.ytimg.com/vi/e-3S1M0YyvE/maxresdefault.jpg",
     muscleGroups: ["Full Body", "Flexibility", "Mindfulness"],
     difficulty: "Beginner",
     duration: 20,
@@ -48,7 +48,7 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     description:
       "Hướng dẫn bài tập plank cơ bản cho người mới bắt đầu để xây dựng sức mạnh cốt lõi (core).",
     videoUrl: "https://www.youtube.com/watch?v=ASdvN_XEl_c",
-    thumbnailUrl: "https://i.ytimg.com/vi/ASdvN_XEl_c/maxresdefault.jpg",
+    thumbnailUrl: "https://i.ytimg.com/vi/bNcB0sSC7i0/maxresdefault.jpg",
     muscleGroups: ["Core", "Abs"],
     difficulty: "Beginner",
     duration: 15,
@@ -64,8 +64,8 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     name: "10 Min Beginner Abs",
     description:
       "Bài tập bụng 10 phút cho người mới bắt đầu, không cần dụng cụ, tập ngay trên sàn.",
-    videoUrl: "https://www.youtube.com/watch?v=DHD1-2P94DI",
-    thumbnailUrl: "https://i.ytimg.com/vi/DHD1-2P94DI/maxresdefault.jpg",
+    videoUrl: "https://www.youtube.com/watch?v=s27_b914-pg",
+    thumbnailUrl: "https://i.ytimg.com/vi/s27_b914-pg/maxresdefault.jpg",
     muscleGroups: ["Core", "Abs"],
     difficulty: "Beginner",
     duration: 10,
@@ -81,8 +81,8 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     name: "Full Body Stretch (15 Min)",
     description:
       "Bài tập giãn cơ toàn thân 15 phút, tuyệt vời cho phục hồi sau tập hoặc giảm căng thẳng.",
-    videoUrl: "https://www.youtube.com/watch?v=g_tea8ZNk5A",
-    thumbnailUrl: "https://i.ytimg.com/vi/g_tea8ZNk5A/maxresdefault.jpg",
+    videoUrl: "https://www.youtube.com/watch?v=Eogrw-I5-A8",
+    thumbnailUrl: "https://i.ytimg.com/vi/Eogrw-I5-A8/maxresdefault.jpg",
     muscleGroups: ["Full Body", "Flexibility"],
     difficulty: "Beginner",
     duration: 15,
@@ -101,7 +101,7 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     description:
       "Bài tập HIIT 20 phút toàn thân cường độ cao để đốt mỡ. Không lặp lại bài tập, không cần dụng cụ.",
     videoUrl: "https://www.youtube.com/watch?v=zJKtwow2oBc",
-    thumbnailUrl: "https://i.ytimg.com/vi/zJKtwow2oBc/maxresdefault.jpg",
+    thumbnailUrl: "https://i.ytimg.com/vi/CBd8-34gq4A/maxresdefault.jpg",
     muscleGroups: ["Full Body", "Cardio"],
     difficulty: "Intermediate",
     duration: 20,
@@ -118,7 +118,7 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     description:
       "Ngày 1 của chuỗi 28 ngày tập sức mạnh toàn thân với tạ dumbbell. Bao gồm các bài tập kết hợp.",
     videoUrl: "https://www.youtube.com/watch?v=_jGebGZnYrU",
-    thumbnailUrl: "https://i.ytimg.com/vi/_jGebGZnYrU/maxresdefault.jpg",
+    thumbnailUrl: "https://i.ytimg.com/vi/pD3-yE-E0eE/maxresdefault.jpg",
     muscleGroups: ["Full Body", "Strength"],
     difficulty: "Intermediate",
     duration: 45,
@@ -134,7 +134,7 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     name: "HIIT Fat Burn (HIIT x Cardio)",
     description: "Bài tập HIIT x Cardio kết hợp để đốt mỡ toàn thân hiệu quả.",
     videoUrl: "https://www.youtube.com/watch?v=YfIVllyojnQ",
-    thumbnailUrl: "https://i.ytimg.com/vi/YfIVllyojnQ/maxresdefault.jpg",
+    thumbnailUrl: "https://i.ytimg.com/vi/ypl8-v0-I-k/maxresdefault.jpg",
     muscleGroups: ["Full Body", "Cardio"],
     difficulty: "Intermediate",
     duration: 25,
@@ -145,14 +145,30 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     calories: 400,
     status: "Not Started",
   },
-
+  {
+    id: "DUMBBELL_HIIT_01",
+    name: "30 Min Dumbbell HIIT",
+    description:
+      "Bài tập HIIT 30 phút sử dụng tạ dumbbell để tăng cường sức mạnh và đốt calo cùng lúc.",
+    videoUrl: "https://www.youtube.com/watch?v=1oD_bVf_UqY",
+    thumbnailUrl: "https://i.ytimg.com/vi/1oD_bVf_UqY/maxresdefault.jpg",
+    muscleGroups: ["Full Body", "Cardio", "Strength"],
+    difficulty: "Intermediate",
+    duration: 30,
+    sets: 3,
+    reps: "40s tập / 20s nghỉ",
+    rest: "20 giây",
+    weight: "Dumbbells",
+    calories: 380,
+    status: "Not Started",
+  },
   {
     id: "CORE_CRUSHER_01",
     name: "Core & Abs Crusher (15 Min)",
     description:
       "Tập trung 'nghiền nát' cơ bụng và cơ lõi của bạn trong 15 phút.",
     videoUrl: "https://www.youtube.com/watch?v=MiGCfVrA388",
-    thumbnailUrl: "https://i.ytimg.com/vi/MiGCfVrA388/maxresdefault.jpg",
+    thumbnailUrl: "https://i.ytimg.com/vi/bNcB0sSC7i0/maxresdefault.jpg", // Dùng lại ảnh plank
     muscleGroups: ["Core", "Abs"],
     difficulty: "Intermediate",
     duration: 15,
@@ -171,7 +187,7 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     description:
       "Tập trung vào sức mạnh phần thân trên (Đẩy, Kéo) và vai. Sử dụng trọng lượng cơ thể.",
     videoUrl: "https://www.youtube.com/watch?v=c6w8ZyEioZM",
-    thumbnailUrl: "https://i.ytimg.com/vi/c6w8ZyEioZM/maxresdefault.jpg",
+    thumbnailUrl: "https://i.ytimg.com/vi/fKYrLv3Qj2E/maxresdefault.jpg",
     muscleGroups: ["Upper Body", "Chest", "Back", "Shoulders"],
     difficulty: "Advanced",
     duration: 25,
@@ -238,8 +254,8 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     name: "Explosive Plyometric HIIT",
     description:
       "Bài tập 25 phút tập trung vào sức mạnh bùng nổ (plyometric) để cải thiện tốc độ và đốt mỡ.",
-    videoUrl: "https://www.youtube.com/watch?v=ml6cT4AZdqI",
-    thumbnailUrl: "https://i.ytimg.com/vi/ml6cT4AZdqI/maxresdefault.jpg",
+    videoUrl: "https://www.youtube.com/watch?v=s_dHT-EogIU",
+    thumbnailUrl: "https://i.ytimg.com/vi/s_dHT-EogIU/maxresdefault.jpg",
     muscleGroups: ["Full Body", "Cardio", "Legs"],
     difficulty: "Advanced",
     duration: 25,
@@ -255,8 +271,8 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     name: "Advanced Core & Abs (20 Min)",
     description:
       "Thử thách cơ lõi của bạn với bài tập bụng nâng cao 20 phút không nghỉ.",
-    videoUrl: "https://www.youtube.com/watch?v=50kH47ZztHs",
-    thumbnailUrl: "https://i.ytimg.com/vi/50kH47ZztHs/maxresdefault.jpg",
+    videoUrl: "https://www.youtube.com/watch?v=4dGYBYM-n0M",
+    thumbnailUrl: "https://i.ytimg.com/vi/4dGYBYM-n0M/maxresdefault.jpg",
     muscleGroups: ["Core", "Abs"],
     difficulty: "Advanced",
     duration: 20,
@@ -272,8 +288,8 @@ const PROFESSIONAL_WORKOUT_PLANS: Exercise[] = [
     name: "Advanced Full Body Dumbbell",
     description:
       "Một bài tập toàn thân nâng cao kéo dài 45 phút, chỉ sử dụng tạ dumbbell.",
-    videoUrl: "https://www.youtube.com/watch?v=vc1E5CfRfos",
-    thumbnailUrl: "https://i.ytimg.com/vi/vc1E5CfRfos/maxresdefault.jpg",
+    videoUrl: "https://www.youtube.com/watch?v=Jb-t-_S1SjM",
+    thumbnailUrl: "https://i.ytimg.com/vi/Jb-t-_S1SjM/maxresdefault.jpg",
     muscleGroups: ["Full Body", "Strength"],
     difficulty: "Advanced",
     duration: 45,
@@ -371,8 +387,8 @@ export default function ExercisesNew() {
         name === "duration" || name === "sets" || name === "calories"
           ? parseInt(value) || 0
           : name === "muscleGroups"
-            ? value.split(",").map((s) => s.trim())
-            : value,
+          ? value.split(",").map((s) => s.trim())
+          : value,
     }));
   };
 
@@ -646,7 +662,7 @@ export default function ExercisesNew() {
             value={selectedDifficulty}
             onChange={(e) => setSelectedDifficulty(e.target.value)}
           >
-            <option value="All">All Difficulty</option>
+            <option value="All">Mọi độ khó</option>
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
             <option value="Advanced">Advanced</option>
@@ -657,7 +673,7 @@ export default function ExercisesNew() {
             value={selectedMuscleGroup}
             onChange={(e) => setSelectedMuscleGroup(e.target.value)}
           >
-            <option value="All">All Muscle Groups</option>
+            <option value="All">Mọi nhóm cơ</option>
             <option value="Full Body">Full Body</option>
             <option value="Core">Core</option>
             <option value="Upper Body">Upper Body</option>
